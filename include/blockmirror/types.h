@@ -1,0 +1,20 @@
+#pragma once
+
+#include <cstdint>
+#include <array>
+#include <memory>
+
+namespace blockmirror {
+
+using Hash256 = std::array<uint8_t, 32>;
+using Pubkey = std::array<uint8_t, 32>;
+using Signature = std::array<uint8_t, 64>;
+using Privkey = std::array<uint8_t, 64>;
+using Hash256Ptr = std::shared_ptr<Hash256>;
+
+struct SignaturePair {
+  Pubkey signer;
+  Signature signature;
+};
+
+}  // namespace blockmirror

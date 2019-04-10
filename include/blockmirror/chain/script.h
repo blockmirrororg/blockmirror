@@ -1,6 +1,7 @@
 #pragma once
 
 #include <blockmirror/types.h>
+#include <blockmirror/chain/data.h>
 #include <vector>
 
 namespace blockmirror {
@@ -44,11 +45,8 @@ class ScriptNewDataType {
   std::string desc;  // utf-8 256字节
   /**
    * @brief 数据类型
-   * 这里来个数组
    */
-  uint64_t dataType;  // 数据类型 内置(1.IEEE754单精度
-                      // 2.IEEE754双精度
-                      // 3.无符号整数(变长编码) 4.带符号整数(变长编码))
+  std::vector<DataType> dataType;
   /**
    * @brief X64 字节码
    * 二进制接口 extern "C" size_t validScript(void *dataArray(rdi), size_t
@@ -62,15 +60,7 @@ class ScriptNewDataType {
   std::vector<uint8_t> resultScript;
 };
 
-/**
- * @brief 删除数据格式
- */
-class ScriptRemoveDataType {
- public:
-  uint64_t dataId;
-};
-
-class ScriptNewData {
+class ScriptAddData {
  public:
   std::string name;
   std::string type;

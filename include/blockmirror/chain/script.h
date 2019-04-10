@@ -1,7 +1,7 @@
 #pragma once
 
-#include <blockmirror/types.h>
 #include <blockmirror/chain/data.h>
+#include <blockmirror/types.h>
 #include <vector>
 
 namespace blockmirror {
@@ -63,7 +63,7 @@ class ScriptNewDataType {
 class ScriptAddData {
  public:
   std::string name;
-  std::string type;
+  uint64_t typeId;
 };
 
 // class ScriptAddContracts

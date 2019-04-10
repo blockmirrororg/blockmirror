@@ -15,11 +15,12 @@ class ECCContext {
   ECCContext(bool sign = false);
   ~ECCContext();
 
-  bool verify(const Pubkey &pub, const Hash256 &hash, const Signature &sig);
-  void sign(const Privkey &priv, const Hash256 &hash, Signature &sig);
-  bool verify(const Privkey &priv, const Pubkey &pub);
-  void newKey(Privkey &priv);
-  void computePub(const Privkey &priv, Pubkey &pub);
+  bool verify(const Pubkey &pub, const Hash256 &hash,
+              const Signature &sig) const;
+  void sign(const Privkey &priv, const Hash256 &hash, Signature &sig) const;
+  bool verify(const Privkey &priv, const Pubkey &pub) const;
+  void newKey(Privkey &priv) const;
+  void computePub(const Privkey &priv, Pubkey &pub) const;
 };
 
 extern thread_local ECCContext ECC;

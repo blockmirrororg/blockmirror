@@ -21,8 +21,7 @@ ECCContext::ECCContext(bool sign)
     unsigned char vseed[32];
     int r = RAND_bytes(vseed, 32);
     if (r != 1) {
-      assert(r);
-      // ERR_get_error
+      assert(false && "ERR_get_error");
     }
     r = secp256k1_context_randomize(_context, vseed);
     assert(r);
@@ -32,7 +31,7 @@ ECCContext::ECCContext(bool sign)
 ECCContext::~ECCContext() { secp256k1_context_destroy(_context); }
 
 bool ECCContext::verify(const Pubkey &pub, const Hash256 &hash,
-                        const Signature &sig) {
+                        const Signature &sig) const {
   secp256k1_pubkey pubkey;
   secp256k1_ecdsa_signature signature;
   if (!secp256k1_ec_pubkey_parse(_context, &pubkey, pub.data(), pub.size())) {
@@ -64,7 +63,7 @@ bool SigHasLowR(const secp256k1_context *ctx,
   return compact_sig[0] < 0x80;
 }
 
-bool ECCContext::verify(const Privkey &priv, const Pubkey &pub) {
+bool ECCContext::verify(const Privkey &priv, const Pubkey &pub) const {
   assert(_hasSigner);
   unsigned char rnd[8];
   std::string str = "Blockmirror key verification\n";
@@ -83,7 +82,7 @@ bool ECCContext::verify(const Privkey &priv, const Pubkey &pub) {
 }
 
 void ECCContext::sign(const Privkey &priv, const Hash256 &hash,
-                      Signature &sig) {
+                      Signature &sig) const {
   assert(_hasSigner);
   secp256k1_ecdsa_signature signature;
   union {
@@ -91,9 +90,8 @@ void ECCContext::sign(const Privkey &priv, const Hash256 &hash,
     uint32_t counter;
   };
   size_t sigLen = sig.size();
-  int ret =
-      secp256k1_ecdsa_sign(_context, &signature, hash.data(), priv.data(),
-                           secp256k1_nonce_function_rfc6979, nullptr);
+  int ret = secp256k1_ecdsa_sign(_context, &signature, hash.data(), priv.data(),
+                                 secp256k1_nonce_function_rfc6979, nullptr);
 
   while (ret && !SigHasLowR(_context, &signature)) {
     ++counter;
@@ -108,14 +106,14 @@ void ECCContext::sign(const Privkey &priv, const Hash256 &hash,
   assert(sigLen != sig.size());
 }
 
-void ECCContext::newKey(Privkey &priv) {
+void ECCContext::newKey(Privkey &priv) const {
   assert(_hasSigner);
   do {
     RAND_bytes(priv.data(), priv.size());
   } while (!secp256k1_ec_seckey_verify(_context, priv.data()));
 }
 
-void ECCContext::computePub(const Privkey &priv, Pubkey &pub) {
+void ECCContext::computePub(const Privkey &priv, Pubkey &pub) const {
   assert(_hasSigner);
   secp256k1_pubkey pubkey;
   size_t clen = pub.size();

@@ -4,6 +4,9 @@ add_library( blockmirror
   secp256k1_contrib/lax_der_privatekey_parsing.c
 
   crypto/ecc.cpp
+  
+  chain/block.cpp
+  chain/transaction.cpp
 )
 
 target_link_libraries( blockmirror 

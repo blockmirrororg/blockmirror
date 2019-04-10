@@ -1,6 +1,9 @@
 #pragma once
 
+#include <blockmirror/crypto/ecc.h>
+#include <blockmirror/serialization/access.h>
 #include <blockmirror/types.h>
+#include <boost/serialization/nvp.hpp>
 #include <vector>
 
 namespace blockmirror {
@@ -19,7 +22,7 @@ namespace chain {
 
 /**
  * 出块流程
- * 1. 
+ * 1.
  */
 
 /**
@@ -29,7 +32,6 @@ namespace chain {
  * 3. 收到一个非拒绝的块 如果是当前链则应用该块
  * 4. 如果是非当前链则先放入孤块池，如果块高度大于当前链则尝试切换
  */
-
 
 enum class ScriptType {
   Transfer,
@@ -47,11 +49,37 @@ enum class ScriptType {
  * 3. 交易的手续费会和交易执行脚本相关
  */
 class Transaction {
+ protected:
+  friend class blockmirror::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar) {
+    ar &BOOST_SERIALIZATION_NVP(type) & BOOST_SERIALIZATION_NVP(expire) &
+        BOOST_SERIALIZATION_NVP(nonce);
+    // FIXME: 如果是JSON序列化 需要特殊处理 script
+    // FIXME: JSON输出时 将 HASH也加进去
+    ar &BOOST_SERIALIZATION_NVP(script);
+  }
+
+ private:
+  mutable Hash256Ptr _hash;
+
  public:
   ScriptType type;              // 交易类型
   uint64_t expire;              // 过期高度 大于这个高度了则丢弃
   uint32_t nonce;               // 交易随机数
   std::vector<uint8_t> script;  // 交易执行脚本
+
+  const Hash256 &getHash() const;
+};
+
+struct SignaturePair {
+  template <class Archive>
+  void serialize(Archive &ar) {
+    ar &BOOST_SERIALIZATION_NVP(signer) & BOOST_SERIALIZATION_NVP(signature);
+  }
+
+  Pubkey signer;
+  Signature signature;
 };
 
 /**
@@ -59,11 +87,20 @@ class Transaction {
  * 1. 可以多个签名，再校验有效性的时候需要所有的签名对
  */
 class TransactionSigned : public Transaction {
+ protected:
+  friend class blockmirror::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar) {
+    Transaction::serialize(ar);
+    ar &BOOST_SERIALIZATION_NVP(signatures);
+  }
+
  public:
   std::vector<SignaturePair> signatures;
 
-  void addSign(const Privkey &priv);
-  bool verify();
+  void addSign(const Privkey &priv,
+               const crypto::ECCContext &ecc = crypto::ECC);
+  bool verify(const crypto::ECCContext &ecc = crypto::ECC);
 };
 
 }  // namespace chain

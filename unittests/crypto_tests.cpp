@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(crypto_tests_ecc) {
       0xa6, 0x95, 0x66, 0x96, 0x2e, 0x87, 0x71, 0xb5, 0x94, 0x4d};
 
   using blockmirror::crypto::ECC;
-  
+
   BOOST_CHECK(ECC.verify(key1, pub1));
   BOOST_CHECK(ECC.verify(key2, pub2));
   BOOST_CHECK(ECC.verify(pub1, hash, sig1));

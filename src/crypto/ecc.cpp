@@ -3,8 +3,15 @@
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <secp256k1_contrib/lax_der_parsing.h>
+#include <boost/assert.hpp>
 #include <boost/endian/conversion.hpp>
 #include <cassert>
+
+#define ASSERT BOOST_ASSERT
+#define VERIFY BOOST_VERIFY
+#define LOG printf
+#define WARN printf
+#define ERR printf
 
 namespace blockmirror {
 namespace crypto {
@@ -16,34 +23,32 @@ ECCContext::ECCContext(bool sign)
       _context(secp256k1_context_create(
           sign ? (SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY)
                : SECP256K1_CONTEXT_VERIFY)) {
-  assert(_context);
+  ASSERT(_context);
   if (_hasSigner) {
     unsigned char vseed[32];
-    int r = RAND_bytes(vseed, 32);
-    if (r != 1) {
-      assert(false && "ERR_get_error");
-    }
-    r = secp256k1_context_randomize(_context, vseed);
-    assert(r);
+    VERIFY(RAND_bytes(vseed, 32));
+    VERIFY(secp256k1_context_randomize(_context, vseed));
   }
 }
 
 ECCContext::~ECCContext() { secp256k1_context_destroy(_context); }
 
+void ECCContext::normalizeSignature(const std::vector<uint8_t> &in,
+                                    Signature &sig) const {
+  secp256k1_ecdsa_signature &signature = (secp256k1_ecdsa_signature &)sig;
+  VERIFY(ecdsa_signature_parse_der_lax(_context, &signature, in.data(),
+                                       in.size()));
+  secp256k1_ecdsa_signature_normalize(_context, &signature, &signature);
+}
+
 bool ECCContext::verify(const Pubkey &pub, const Hash256 &hash,
                         const Signature &sig) const {
   secp256k1_pubkey pubkey;
-  secp256k1_ecdsa_signature signature;
+  secp256k1_ecdsa_signature &signature = (secp256k1_ecdsa_signature &)sig;
   if (!secp256k1_ec_pubkey_parse(_context, &pubkey, pub.data(), pub.size())) {
-    printf("secp256k1_ec_pubkey_parse\n");
+    WARN("secp256k1_ec_pubkey_parse");
     return false;
   }
-  if (!ecdsa_signature_parse_der_lax(_context, &signature, sig.data(),
-                                     sig.size())) {
-    printf("ecdsa_signature_parse_der_lax\n");
-    return false;
-  }
-  secp256k1_ecdsa_signature_normalize(_context, &signature, &signature);
   return secp256k1_ecdsa_verify(_context, &signature, hash.data(), &pubkey);
 }
 
@@ -64,10 +69,10 @@ bool SigHasLowR(const secp256k1_context *ctx,
 }
 
 bool ECCContext::verify(const Privkey &priv, const Pubkey &pub) const {
-  assert(_hasSigner);
+  ASSERT(_hasSigner);
   unsigned char rnd[8];
   std::string str = "Blockmirror key verification\n";
-  RAND_bytes(rnd, sizeof(rnd));
+  VERIFY(RAND_bytes(rnd, sizeof(rnd)));
 
   Hash256 hash;
   SHA256_CTX ctx;
@@ -83,8 +88,8 @@ bool ECCContext::verify(const Privkey &priv, const Pubkey &pub) const {
 
 void ECCContext::sign(const Privkey &priv, const Hash256 &hash,
                       Signature &sig) const {
-  assert(_hasSigner);
-  secp256k1_ecdsa_signature signature;
+  ASSERT(_hasSigner);
+  secp256k1_ecdsa_signature &signature = (secp256k1_ecdsa_signature &)sig;
   union {
     unsigned char extra_entropy[32] = {0};
     uint32_t counter;
@@ -100,25 +105,22 @@ void ECCContext::sign(const Privkey &priv, const Hash256 &hash,
                                secp256k1_nonce_function_rfc6979, extra_entropy);
     boost::endian::little_to_native_inplace(counter);
   }
-  assert(ret);
-  secp256k1_ecdsa_signature_serialize_der(_context, sig.data(), &sigLen,
-                                          &signature);
-  assert(sigLen != sig.size());
+  ASSERT(ret);
+  secp256k1_ecdsa_signature_normalize(_context, &signature, &signature);
 }
 
 void ECCContext::newKey(Privkey &priv) const {
-  assert(_hasSigner);
+  ASSERT(_hasSigner);
   do {
-    RAND_bytes(priv.data(), priv.size());
+    VERIFY(RAND_bytes(priv.data(), priv.size()));
   } while (!secp256k1_ec_seckey_verify(_context, priv.data()));
 }
 
 void ECCContext::computePub(const Privkey &priv, Pubkey &pub) const {
-  assert(_hasSigner);
+  ASSERT(_hasSigner);
   secp256k1_pubkey pubkey;
   size_t clen = pub.size();
-  int ret = secp256k1_ec_pubkey_create(_context, &pubkey, priv.data());
-  assert(ret);
+  VERIFY(secp256k1_ec_pubkey_create(_context, &pubkey, priv.data()));
   secp256k1_ec_pubkey_serialize(_context, pub.data(), &clen, &pubkey,
                                 SECP256K1_EC_COMPRESSED);
   assert(pub.size() == clen);

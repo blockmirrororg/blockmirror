@@ -18,7 +18,8 @@ class BlockHeader {
     ar &BOOST_SERIALIZATION_NVP(height) & BOOST_SERIALIZATION_NVP(previous) &
         BOOST_SERIALIZATION_NVP(merkleTransaction) &
         BOOST_SERIALIZATION_NVP(merkleData) & BOOST_SERIALIZATION_NVP(producer);
-    // FIXME: JSON输出时 将 HASH也加进去
+
+    SERIALIZE_HASH(ar);
   }
 
  private:
@@ -56,15 +57,16 @@ class Block : public BlockHeaderSigned {
   template <class Archive>
   void serialize(Archive &ar) {
     BlockHeaderSigned::serialize(ar);
-    ar &BOOST_SERIALIZATION_NVP(coinbase);
-    ar &BOOST_SERIALIZATION_NVP(transactions);
+    ar &BOOST_SERIALIZATION_NVP(coinbase) &
+        BOOST_SERIALIZATION_NVP(transactions) & BOOST_SERIALIZATION_NVP(datas) &
+        BOOST_SERIALIZATION_NVP(result);
   }
 
  public:
   TransactionSigned coinbase;  // transfer only
   std::vector<TransactionSigned> transactions;
-  // DataStore datas;
-  // DataResult result;
+  std::vector<DataBP> datas;
+  std::vector<DataValue> result;
 };
 
 }  // namespace chain

@@ -1,52 +1,71 @@
 #pragma once
 
 #include <blockmirror/chain/data.h>
+#include <blockmirror/serialization/access.h>
 #include <blockmirror/types.h>
+#include <boost/serialization/nvp.hpp>
+#include <boost/variant.hpp>
 #include <vector>
 
 namespace blockmirror {
 namespace chain {
+namespace script {
+// 转账: signer(必须为一个) 给 target 转账 amount
+class Transfer {
+ protected:
+  friend class blockmirror::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar) {
+    ar &BOOST_SERIALIZATION_NVP(target) & BOOST_SERIALIZATION_NVP(amount);
+  }
 
-/**
- * @brief 转账脚本
- * 有且仅有一个签名对 公钥作为源地址
- */
-class ScriptTransfer {
  public:
   Pubkey target;
   uint64_t amount;
 };
+// 加入BP: signer(>BP_PERCENT_SIGNER) 推荐新的bp
+class BPJoin {
+ protected:
+  friend class blockmirror::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar) {
+    ar &BOOST_SERIALIZATION_NVP(bp);
+  }
 
-/**
- * @brief 推荐新的出块节点
- * 签名对数量/当前BP数量 必须大于等于 VOTEBP_PERCENT_SIGNER
- */
-class ScriptVoteBP {
  public:
   Pubkey bp;
 };
+// 删除BP: signer(>BP_PERCENT_SIGNER) 踢掉BP
+class BPExit {
+ protected:
+  friend class blockmirror::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar) {
+    ar &BOOST_SERIALIZATION_NVP(bp);
+  }
 
-/**
- * @brief 删除BP
- * 签名对数量/当前BP数量 必须大于等于 EXITBP_PERCENT_SIGNER
- */
-class ScriptExitBP {
  public:
   Pubkey bp;
 };
+// 新建数据格式: signer(>BP_PERCENT_SIGNER) 新建数据格式
+class NewFormat {
+ protected:
+  friend class blockmirror::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar) {
+    ar &BOOST_SERIALIZATION_NVP(name) & BOOST_SERIALIZATION_NVP(desc) &
+        BOOST_SERIALIZATION_NVP(dataFormat) &
+        BOOST_SERIALIZATION_NVP(validScript) &
+        BOOST_SERIALIZATION_NVP(resultScript);
+  }
 
-/**
- * @brief 添加新的数据格式
- * 签名对数量/当前BP数量 必须大于等于 VOTENEWDATA_PERCENT_SIGNER
- */
-class ScriptNewDataType {
  public:
   std::string name;  // utf-8 32字节 禁止重复
   std::string desc;  // utf-8 256字节
   /**
    * @brief 数据类型
    */
-  std::vector<DataType> dataType;
+  std::vector<uint8_t> dataFormat;
   /**
    * @brief X64 字节码
    * 二进制接口 extern "C" size_t validScript(void *dataArray(rdi), size_t
@@ -59,14 +78,24 @@ class ScriptNewDataType {
    */
   std::vector<uint8_t> resultScript;
 };
+// 增加数据: signer(>BP_PERCENT_SIGNER) 增加采集数据
+class NewData {
+ protected:
+  friend class blockmirror::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar) {
+    ar &BOOST_SERIALIZATION_NVP(format) & BOOST_SERIALIZATION_NVP(name);
+  }
 
-class ScriptAddData {
  public:
+  uint64_t format;
   std::string name;
-  uint64_t typeId;
 };
 
-// class ScriptAddContracts
+}  // namespace script
+
+using Script = boost::variant<script::Transfer, script::BPJoin, script::BPExit,
+                              script::NewFormat, script::NewData>;
 
 }  // namespace chain
 }  // namespace blockmirror

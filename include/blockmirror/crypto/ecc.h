@@ -2,6 +2,7 @@
 
 #include <blockmirror/types.h>
 #include <secp256k1.h>
+#include <vector>
 
 namespace blockmirror {
 namespace crypto {
@@ -21,6 +22,8 @@ class ECCContext {
   bool verify(const Privkey &priv, const Pubkey &pub) const;
   void newKey(Privkey &priv) const;
   void computePub(const Privkey &priv, Pubkey &pub) const;
+
+  void normalizeSignature(const std::vector<uint8_t> &in, Signature &sig) const;
 };
 
 extern thread_local ECCContext ECC;

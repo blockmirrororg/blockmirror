@@ -1,11 +1,23 @@
 
 #include <blockmirror/chain/block.h>
 #include <blockmirror/serialization/binary_oarchive.h>
+#include <blockmirror/serialization/json_oarchive.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <fstream>
 #include <iostream>
+
+using Bin = blockmirror::serialization::BinaryOarchive<std::ostringstream>;
+using JSON = blockmirror::serialization::JSONOarchive<std::ostringstream>;
+
+template <typename Archive, typename T>
+std::string SS(const T &obj) {
+  std::ostringstream oss;
+  Archive archive(oss);
+  archive << obj;
+  return oss.str();
+}
 
 BOOST_AUTO_TEST_SUITE(block_tests)
 
@@ -17,16 +29,12 @@ BOOST_AUTO_TEST_CASE(block_tests_header) {
   header.previous.fill(0x33);
   header.producer.fill(0x44);
 
-  std::ostringstream oss;
-  blockmirror::serialization::BinaryOarchive<std::ostringstream> oa(oss);
-  oa << header;
-
   BOOST_CHECK_EQUAL(
       "887766554433221133333333333333333333333333333333333333333333333333333333"
       "333333332222222222222222222222222222222222222222222222222222222222222222"
       "111111111111111111111111111111111111111111111111111111111111111144444444"
       "4444444444444444444444444444444444444444444444444444444444",
-      boost::algorithm::hex(oss.str()));
+      boost::algorithm::hex(SS<Bin>(header)));
   auto &hash = header.getHash();
   BOOST_CHECK_EQUAL(
       boost::algorithm::hex(std::string(hash.begin(), hash.end())),
@@ -59,23 +67,36 @@ BOOST_AUTO_TEST_CASE(block_tests_header) {
 
   BOOST_CHECK(headerSigned.verify());
 
-  oss.clear();
-  oa << headerSigned;
-
   BOOST_CHECK_EQUAL(
       "887766554433221133333333333333333333333333333333333333333333333333333333"
       "333333332222222222222222222222222222222222222222222222222222222222222222"
-      "111111111111111111111111111111111111111111111111111111111111111144444444"
-      "444444444444444444444444444444444444444444444444444444444488776655443322"
-      "113333333333333333333333333333333333333333333333333333333333333333222222"
-      "222222222222222222222222222222222222222222222222222222222211111111111111"
-      "11111111111111111111111111111111111111111111111111030B4C866585DD868A9D62"
-      "348A9CD008D6A312937048FFF31670E7E920CFC7A744304402205D5AA091775536B58FB9"
-      "89DC2D1B8788E641AEA16B7D6A8EAE7C9992B5B0AB2602200795F8D2B1188934CD8E0734"
-      "DA3B68E5C13A5965723B46F746278640551F25200010",
-      boost::algorithm::hex(oss.str()));
+      "1111111111111111111111111111111111111111111111111111111111111111030B4C86"
+      "6585DD868A9D62348A9CD008D6A312937048FFF31670E7E920CFC7A74426ABB0B592997C"
+      "AE8E6A7D6BA1AE41E688871B2DDC89B98FB536557791A05A5D20251F5540862746F7463B"
+      "7265593AC1E5683BDA34078ECD348918B1D2F89507",
+      boost::algorithm::hex(SS<Bin>(headerSigned)));
+
+  // std::cout << SS<JSON>(headerSigned) << std::endl;
 }
 
-BOOST_AUTO_TEST_CASE(block_tests_transactions) {}
+BOOST_AUTO_TEST_CASE(block_tests_transactions) {
+  blockmirror::chain::Block block;
+  using namespace blockmirror::chain::script;
+  BPExit bpExit;
+  BPJoin bpJoin;
+  NewFormat newData;
+  NewData addData;
+  blockmirror::chain::TransactionSigned trx;
+  trx.script = bpExit;
+  block.transactions.push_back(trx);
+  trx.script = bpJoin;
+  block.transactions.push_back(trx);
+  trx.script = newData;
+  block.transactions.push_back(trx);
+  trx.script = addData;
+  block.transactions.push_back(trx);
+  std::cout << SS<JSON>(block) << std::endl;
+  std::cout << boost::algorithm::hex(SS<Bin>(block)) << std::endl;
+}
 
 BOOST_AUTO_TEST_SUITE_END()

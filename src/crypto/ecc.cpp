@@ -3,15 +3,9 @@
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <secp256k1_contrib/lax_der_parsing.h>
-#include <boost/assert.hpp>
 #include <boost/endian/conversion.hpp>
 #include <cassert>
-
-#define ASSERT BOOST_ASSERT
-#define VERIFY BOOST_VERIFY
-#define LOG printf
-#define WARN printf
-#define ERR printf
+#include <blockmirror/common.h>
 
 namespace blockmirror {
 namespace crypto {

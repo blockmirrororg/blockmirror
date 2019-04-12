@@ -1,10 +1,29 @@
 #include <blockmirror/chain/transaction.h>
 #include <blockmirror/serialization/binary_oarchive.h>
 #include <blockmirror/serialization/hash_ostream.h>
+#include <openssl/rand.h>
 
 namespace blockmirror {
 namespace chain {
 
+Transaction::Transaction(script::Transfer &&transfer) : script(transfer) {}
+Transaction::Transaction(script::BPJoin &&join) : script(join) {}
+Transaction::Transaction(script::BPExit &&leave) : script(leave) {}
+Transaction::Transaction(script::NewFormat &&newFormat) : script(newFormat) {}
+Transaction::Transaction(script::NewData &&newData) : script(newData) {}
+
+void Transaction::setNonce() {
+  _hash.reset();
+  VERIFY(RAND_bytes((unsigned char *)&nonce, sizeof(nonce)));
+}
+void Transaction::setNonce(uint32_t n) {
+  _hash.reset();
+  nonce = n;
+}
+void Transaction::setExpire(uint64_t e) {
+  _hash.reset();
+  expire = e;
+}
 const Hash256 &Transaction::getHash() const {
   if (_hash) {
     return *_hash;

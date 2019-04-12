@@ -5,6 +5,8 @@
 namespace blockmirror {
 namespace chain {
 
+BlockHeader::BlockHeader() : timestamp(now_ms_since_1970()) {}
+
 const Hash256 &BlockHeader::getHash() const {
   if (_hash) {
     return *_hash;
@@ -15,6 +17,13 @@ const Hash256 &BlockHeader::getHash() const {
   _hash.reset(new Hash256());
   oss.getHash(*_hash);
   return *_hash;
+}
+
+void BlockHeader::setPrevious(const BlockHeader &parent) {
+  _hash.reset();
+  previous = parent.getHash();
+  height = parent.getHeight() + 1;
+  timestamp = now_ms_since_1970();
 }
 
 void BlockHeaderSigned::sign(const Privkey &priv,

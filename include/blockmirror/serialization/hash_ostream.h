@@ -1,6 +1,6 @@
 #pragma once
 
-#include <blockmirror/types.h>
+#include <blockmirror/common.h>
 #include <openssl/sha.h>
 
 namespace blockmirror {

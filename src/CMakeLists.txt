@@ -5,6 +5,7 @@ add_library( blockmirror
 
   crypto/ecc.cpp
   
+  chain/data.cpp
   chain/block.cpp
   chain/transaction.cpp
 )

@@ -1,9 +1,8 @@
 #pragma once
 
+#include <blockmirror/common.h>
+#include <blockmirror/serialization/access.h>
 #include <boost/algorithm/hex.hpp>
-#include <boost/noncopyable.hpp>
-#include <iostream>
-#include <type_traits>
 
 namespace blockmirror {
 namespace serialization {

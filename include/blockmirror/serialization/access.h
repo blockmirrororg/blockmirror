@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/variant.hpp>
+#include <blockmirror/common.h>
 
 namespace blockmirror {
 namespace serialization {
@@ -24,12 +24,6 @@ class VariantVisitor : public boost::static_visitor<void> {
     _ar &value;
   }
 };
-
-#define SERIALIZE_HASH(ar)                                  \
-  if (Archive::IsJSON::value && Archive::IsSaving::value) { \
-    auto &hash = getHash();                                 \
-    ar &BOOST_SERIALIZATION_NVP(hash);                      \
-  }
 
 }  // namespace serialization
 }  // namespace blockmirror

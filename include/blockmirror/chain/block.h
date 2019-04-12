@@ -2,10 +2,9 @@
 
 #include <blockmirror/chain/data.h>
 #include <blockmirror/chain/transaction.h>
+#include <blockmirror/common.h>
 #include <blockmirror/crypto/ecc.h>
 #include <blockmirror/serialization/access.h>
-#include <blockmirror/types.h>
-#include <boost/serialization/nvp.hpp>
 
 namespace blockmirror {
 namespace chain {
@@ -15,23 +14,32 @@ class BlockHeader {
   friend class blockmirror::serialization::access;
   template <class Archive>
   void serialize(Archive &ar) {
-    ar &BOOST_SERIALIZATION_NVP(height) & BOOST_SERIALIZATION_NVP(previous) &
+    ar &BOOST_SERIALIZATION_NVP(timestamp) & BOOST_SERIALIZATION_NVP(height) &
+        BOOST_SERIALIZATION_NVP(previous) &
         BOOST_SERIALIZATION_NVP(merkleTransaction) &
         BOOST_SERIALIZATION_NVP(merkleData) & BOOST_SERIALIZATION_NVP(producer);
-
-    SERIALIZE_HASH(ar);
   }
 
- private:
+ protected:
   mutable Hash256Ptr _hash;
 
- public:
+  uint64_t timestamp;
   uint64_t height;
   Hash256 previous;
   Hash256 merkleTransaction;
   Hash256 merkleData;
   Pubkey producer;
 
+ public:
+  BlockHeader();
+
+  uint64_t getTimestamp() const { return timestamp; }
+  uint64_t getHeight() const { return height; }
+  const Hash256 &getPrevious() const { return previous; }
+  const Hash256 &getMerkleTrx() const { return merkleTransaction; }
+  const Hash256 &getMerkleData() const { return merkleData; }
+  const Pubkey &getProducer() const { return producer; }
+  void setPrevious(const BlockHeader &parent);
   const Hash256 &getHash() const;
 };
 
@@ -44,9 +52,13 @@ class BlockHeaderSigned : public BlockHeader {
     ar &BOOST_SERIALIZATION_NVP(signature);
   }
 
- public:
+ protected:
   Signature signature;
 
+ public:
+  using BlockHeader::BlockHeader;
+
+  const Signature &getSignature() const { return signature; }
   void sign(const Privkey &priv, const crypto::ECCContext &ecc = crypto::ECC);
   bool verify(const crypto::ECCContext &ecc = crypto::ECC) const;
 };
@@ -63,11 +75,15 @@ class Block : public BlockHeaderSigned {
   }
 
  public:
+  using BlockHeaderSigned::BlockHeaderSigned;
+
   TransactionSigned coinbase;  // transfer only
   std::vector<TransactionSigned> transactions;
-  std::vector<DataBP> datas;
-  std::vector<DataValue> result;
+  std::vector<DataBPPtr> datas;
+  std::vector<DataPtr> result;
 };
+
+using BlockPtr = std::shared_ptr<Block>;
 
 }  // namespace chain
 }  // namespace blockmirror

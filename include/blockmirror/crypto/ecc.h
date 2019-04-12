@@ -1,8 +1,7 @@
 #pragma once
 
-#include <blockmirror/types.h>
+#include <blockmirror/common.h>
 #include <secp256k1.h>
-#include <vector>
 
 namespace blockmirror {
 namespace crypto {

@@ -1,39 +1,87 @@
 #pragma once
 
+#include <blockmirror/common.h>
+#include <blockmirror/crypto/ecc.h>
 #include <blockmirror/serialization/access.h>
-#include <blockmirror/types.h>
-#include <boost/serialization/nvp.hpp>
-#include <vector>
 
 namespace blockmirror {
 namespace chain {
 
-// RPC
-class DataValue {
+// rpc
+class Data {
  protected:
   friend class blockmirror::serialization::access;
   template <class Archive>
   void serialize(Archive &ar) {
-    ar &BOOST_SERIALIZATION_NVP(typeId) & BOOST_SERIALIZATION_NVP(data);
+    ar &BOOST_SERIALIZATION_NVP(name) & BOOST_SERIALIZATION_NVP(data);
   }
- public:
-  uint64_t typeId;
-  std::vector<char> data;
-};
 
-// BP
-class DataBP : public DataValue {
+ protected:
+  std::string name;
+  std::vector<uint8_t> data;
+
+ public:
+  Data(const std::string &n, const std::vector<uint8_t> &d);
+  Data(std::string &&n, const std::vector<uint8_t> &d);
+  Data(const std::string &n, std::vector<uint8_t> &&d);
+  Data(std::string &&n, std::vector<uint8_t> &&d);
+  Data(const Data &o);
+  Data(Data &&o);
+
+  const std::string &getName() { return name; }
+  const std::vector<uint8_t> &getData() { return data; }
+  void getHash(const Pubkey &bp, uint64_t height, Hash256 &hash) const;
+};
+using DataPtr = std::shared_ptr<Data>;
+
+// broadcast
+class DataSigned : public Data {
  protected:
   friend class blockmirror::serialization::access;
   template <class Archive>
   void serialize(Archive &ar) {
-    DataValue::serialize(ar);
-    ar &BOOST_SERIALIZATION_NVP(bpId) & BOOST_SERIALIZATION_NVP(signature);
+    Data::serialize(ar);
+    ar &BOOST_SERIALIZATION_NVP(signature);
   }
+
+ protected:
+  Signature signature;
+
  public:
-  uint64_t bpId;
-  Signature signature;  // Verify(bp, sha256(bpId, data, validHeight))
+  using Data::Data;
+
+  const Signature &getSignature() { return signature; }
+  void sign(const Privkey &priv, uint64_t height,
+            const crypto::ECCContext &ecc = crypto::ECC);
+  bool verify(const Pubkey &pub, uint64_t height,
+              const crypto::ECCContext &ecc = crypto::ECC);
+  bool verify(const Privkey &priv, uint64_t height,
+              const crypto::ECCContext &ecc = crypto::ECC);
 };
+using DataSignedPtr = std::shared_ptr<DataSigned>;
+
+class DataBP {
+ protected:
+  friend class blockmirror::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar) {
+    ar &BOOST_SERIALIZATION_NVP(bp) & BOOST_SERIALIZATION_NVP(datas);
+  }
+
+ protected:
+  Pubkey bp;
+  std::vector<DataSignedPtr> datas;
+
+ public:
+  DataBP(const Pubkey &b);
+  DataBP(const DataBP &o);
+  DataBP(DataBP &&o);
+
+  const Pubkey &getBP() const { return bp; }
+  const std::vector<DataSignedPtr> &getDatas() const { return datas; }
+  void addData(const DataSignedPtr &data) { datas.push_back(data); }
+};
+using DataBPPtr = std::shared_ptr<DataBP>;
 
 }  // namespace chain
 }  // namespace blockmirror

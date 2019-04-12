@@ -1,11 +1,8 @@
 #pragma once
 
 #include <blockmirror/chain/data.h>
+#include <blockmirror/common.h>
 #include <blockmirror/serialization/access.h>
-#include <blockmirror/types.h>
-#include <boost/serialization/nvp.hpp>
-#include <boost/variant.hpp>
-#include <vector>
 
 namespace blockmirror {
 namespace chain {
@@ -19,9 +16,18 @@ class Transfer {
     ar &BOOST_SERIALIZATION_NVP(target) & BOOST_SERIALIZATION_NVP(amount);
   }
 
- public:
+ protected:
   Pubkey target;
   uint64_t amount;
+
+ public:
+  Transfer(Transfer &&o) : target(o.target), amount(o.amount) {}
+  Transfer(const Transfer &o) : target(o.target), amount(o.amount) {}
+  Transfer(const Pubkey &to, const uint64_t value)
+      : target(to), amount(value) {}
+
+  const Pubkey &getTarget() const { return target; }
+  uint64_t getAmount() const { return amount; }
 };
 // 加入BP: signer(>BP_PERCENT_SIGNER) 推荐新的bp
 class BPJoin {
@@ -32,8 +38,15 @@ class BPJoin {
     ar &BOOST_SERIALIZATION_NVP(bp);
   }
 
- public:
+ protected:
   Pubkey bp;
+
+ public:
+  BPJoin(BPJoin &&b) : bp(b.bp) {}
+  BPJoin(const BPJoin &b) : bp(b.bp) {}
+  BPJoin(const Pubkey &pub) : bp(pub) {}
+
+  const Pubkey &getBP() const { return bp; }
 };
 // 删除BP: signer(>BP_PERCENT_SIGNER) 踢掉BP
 class BPExit {
@@ -44,8 +57,15 @@ class BPExit {
     ar &BOOST_SERIALIZATION_NVP(bp);
   }
 
- public:
+ protected:
   Pubkey bp;
+
+ public:
+  BPExit(BPExit &&b) : bp(b.bp) {}
+  BPExit(const BPExit &b) : bp(b.bp) {}
+  BPExit(const Pubkey &pub) : bp(pub) {}
+
+  const Pubkey &getBP() const { return bp; }
 };
 // 新建数据格式: signer(>BP_PERCENT_SIGNER) 新建数据格式
 class NewFormat {
@@ -59,7 +79,7 @@ class NewFormat {
         BOOST_SERIALIZATION_NVP(resultScript);
   }
 
- public:
+ protected:
   std::string name;  // utf-8 32字节 禁止重复
   std::string desc;  // utf-8 256字节
   /**
@@ -77,6 +97,35 @@ class NewFormat {
    * dataCount(rsi), void *dataOut(rdx))
    */
   std::vector<uint8_t> resultScript;
+
+ public:
+  NewFormat(NewFormat &&b)
+      : name(b.name),
+        desc(b.desc),
+        dataFormat(b.dataFormat),
+        validScript(b.validScript),
+        resultScript(b.resultScript) {}
+  NewFormat(const NewFormat &b)
+      : name(b.name),
+        desc(b.desc),
+        dataFormat(b.dataFormat),
+        validScript(b.validScript),
+        resultScript(b.resultScript) {}
+  NewFormat(const std::string &n, const std::string &d,
+            const std::vector<uint8_t> &format,
+            const std::vector<uint8_t> &valid,
+            const std::vector<uint8_t> &result)
+      : name(n),
+        desc(d),
+        dataFormat(format),
+        validScript(valid),
+        resultScript(result) {}
+
+  const std::string &getName() const { return name; }
+  const std::string &getDesc() const { return desc; }
+  const std::vector<uint8_t> &getDataFormat() const { return dataFormat; }
+  const std::vector<uint8_t> &getValidScript() const { return validScript; }
+  const std::vector<uint8_t> &getResultScript() const { return resultScript; }
 };
 // 增加数据: signer(>BP_PERCENT_SIGNER) 增加采集数据
 class NewData {
@@ -87,9 +136,17 @@ class NewData {
     ar &BOOST_SERIALIZATION_NVP(format) & BOOST_SERIALIZATION_NVP(name);
   }
 
- public:
-  uint64_t format;
+ protected:
+  std::string format;
   std::string name;
+
+ public:
+  NewData(NewData &&o) : format(o.format), name(o.name) {}
+  NewData(const NewData &o) : format(o.format), name(o.name) {}
+  NewData(const std::string &f, const std::string &n) : format(f), name(n) {}
+
+  const std::string &getName() const { return name; }
+  const std::string &getFormat() const { return format; }
 };
 
 }  // namespace script

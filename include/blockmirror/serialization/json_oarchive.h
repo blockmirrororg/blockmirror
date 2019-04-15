@@ -128,9 +128,9 @@ class JSONOarchive : private boost::noncopyable {
   // boost::variant
   template <typename... T>
   JSONOarchive &operator<<(const boost::variant<T...> &value) {
-    boost::apply_visitor(VariantVisitor<JSONOarchive>(*this), value);
-    uint8_t type = (uint8_t)value.which();
+    uint32_t type = (uint32_t)value.which();
     *this << BOOST_SERIALIZATION_NVP(type);
+    boost::apply_visitor(VariantVisitor<JSONOarchive>(*this), value);
     return *this;
   }
 };

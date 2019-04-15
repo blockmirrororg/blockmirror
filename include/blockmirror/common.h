@@ -8,10 +8,17 @@
 #include <vector>
 
 #include <boost/assert.hpp>
+#include <boost/mpl/empty.hpp>
+#include <boost/mpl/eval_if.hpp>
+#include <boost/mpl/front.hpp>
+#include <boost/mpl/identity.hpp>
+#include <boost/mpl/pop_front.hpp>
+#include <boost/mpl/size.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/serialization/nvp.hpp>
 #include <boost/variant.hpp>
 
+#include <blockmirror/config.h>
 #include <blockmirror/types.h>
 
 #define ASSERT BOOST_ASSERT

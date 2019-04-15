@@ -7,8 +7,8 @@
 // 6. std::string
 // 7. std::vector<T>
 // 8. boost::variant
-// 9. chain 的各种结构
 #include <blockmirror/chain/data.h>
+#include <blockmirror/serialization/binary_iarchive.h>
 #include <blockmirror/serialization/binary_oarchive.h>
 #include <blockmirror/serialization/json_oarchive.h>
 #include <boost/algorithm/hex.hpp>
@@ -29,19 +29,38 @@ std::string J(const T &value) {
   std::ostringstream oss;
   blockmirror::serialization::JSONOarchive<std::ostringstream> archive(oss);
   archive << value;
-  return oss.str();
+  return boost::algorithm::hex(oss.str());
+}
+template <typename T>
+void IS(const std::string &value, T &out) {
+  std::istringstream iss(boost::algorithm::unhex(value));
+  blockmirror::serialization::BinaryIarchive<std::istringstream> archive(iss);
+  archive >> out;
 }
 
 BOOST_AUTO_TEST_SUITE(serialization_tests)
 
 void checkUInt(uint64_t value, const char *str) {
+  std::string ostr;
   if (std::numeric_limits<uint16_t>::max() >= value) {
-    BOOST_CHECK_EQUAL(S((uint16_t)value), str);
+    ostr = S((uint16_t)value);
+    BOOST_CHECK_EQUAL(ostr, str);
+    uint16_t val;
+    IS(ostr, val);
+    BOOST_CHECK_EQUAL(val, (uint16_t)value);
   }
   if (std::numeric_limits<uint32_t>::max() >= value) {
-    BOOST_CHECK_EQUAL(S((uint32_t)value), str);
+    ostr = S((uint32_t)value);
+    BOOST_CHECK_EQUAL(ostr, str);
+    uint32_t val;
+    IS(ostr, val);
+    BOOST_CHECK_EQUAL(val, (uint32_t)value);
   }
-  BOOST_CHECK_EQUAL(S(value), str);
+  ostr = S((uint64_t)value);
+  BOOST_CHECK_EQUAL(ostr, str);
+  uint64_t val;
+  IS(ostr, val);
+  BOOST_CHECK_EQUAL(val, (uint64_t)value);
 }
 
 BOOST_AUTO_TEST_CASE(serialization_tests_bin_integer) {
@@ -61,8 +80,24 @@ BOOST_AUTO_TEST_CASE(serialization_tests_bin_integer) {
   checkUInt(0xFFFFFFFFFFFFFFFFull, "FFFFFFFFFFFFFFFFFF01");
 }
 
-BOOST_AUTO_TEST_CASE(serialization_tests_bin_data) {
-  BOOST_CHECK_EQUAL(S(blockmirror::chain::Data("Hello", {1, 2, 3})), "0548656C6C6F03010203");
+BOOST_AUTO_TEST_CASE(serialization_tests_variant) {
+  boost::variant<unsigned int, float, std::string, int> val = (unsigned int)0x11;
+  boost::variant<unsigned int, float, std::string, int> val2;
+  BOOST_CHECK_EQUAL(S(val), "0011");
+  IS("0011", val2);
+  BOOST_CHECK_EQUAL(val2, val);
+  val = (float)1.0f;
+  BOOST_CHECK_EQUAL(S(val), "010000803F");
+  IS("010000803F", val2);
+  BOOST_CHECK_EQUAL(val2, val);
+  val = (std::string) "0000";
+  BOOST_CHECK_EQUAL(S(val), "020430303030");
+  IS("020430303030", val2);
+  BOOST_CHECK_EQUAL(val2, val);
+  val = (int)-0x11;
+  BOOST_CHECK_EQUAL(S(val), "0323");
+  IS("0323", val2);
+  BOOST_CHECK_EQUAL(val2, val);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

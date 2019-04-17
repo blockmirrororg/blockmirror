@@ -15,7 +15,7 @@ Data::Data(Data &&o) : name(o.name), data(o.data) {}
 
 void Data::getHash(const Pubkey &bp, uint64_t height, Hash256 &hash) const {
   serialization::HashOStream oss;
-  serialization::BinaryOarchive<decltype(oss)> oa(oss);
+  serialization::BinaryOArchive<decltype(oss)> oa(oss);
   oa << bp << height << *this;
   oss.getHash(hash);
 }

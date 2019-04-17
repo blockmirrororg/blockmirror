@@ -12,7 +12,7 @@ const Hash256 &BlockHeader::getHash() const {
     return *_hash;
   }
   serialization::HashOStream oss;
-  serialization::BinaryOarchive<decltype(oss)> oa(oss);
+  serialization::BinaryOArchive<decltype(oss)> oa(oss);
   oa << *this;
   _hash.reset(new Hash256());
   oss.getHash(*_hash);

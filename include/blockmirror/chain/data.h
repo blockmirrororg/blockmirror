@@ -27,6 +27,7 @@ class Data {
   Data(std::string &&n, std::vector<uint8_t> &&d);
   Data(const Data &o);
   Data(Data &&o);
+  Data() = default;
 
   const std::string &getName() { return name; }
   const std::vector<uint8_t> &getData() { return data; }
@@ -76,6 +77,7 @@ class DataBP {
   DataBP(const Pubkey &b);
   DataBP(const DataBP &o);
   DataBP(DataBP &&o);
+  DataBP() = default;
 
   const Pubkey &getBP() const { return bp; }
   const std::vector<DataSignedPtr> &getDatas() const { return datas; }

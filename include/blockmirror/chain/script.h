@@ -25,6 +25,7 @@ class Transfer {
   Transfer(const Transfer &o) : target(o.target), amount(o.amount) {}
   Transfer(const Pubkey &to, const uint64_t value)
       : target(to), amount(value) {}
+  Transfer() {}
 
   const Pubkey &getTarget() const { return target; }
   uint64_t getAmount() const { return amount; }

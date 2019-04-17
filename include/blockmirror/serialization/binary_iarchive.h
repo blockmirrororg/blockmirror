@@ -8,7 +8,7 @@ namespace blockmirror {
 namespace serialization {
 
 template <typename StreamType>
-class BinaryIarchive : private boost::noncopyable {
+class BinaryIArchive : private boost::noncopyable {
  public:
   using IsJSON = std::false_type;
   using IsSaving = std::false_type;
@@ -17,15 +17,15 @@ class BinaryIarchive : private boost::noncopyable {
   StreamType &_stream;
 
  public:
-  BinaryIarchive(StreamType &stream) : _stream(stream) {}
+  BinaryIArchive(StreamType &stream) : _stream(stream) {}
 
   // Dispatch
   template <class T>
-  BinaryIarchive &operator>>(::boost::serialization::nvp<T> &t) {
+  BinaryIArchive &operator>>(::boost::serialization::nvp<T> &t) {
     return *this >> t.value();
   }
   template <class T>
-  BinaryIarchive &operator&(T &t) {
+  BinaryIArchive &operator&(T &t) {
     return *this >> t;
   }
   // read size
@@ -41,14 +41,14 @@ class BinaryIarchive : private boost::noncopyable {
   // !Number
   template <class T, typename std::enable_if<!std::is_arithmetic<T>::value,
                                              int>::type = 0>
-  BinaryIarchive &operator>>(T &t) {
+  BinaryIArchive &operator>>(T &t) {
     access::serialize(*this, t);
     return *this;
   }
   // Number
   template <typename T, typename std::enable_if<std::is_arithmetic<T>::value,
                                                 int>::type = 0>
-  BinaryIarchive &operator>>(T &value) {
+  BinaryIArchive &operator>>(T &value) {
     if (sizeof(T) > 1 && std::is_integral<T>::value) {
       uint64_t target = 0;
       uint8_t byte;
@@ -75,11 +75,11 @@ class BinaryIarchive : private boost::noncopyable {
   }
   // Binary
   template <size_t N>
-  BinaryIarchive &operator>>(std::array<uint8_t, N> &value) {
+  BinaryIArchive &operator>>(std::array<uint8_t, N> &value) {
     _stream.read((char *)&value[0], N);
     return *this;
   }
-  BinaryIarchive &operator>>(std::vector<uint8_t> &value) {
+  BinaryIArchive &operator>>(std::vector<uint8_t> &value) {
     size_t size = readSize();
     value.resize(size);
     if (value.size() > 0) {
@@ -88,7 +88,7 @@ class BinaryIarchive : private boost::noncopyable {
     return *this;
   }
   // String
-  BinaryIarchive &operator>>(std::string &value) {
+  BinaryIArchive &operator>>(std::string &value) {
     size_t size = readSize();
     value.resize(size);
     if (value.size() > 0) {
@@ -98,7 +98,7 @@ class BinaryIarchive : private boost::noncopyable {
   }
   // Vector
   template <typename T>
-  BinaryIarchive &operator>>(std::vector<T> &arr) {
+  BinaryIArchive &operator>>(std::vector<T> &arr) {
     size_t size = readSize();
     arr.resize(size);
     for (auto &val : arr) {
@@ -108,7 +108,7 @@ class BinaryIarchive : private boost::noncopyable {
   }
   // boost::variant
   template <typename... T>
-  BinaryIarchive &operator>>(boost::variant<T...> &value) {
+  BinaryIArchive &operator>>(boost::variant<T...> &value) {
     uint32_t which;
     *this >> which;
     VariantLoad(*this, value, which);

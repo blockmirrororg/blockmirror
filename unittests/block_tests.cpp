@@ -8,8 +8,8 @@
 #include <fstream>
 #include <iostream>
 
-using Bin = blockmirror::serialization::BinaryOarchive<std::ostringstream>;
-using JSON = blockmirror::serialization::JSONOarchive<std::ostringstream>;
+using Bin = blockmirror::serialization::BinaryOArchive<std::ostringstream>;
+using JSON = blockmirror::serialization::JSONOArchive<std::ostringstream>;
 
 template <typename Archive, typename T>
 std::string SS(const T &obj) {

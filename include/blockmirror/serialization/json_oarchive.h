@@ -8,7 +8,7 @@ namespace blockmirror {
 namespace serialization {
 
 template <typename StreamType>
-class JSONOarchive : private boost::noncopyable {
+class JSONOArchive : private boost::noncopyable {
  public:
   using IsJSON = std::true_type;
   using IsSaving = std::true_type;
@@ -56,7 +56,7 @@ class JSONOarchive : private boost::noncopyable {
   }
 
  public:
-  JSONOarchive(StreamType &stream, bool indent = true)
+  JSONOArchive(StreamType &stream, bool indent = true)
       : _stream(stream),
         _depth(0),
         _array_size(0),
@@ -64,13 +64,13 @@ class JSONOarchive : private boost::noncopyable {
         _indent(indent) {}
 
   template <class T>
-  JSONOarchive &operator<<(const ::boost::serialization::nvp<T> &t) {
+  JSONOArchive &operator<<(const ::boost::serialization::nvp<T> &t) {
     _tag(t.name());
     return *this << t.const_value();
   }
 
   template <class T>
-  JSONOarchive &operator&(const T &t) {
+  JSONOArchive &operator&(const T &t) {
     return *this << t;
   }
 
@@ -78,7 +78,7 @@ class JSONOarchive : private boost::noncopyable {
   template <class T, typename std::enable_if<!std::is_arithmetic<T>::value &&
                                                  !std::is_enum<T>::value,
                                              int>::type = 0>
-  JSONOarchive &operator<<(const T &t) {
+  JSONOArchive &operator<<(const T &t) {
     _begin_object();
     access::serialize(*this, const_cast<T &>(t));
     _end_object();
@@ -87,20 +87,20 @@ class JSONOarchive : private boost::noncopyable {
   // Number
   template <class T, typename std::enable_if<std::is_arithmetic<T>::value,
                                              int>::type = 0>
-  JSONOarchive &operator<<(const T &t) {
+  JSONOArchive &operator<<(const T &t) {
     _stream << +t;
     return *this;
   }
   // Binary
   template <size_t N>
-  JSONOarchive &operator<<(const std::array<uint8_t, N> &value) {
+  JSONOArchive &operator<<(const std::array<uint8_t, N> &value) {
     _stream << '"';
     boost::algorithm::hex(value.begin(), value.end(),
                           std::ostream_iterator<char>(_stream));
     _stream << '"';
     return *this;
   }
-  JSONOarchive &operator<<(const std::vector<uint8_t> &value) {
+  JSONOArchive &operator<<(const std::vector<uint8_t> &value) {
     _stream << '"';
     boost::algorithm::hex(value.begin(), value.end(),
                           std::ostream_iterator<char>(_stream));
@@ -108,13 +108,13 @@ class JSONOarchive : private boost::noncopyable {
     return *this;
   }
   // String
-  JSONOarchive &operator<<(const std::string &value) {
+  JSONOArchive &operator<<(const std::string &value) {
     _stream << '"' << value << '"';
     return *this;
   }
   // Vector
   template <typename T>
-  JSONOarchive &operator<<(const std::vector<T> &arr) {
+  JSONOArchive &operator<<(const std::vector<T> &arr) {
     _begin_array();
     for (auto &val : arr) {
       *this << val;
@@ -127,10 +127,13 @@ class JSONOarchive : private boost::noncopyable {
   }
   // boost::variant
   template <typename... T>
-  JSONOarchive &operator<<(const boost::variant<T...> &value) {
+  JSONOArchive &operator<<(const boost::variant<T...> &value) {
+    _begin_object();
     uint32_t type = (uint32_t)value.which();
     *this << BOOST_SERIALIZATION_NVP(type);
-    boost::apply_visitor(VariantVisitor<JSONOarchive>(*this), value);
+    _tag("value");
+    boost::apply_visitor(VariantVisitor<JSONOArchive>(*this), value);
+    _end_object();
     return *this;
   }
 };

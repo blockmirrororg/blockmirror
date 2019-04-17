@@ -30,6 +30,7 @@ class Transaction {
   Transaction(script::BPExit &&leave);
   Transaction(script::NewFormat &&newFormat);
   Transaction(script::NewData &&newData);
+  Transaction() = default;
 
   void setNonce(uint32_t n);
   void setExpire(uint64_t e);

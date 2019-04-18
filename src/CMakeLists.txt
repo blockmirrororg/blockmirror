@@ -8,6 +8,8 @@ add_library( blockmirror
   chain/data.cpp
   chain/block.cpp
   chain/transaction.cpp
+  
+  common.cpp
 )
 
 target_link_libraries( blockmirror 

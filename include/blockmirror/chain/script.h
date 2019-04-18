@@ -11,7 +11,7 @@ namespace script {
 class Transfer {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(target) & BOOST_SERIALIZATION_NVP(amount);
   }
@@ -21,11 +21,10 @@ class Transfer {
   uint64_t amount;
 
  public:
-  Transfer(Transfer &&o) : target(o.target), amount(o.amount) {}
+  Transfer() = default;
   Transfer(const Transfer &o) : target(o.target), amount(o.amount) {}
   Transfer(const Pubkey &to, const uint64_t value)
       : target(to), amount(value) {}
-  Transfer() {}
 
   const Pubkey &getTarget() const { return target; }
   uint64_t getAmount() const { return amount; }
@@ -34,7 +33,7 @@ class Transfer {
 class BPJoin {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(bp);
   }
@@ -43,7 +42,7 @@ class BPJoin {
   Pubkey bp;
 
  public:
-  BPJoin(BPJoin &&b) : bp(b.bp) {}
+  BPJoin() = default;
   BPJoin(const BPJoin &b) : bp(b.bp) {}
   BPJoin(const Pubkey &pub) : bp(pub) {}
 
@@ -53,7 +52,7 @@ class BPJoin {
 class BPExit {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(bp);
   }
@@ -62,7 +61,7 @@ class BPExit {
   Pubkey bp;
 
  public:
-  BPExit(BPExit &&b) : bp(b.bp) {}
+  BPExit() = default;
   BPExit(const BPExit &b) : bp(b.bp) {}
   BPExit(const Pubkey &pub) : bp(pub) {}
 
@@ -70,9 +69,15 @@ class BPExit {
 };
 // 新建数据格式: signer(>BP_PERCENT_SIGNER) 新建数据格式
 class NewFormat {
+ public:
+  const static uint8_t TYPE_FLOAT = 1;
+  const static uint8_t TYPE_DOUBLE = 2;
+  const static uint8_t TYPE_UINT = 3;
+  const static uint8_t TYPE_INT = 4;
+
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(name) & BOOST_SERIALIZATION_NVP(desc) &
         BOOST_SERIALIZATION_NVP(dataFormat) &
@@ -100,12 +105,7 @@ class NewFormat {
   std::vector<uint8_t> resultScript;
 
  public:
-  NewFormat(NewFormat &&b)
-      : name(b.name),
-        desc(b.desc),
-        dataFormat(b.dataFormat),
-        validScript(b.validScript),
-        resultScript(b.resultScript) {}
+  NewFormat() = default;
   NewFormat(const NewFormat &b)
       : name(b.name),
         desc(b.desc),
@@ -132,19 +132,20 @@ class NewFormat {
 class NewData {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
-    ar &BOOST_SERIALIZATION_NVP(format) & BOOST_SERIALIZATION_NVP(name);
+    ar &BOOST_SERIALIZATION_NVP(format) & BOOST_SERIALIZATION_NVP(name) & BOOST_SERIALIZATION_NVP(desc);
   }
 
  protected:
   std::string format;
   std::string name;
+  std::string desc;
 
  public:
-  NewData(NewData &&o) : format(o.format), name(o.name) {}
+  NewData() = default;
   NewData(const NewData &o) : format(o.format), name(o.name) {}
-  NewData(const std::string &f, const std::string &n) : format(f), name(n) {}
+  NewData(const std::string &f, const std::string &n, const std::string &d) : format(f), name(n), desc(d) {}
 
   const std::string &getName() const { return name; }
   const std::string &getFormat() const { return format; }

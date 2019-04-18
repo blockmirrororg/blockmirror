@@ -20,12 +20,15 @@ class PTreeIArchive : private boost::noncopyable {
   PTreeIArchive(boost::property_tree::ptree &tree) : _tree(tree) {}
 
   // Dispatch
-  template <class T>
-  PTreeIArchive &operator>>(::boost::serialization::nvp<T> &t) {
-    auto tree = _tree.get_child(t.name());
-    PTreeIArchive child(tree);
+  template <typename T>
+  PTreeIArchive &operator&(const ::boost::serialization::nvp<T> &t) {
+    PTreeIArchive child(_tree.get_child(t.name()));
     child >> t.value();
     return *this;
+  }
+  template <typename T>
+  PTreeIArchive &operator&(T &t) {
+    return *this >> t;
   }
   void checkSize(uint32_t value) {
     if (value > SERIALIZER_MAX_SIZE_T) {
@@ -34,7 +37,7 @@ class PTreeIArchive : private boost::noncopyable {
   }
 
   // !Number
-  template <class T, typename std::enable_if<!std::is_arithmetic<T>::value,
+  template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value,
                                              int>::type = 0>
   PTreeIArchive &operator>>(T &t) {
     access::serialize(*this, t);
@@ -72,8 +75,11 @@ class PTreeIArchive : private boost::noncopyable {
   // Vector
   template <typename T>
   PTreeIArchive &operator>>(std::vector<T> &arr) {
-    for (auto& item : _tree.get_child(""))
-        arr.push_back(item.second.get_value<T>());
+    for (auto& item : _tree.get_child("")) {
+      PTreeIArchive child(item.second);
+      arr.push_back(T());
+      child >> arr.back();
+    }
     return *this;
   }
   // boost::variant
@@ -83,6 +89,13 @@ class PTreeIArchive : private boost::noncopyable {
     auto tree = _tree.get_child("value");
     PTreeIArchive child(tree);
     VariantLoad(child, value, type);
+    return *this;
+  }
+  // shared_ptr
+  template <typename T>
+  PTreeIArchive &operator>>(std::shared_ptr<T> &value) {
+    value = std::make_shared<T>();
+    *this >> *value;
     return *this;
   }
 };

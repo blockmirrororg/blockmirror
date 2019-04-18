@@ -20,17 +20,17 @@ class BinaryOArchive : private boost::noncopyable {
   BinaryOArchive(StreamType &stream) : _stream(stream) {}
 
   // Dispatch
-  template <class T>
+  template <typename T>
   BinaryOArchive &operator<<(const ::boost::serialization::nvp<T> &t) {
     return *this << t.const_value();
   }
-  template <class T>
+  template <typename T>
   BinaryOArchive &operator&(const T &t) {
     return *this << t;
   }
 
   // !Number
-  template <class T, typename std::enable_if<!std::is_arithmetic<T>::value,
+  template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value,
                                              int>::type = 0>
   BinaryOArchive &operator<<(const T &t) {
     access::serialize(*this, const_cast<T &>(t));
@@ -63,8 +63,8 @@ class BinaryOArchive : private boost::noncopyable {
     } else {
       boost::endian::native_to_little_inplace(value);
       _stream.write((char *)&value, sizeof(value));
-      return *this;
     }
+    return *this;
   }
   // Binary
   template <size_t N>
@@ -102,6 +102,15 @@ class BinaryOArchive : private boost::noncopyable {
     *this << (uint32_t)value.which();
     boost::apply_visitor(VariantVisitor<BinaryOArchive>(*this), value);
     return *this;
+  }
+  // shared_ptr
+  template <typename T>
+  BinaryOArchive &operator<<(const std::shared_ptr<T> &value) {
+    if (value.get()) {
+      return *this << *value;
+    } else {
+      return *this << T();
+    }
   }
 };
 

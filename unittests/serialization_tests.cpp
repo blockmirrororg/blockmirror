@@ -1,7 +1,7 @@
 // 测试列表:
 // 1. 无符号整数
 // 2. 带符号整数
-// 3. 单精度和双精度浮点是IEEE754编码
+// 3. 单精度和双精度 IEEE754编码
 // 4. std::array<uint8_t, X>
 // 5. std::vector<uint8_t>
 // 6. std::string
@@ -51,6 +51,10 @@ void IS(const std::string &value, T &out) {
   archive >> out;
 }
 
+using VariantType =
+    boost::variant<unsigned int, float, std::string, int, std::vector<uint8_t>,
+                   std::array<uint8_t, 4>, std::shared_ptr<int>>;
+
 template <typename T>
 bool operator==(const std::vector<T> &a, const std::vector<T> &b) {
   if (a.size() != b.size()) return false;
@@ -63,18 +67,23 @@ bool operator==(const std::vector<T> &a, const std::vector<T> &b) {
 BOOST_AUTO_TEST_SUITE(serialization_tests)
 
 template <typename T>
-void checkValue(const T &value, const char *str, const char *json) {
+void checkValue(const T &value, const char *str, const char *json,
+                bool noCheckValue = false) {
   std::string ostr = S(value);
   BOOST_CHECK_EQUAL(ostr, str);
   T ovalue;
   IS(ostr, ovalue);
-  BOOST_CHECK(ovalue == value);
+  if (!noCheckValue) {
+    BOOST_CHECK(ovalue == value);
+  }
 
   std::string jstr = J(value);
   BOOST_CHECK_EQUAL(jstr, json);
   T oovalue;
   IJ(jstr, oovalue);
-  BOOST_CHECK(oovalue == value);
+  if (!noCheckValue) {
+    BOOST_CHECK(oovalue == value);
+  }
 }
 
 void checkUInt(uint64_t value, const char *str, const char *json) {
@@ -117,9 +126,6 @@ BOOST_AUTO_TEST_CASE(serialization_tests_binary) {
 }
 
 BOOST_AUTO_TEST_CASE(serialization_tests_variant) {
-  using VariantType =
-      boost::variant<unsigned int, float, std::string, int,
-                     std::vector<uint8_t>, std::array<uint8_t, 4>>;
   checkValue(VariantType((unsigned int)0x11), "0011",
              "{\"type\": 0, \"value\": 17}");
   checkValue(VariantType((float)1.0f), "010000803F",
@@ -131,6 +137,8 @@ BOOST_AUTO_TEST_CASE(serialization_tests_variant) {
              "{\"type\": 4, \"value\": \"08060402\"}");
   checkValue(VariantType(std::array<uint8_t, 4>{8, 6, 4, 2}), "0508060402",
              "{\"type\": 5, \"value\": \"08060402\"}");
+  checkValue(VariantType(std::make_shared<int>(0x11)), "0622",
+             "{\"type\": 6, \"value\": 17}", true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

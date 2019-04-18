@@ -12,7 +12,7 @@ namespace chain {
 class BlockHeader {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(timestamp) & BOOST_SERIALIZATION_NVP(height) &
         BOOST_SERIALIZATION_NVP(previous) &
@@ -31,7 +31,7 @@ class BlockHeader {
   Pubkey producer;
 
  public:
-  BlockHeader();
+  BlockHeader() = default;
 
   uint64_t getTimestamp() const { return timestamp; }
   uint64_t getHeight() const { return height; }
@@ -39,14 +39,15 @@ class BlockHeader {
   const Hash256 &getMerkleTrx() const { return merkleTransaction; }
   const Hash256 &getMerkleData() const { return merkleData; }
   const Pubkey &getProducer() const { return producer; }
-  void setPrevious(const BlockHeader &parent);
   const Hash256 &getHash() const;
+  void setPrevious(const BlockHeader &parent);
+  void setGenesis();
 };
 
 class BlockHeaderSigned : public BlockHeader {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     BlockHeader::serialize(ar);
     ar &BOOST_SERIALIZATION_NVP(signature);
@@ -66,7 +67,7 @@ class BlockHeaderSigned : public BlockHeader {
 class Block : public BlockHeaderSigned {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     BlockHeaderSigned::serialize(ar);
     ar &BOOST_SERIALIZATION_NVP(coinbase) &
@@ -74,13 +75,47 @@ class Block : public BlockHeaderSigned {
         BOOST_SERIALIZATION_NVP(result);
   }
 
+ protected:
+  TransactionPtr coinbase;  // transfer only
+  std::vector<TransactionSignedPtr> transactions;
+  std::vector<DataBPPtr> datas;
+  std::vector<DataPtr> result;
+
+  // 辅助
+  std::unordered_map<Pubkey, DataBPPtr, Hasher> _bpDatas;
+
  public:
   using BlockHeaderSigned::BlockHeaderSigned;
 
-  TransactionSigned coinbase;  // transfer only
-  std::vector<TransactionSigned> transactions;
-  std::vector<DataBPPtr> datas;
-  std::vector<DataPtr> result;
+  /**
+   * @brief 增加某BP的一个数据
+   * @param bp BP
+   * @param data 一项数据
+   */
+  void addData(const Pubkey &bp, DataSignedPtr &data);
+  /**
+   * @brief 增加一个BP提交的所有数据
+   * @param data BP的数据
+   */
+  void addDataBP(DataBPPtr &data);
+  /**
+   * @brief 增加一笔交易
+   * @param trx 交易
+   */
+  void addTransaction(TransactionSignedPtr &trx);
+  /**
+   * @brief 设置coinbase交易
+   * @param target 奖励目标
+   * @param amount 奖励金额
+   */
+  void setCoinbase(const Pubkey &target, uint64_t amount = MINER_AMOUNT);
+  /**
+   * @brief 完成区块
+   * 1. 计算结果数据
+   * 2. 计算默克数
+   * 3. 签名
+   */
+  void finalize(const Privkey &priv, const crypto::ECCContext &ecc = crypto::ECC);
 };
 
 using BlockPtr = std::shared_ptr<Block>;

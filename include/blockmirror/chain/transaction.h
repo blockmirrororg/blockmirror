@@ -11,7 +11,7 @@ namespace chain {
 class Transaction {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(expire) & BOOST_SERIALIZATION_NVP(nonce) &
         BOOST_SERIALIZATION_NVP(script);
@@ -25,12 +25,12 @@ class Transaction {
   Script script;    // 交易执行脚本
 
  public:
+  Transaction() = default;
   Transaction(script::Transfer &&transfer);
   Transaction(script::BPJoin &&join);
   Transaction(script::BPExit &&leave);
   Transaction(script::NewFormat &&newFormat);
   Transaction(script::NewData &&newData);
-  Transaction() = default;
 
   void setNonce(uint32_t n);
   void setExpire(uint64_t e);
@@ -42,9 +42,10 @@ class Transaction {
 
   const Hash256 &getHash() const;
 };
+using TransactionPtr = std::shared_ptr<Transaction>;
 
 struct SignaturePair {
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(signer) & BOOST_SERIALIZATION_NVP(signature);
   }
@@ -60,7 +61,7 @@ struct SignaturePair {
 class TransactionSigned : public Transaction {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     Transaction::serialize(ar);
     ar &BOOST_SERIALIZATION_NVP(signatures);
@@ -78,7 +79,7 @@ class TransactionSigned : public Transaction {
                const crypto::ECCContext &ecc = crypto::ECC);
   bool verify(const crypto::ECCContext &ecc = crypto::ECC);
 };
-using TransactionSignedPtr = std::shared_ptr<Transaction>;
+using TransactionSignedPtr = std::shared_ptr<TransactionSigned>;
 
 }  // namespace chain
 }  // namespace blockmirror

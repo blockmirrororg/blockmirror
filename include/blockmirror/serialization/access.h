@@ -7,7 +7,7 @@ namespace serialization {
 
 class access {
  public:
-  template <class Archive, class T>
+  template <typename Archive, typename T>
   static void serialize(Archive &ar, T &t) {
     t.serialize(ar);
   }
@@ -28,13 +28,13 @@ class VariantVisitor : public boost::static_visitor<void> {
 template <typename S>
 struct VariantLoader {
   struct load_null {
-    template <class Archive, class V>
+    template <typename Archive, class V>
     static void invoke(Archive & /*ar*/, uint32_t /*which*/, V & /*v*/
     ) {}
   };
 
   struct load_impl {
-    template <class Archive, class V>
+    template <typename Archive, class V>
     static void invoke(Archive &ar, uint32_t which, V &v) {
       if (which == 0) {
         using head = typename boost::mpl::front<S>::type;
@@ -48,7 +48,7 @@ struct VariantLoader {
     }
   };
 
-  template <class Archive, class V>
+  template <typename Archive, class V>
   static void load(Archive &ar, uint32_t which, V &v) {
     using typex =
         typename boost::mpl::eval_if<boost::mpl::empty<S>,

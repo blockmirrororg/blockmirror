@@ -20,11 +20,11 @@ class BinaryIArchive : private boost::noncopyable {
   BinaryIArchive(StreamType &stream) : _stream(stream) {}
 
   // Dispatch
-  template <class T>
-  BinaryIArchive &operator>>(::boost::serialization::nvp<T> &t) {
+  template <typename T>
+  BinaryIArchive &operator&(const ::boost::serialization::nvp<T> &t) {
     return *this >> t.value();
   }
-  template <class T>
+  template <typename T>
   BinaryIArchive &operator&(T &t) {
     return *this >> t;
   }
@@ -39,8 +39,8 @@ class BinaryIArchive : private boost::noncopyable {
   }
 
   // !Number
-  template <class T, typename std::enable_if<!std::is_arithmetic<T>::value,
-                                             int>::type = 0>
+  template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value,
+                                                int>::type = 0>
   BinaryIArchive &operator>>(T &t) {
     access::serialize(*this, t);
     return *this;
@@ -70,8 +70,8 @@ class BinaryIArchive : private boost::noncopyable {
     } else {
       _stream.read((char *)&value, sizeof(value));
       boost::endian::little_to_native_inplace(value);
-      return *this;
     }
+    return *this;
   }
   // Binary
   template <size_t N>
@@ -112,6 +112,13 @@ class BinaryIArchive : private boost::noncopyable {
     uint32_t which;
     *this >> which;
     VariantLoad(*this, value, which);
+    return *this;
+  }
+  // shared_ptr
+  template <typename T>
+  BinaryIArchive &operator>>(std::shared_ptr<T> &value) {
+    value = std::make_shared<T>();
+    *this >> *value;
     return *this;
   }
 };

@@ -1,4 +1,5 @@
-
+// 测试列表:
+// 1. 签名和验证是否正确
 #include <blockmirror/crypto/ecc.h>
 #include <boost/test/unit_test.hpp>
 

@@ -5,9 +5,11 @@
 #include <iostream>
 #include <memory>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 #include <boost/assert.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/mpl/empty.hpp>
 #include <boost/mpl/eval_if.hpp>
 #include <boost/mpl/front.hpp>
@@ -17,6 +19,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/serialization/nvp.hpp>
 #include <boost/variant.hpp>
+#include <boost/variant/get.hpp>
 
 #include <blockmirror/config.h>
 #include <blockmirror/types.h>

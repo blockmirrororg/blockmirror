@@ -63,19 +63,19 @@ class JSONOArchive : private boost::noncopyable {
         _object_begin(false),
         _indent(indent) {}
 
-  template <class T>
+  template <typename T>
   JSONOArchive &operator<<(const ::boost::serialization::nvp<T> &t) {
     _tag(t.name());
     return *this << t.const_value();
   }
 
-  template <class T>
+  template <typename T>
   JSONOArchive &operator&(const T &t) {
     return *this << t;
   }
 
   // Object
-  template <class T, typename std::enable_if<!std::is_arithmetic<T>::value &&
+  template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value &&
                                                  !std::is_enum<T>::value,
                                              int>::type = 0>
   JSONOArchive &operator<<(const T &t) {
@@ -85,7 +85,7 @@ class JSONOArchive : private boost::noncopyable {
     return *this;
   }
   // Number
-  template <class T, typename std::enable_if<std::is_arithmetic<T>::value,
+  template <typename T, typename std::enable_if<std::is_arithmetic<T>::value,
                                              int>::type = 0>
   JSONOArchive &operator<<(const T &t) {
     _stream << +t;
@@ -135,6 +135,15 @@ class JSONOArchive : private boost::noncopyable {
     boost::apply_visitor(VariantVisitor<JSONOArchive>(*this), value);
     _end_object();
     return *this;
+  }
+  // shared_ptr
+  template <typename T>
+  JSONOArchive &operator<<(const std::shared_ptr<T> &value) {
+    if (value.get()) {
+      return *this << *value;
+    } else {
+      return *this << T();
+    }
   }
 };
 

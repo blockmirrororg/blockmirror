@@ -31,7 +31,7 @@ const Hash256 &Transaction::getHash() const {
   serialization::HashOStream oss;
   serialization::BinaryOArchive<decltype(oss)> oa(oss);
   oa << *this;
-  _hash.reset(new Hash256());
+  _hash = std::make_shared<Hash256>();
   oss.getHash(*_hash);
   return *_hash;
 }

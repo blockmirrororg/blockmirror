@@ -11,7 +11,7 @@ namespace chain {
 class Data {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(name) & BOOST_SERIALIZATION_NVP(data);
   }
@@ -39,7 +39,7 @@ using DataPtr = std::shared_ptr<Data>;
 class DataSigned : public Data {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     Data::serialize(ar);
     ar &BOOST_SERIALIZATION_NVP(signature);
@@ -64,7 +64,7 @@ using DataSignedPtr = std::shared_ptr<DataSigned>;
 class DataBP {
  protected:
   friend class blockmirror::serialization::access;
-  template <class Archive>
+  template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(bp) & BOOST_SERIALIZATION_NVP(datas);
   }

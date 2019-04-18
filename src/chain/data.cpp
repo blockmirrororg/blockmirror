@@ -13,29 +13,30 @@ Data::Data(std::string &&n, std::vector<uint8_t> &&d) : name(n), data(d) {}
 Data::Data(const Data &o) : name(o.name), data(o.data) {}
 Data::Data(Data &&o) : name(o.name), data(o.data) {}
 
-void Data::getHash(const Pubkey &bp, uint64_t height, Hash256 &hash) const {
+const Hash256 &Data::getHash(const Pubkey &bp, uint64_t height) const {
+  if (_hash.get()) {
+    return *_hash;
+  }
+  _hash = std::make_shared<Hash256>();
   serialization::HashOStream oss;
   serialization::BinaryOArchive<decltype(oss)> oa(oss);
   oa << bp << height << *this;
-  oss.getHash(hash);
+  oss.getHash(*_hash);
+  return *_hash;
 }
 
 void DataSigned::sign(const Privkey &priv, uint64_t height,
                       const crypto::ECCContext &ecc) {
   Pubkey pub;
-  Hash256 hash;
   ecc.computePub(priv, pub);
-  getHash(pub, height, hash);
-  ecc.sign(priv, hash, signature);
+  ecc.sign(priv, getHash(pub, height), signature);
 }
 bool DataSigned::verify(const Pubkey &pub, uint64_t height,
-                        const crypto::ECCContext &ecc) {
-  Hash256 hash;
-  getHash(pub, height, hash);
-  return ecc.verify(pub, hash, signature);
+                        const crypto::ECCContext &ecc) const {
+  return ecc.verify(pub, getHash(pub, height), signature);
 }
 bool DataSigned::verify(const Privkey &priv, uint64_t height,
-                        const crypto::ECCContext &ecc) {
+                        const crypto::ECCContext &ecc) const {
   Pubkey pub;
   ecc.computePub(priv, pub);
   return verify(pub, height, ecc);

@@ -17,21 +17,23 @@ class Data {
   }
 
  protected:
+  mutable Hash256Ptr _hash;
+
   std::string name;
   std::vector<uint8_t> data;
 
  public:
+  Data() = default;
   Data(const std::string &n, const std::vector<uint8_t> &d);
   Data(std::string &&n, const std::vector<uint8_t> &d);
   Data(const std::string &n, std::vector<uint8_t> &&d);
   Data(std::string &&n, std::vector<uint8_t> &&d);
   Data(const Data &o);
   Data(Data &&o);
-  Data() = default;
 
   const std::string &getName() { return name; }
   const std::vector<uint8_t> &getData() { return data; }
-  void getHash(const Pubkey &bp, uint64_t height, Hash256 &hash) const;
+  const Hash256 &getHash(const Pubkey &bp, uint64_t height) const;
 };
 using DataPtr = std::shared_ptr<Data>;
 
@@ -55,9 +57,9 @@ class DataSigned : public Data {
   void sign(const Privkey &priv, uint64_t height,
             const crypto::ECCContext &ecc = crypto::ECC);
   bool verify(const Pubkey &pub, uint64_t height,
-              const crypto::ECCContext &ecc = crypto::ECC);
+              const crypto::ECCContext &ecc = crypto::ECC) const;
   bool verify(const Privkey &priv, uint64_t height,
-              const crypto::ECCContext &ecc = crypto::ECC);
+              const crypto::ECCContext &ecc = crypto::ECC) const;
 };
 using DataSignedPtr = std::shared_ptr<DataSigned>;
 
@@ -74,10 +76,10 @@ class DataBP {
   std::vector<DataSignedPtr> datas;
 
  public:
+  DataBP() = default;
   DataBP(const Pubkey &b);
   DataBP(const DataBP &o);
   DataBP(DataBP &&o);
-  DataBP() = default;
 
   const Pubkey &getBP() const { return bp; }
   const std::vector<DataSignedPtr> &getDatas() const { return datas; }

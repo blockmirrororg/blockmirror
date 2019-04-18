@@ -52,8 +52,7 @@ void Block::setCoinbase(const Pubkey &target, uint64_t amount) {
   coinbase = std::make_shared<Transaction>(script::Transfer(target, amount));
 }
 void Block::finalize(const Privkey &priv, const crypto::ECCContext &ecc) {
-  merkleTransaction.fill(0);
-  merkleData.fill(0);
+  merkle.fill(0);
   // FIXME: 计算默克数
   sign(priv, ecc);
 }

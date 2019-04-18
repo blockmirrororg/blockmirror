@@ -1,5 +1,11 @@
 #pragma once
 
+/**
+ * 关于此目录中的线程安全考虑
+ * 1. 已经在跨线程环境中的不能调用非const函数
+ * 2. getHash 必须在首次调用后再发送到跨线程环境
+ */
+
 #include <blockmirror/chain/data.h>
 #include <blockmirror/chain/transaction.h>
 #include <blockmirror/common.h>
@@ -15,9 +21,8 @@ class BlockHeader {
   template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(timestamp) & BOOST_SERIALIZATION_NVP(height) &
-        BOOST_SERIALIZATION_NVP(previous) &
-        BOOST_SERIALIZATION_NVP(merkleTransaction) &
-        BOOST_SERIALIZATION_NVP(merkleData) & BOOST_SERIALIZATION_NVP(producer);
+        BOOST_SERIALIZATION_NVP(previous) & BOOST_SERIALIZATION_NVP(merkle) &
+        BOOST_SERIALIZATION_NVP(producer);
   }
 
  protected:
@@ -26,8 +31,7 @@ class BlockHeader {
   uint64_t timestamp;
   uint64_t height;
   Hash256 previous;
-  Hash256 merkleTransaction;
-  Hash256 merkleData;
+  Hash256 merkle;
   Pubkey producer;
 
  public:
@@ -36,8 +40,7 @@ class BlockHeader {
   uint64_t getTimestamp() const { return timestamp; }
   uint64_t getHeight() const { return height; }
   const Hash256 &getPrevious() const { return previous; }
-  const Hash256 &getMerkleTrx() const { return merkleTransaction; }
-  const Hash256 &getMerkleData() const { return merkleData; }
+  const Hash256 &getMerkle() const { return merkle; }
   const Pubkey &getProducer() const { return producer; }
   const Hash256 &getHash() const;
   void setPrevious(const BlockHeader &parent);
@@ -115,7 +118,8 @@ class Block : public BlockHeaderSigned {
    * 2. 计算默克数
    * 3. 签名
    */
-  void finalize(const Privkey &priv, const crypto::ECCContext &ecc = crypto::ECC);
+  void finalize(const Privkey &priv,
+                const crypto::ECCContext &ecc = crypto::ECC);
 };
 
 using BlockPtr = std::shared_ptr<Block>;

@@ -42,7 +42,7 @@ void TransactionSigned::addSign(const Privkey &priv,
   ecc.computePub(priv, signatures.back().signer);
   ecc.sign(priv, getHash(), signatures.back().signature);
 }
-bool TransactionSigned::verify(const crypto::ECCContext &ecc) {
+bool TransactionSigned::verify(const crypto::ECCContext &ecc) const {
   auto &hash = getHash();
   for (auto &sigPair : signatures) {
     if (!ecc.verify(sigPair.signer, hash, sigPair.signature)) {

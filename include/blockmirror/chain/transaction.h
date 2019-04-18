@@ -77,7 +77,7 @@ class TransactionSigned : public Transaction {
 
   void addSign(const Privkey &priv,
                const crypto::ECCContext &ecc = crypto::ECC);
-  bool verify(const crypto::ECCContext &ecc = crypto::ECC);
+  bool verify(const crypto::ECCContext &ecc = crypto::ECC) const;
 };
 using TransactionSignedPtr = std::shared_ptr<TransactionSigned>;
 

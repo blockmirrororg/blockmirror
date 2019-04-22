@@ -84,12 +84,17 @@ class Block : public BlockHeaderSigned {
   std::vector<DataBPPtr> datas;
   std::vector<DataPtr> result;
 
-  // 辅助
-  std::unordered_map<Pubkey, DataBPPtr, Hasher> _bpDatas;
+  std::vector<Hash256> _getHashes() const;
 
  public:
   using BlockHeaderSigned::BlockHeaderSigned;
 
+  /**
+   * @brief 检测默克ROOT是否正确
+   * @return true 
+   * @return false 
+   */
+  bool verifyMerkle() const;
   /**
    * @brief 增加某BP的一个数据
    * @param bp BP

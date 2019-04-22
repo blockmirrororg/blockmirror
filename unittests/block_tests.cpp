@@ -96,21 +96,30 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
   blockmirror::chain::TransactionSignedPtr transfer =
       std::make_shared<blockmirror::chain::TransactionSigned>(
           blockmirror::chain::script::Transfer(P(BPub), 1000000));
+  transfer->setExpire(2);
+  transfer->setNonce();
   transfer->addSign(K(APriv));
+  BOOST_CHECK(transfer->verify());
   block.addTransaction(transfer);
   // 2. BP加入 bp1和bp2 支持 bp3加入
   blockmirror::chain::TransactionSignedPtr bpjoin =
       std::make_shared<blockmirror::chain::TransactionSigned>(
           blockmirror::chain::script::BPJoin(P(bp3Pub)));
+  bpjoin->setExpire(2);
+  bpjoin->setNonce();
   bpjoin->addSign(K(bp1Priv));
   bpjoin->addSign(K(bp2Priv));
+  BOOST_CHECK(bpjoin->verify());
   block.addTransaction(bpjoin);
   // 3. BP退出 bp1和bp2 投票bp3退出
   blockmirror::chain::TransactionSignedPtr bpexit =
       std::make_shared<blockmirror::chain::TransactionSigned>(
           blockmirror::chain::script::BPExit(P(bp3Pub)));
+  bpexit->setExpire(2);
+  bpexit->setNonce();
   bpexit->addSign(K(bp1Priv));
   bpexit->addSign(K(bp2Priv));
+  BOOST_CHECK(bpjoin->verify());
   block.addTransaction(bpexit);
   // 4. 新的数据格式 bp1和bp2 提案新的数据格式
   using blockmirror::chain::script::NewFormat;
@@ -120,16 +129,22 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
           {NewFormat::TYPE_FLOAT, NewFormat::TYPE_FLOAT, NewFormat::TYPE_FLOAT,
            NewFormat::TYPE_FLOAT, NewFormat::TYPE_FLOAT},
           {0x01}, {0x02}));
+  newformat->setExpire(2);
+  newformat->setNonce();
   newformat->addSign(K(bp1Priv));
   newformat->addSign(K(bp2Priv));
+  BOOST_CHECK(bpjoin->verify());
   block.addTransaction(newformat);
   // 5. 新的数据种类
   blockmirror::chain::TransactionSignedPtr newdata =
       std::make_shared<blockmirror::chain::TransactionSigned>(
           blockmirror::chain::script::NewData("stock", "alibaba",
                                               "阿里巴巴在纳斯达克的股票数据"));
+  newdata->setExpire(2);
+  newdata->setNonce();
   newdata->addSign(K(bp1Priv));
   newdata->addSign(K(bp2Priv));
+  BOOST_CHECK(bpjoin->verify());
   block.addTransaction(newdata);
   // BP1提供的数据
   blockmirror::chain::DataBPPtr bp1Data =
@@ -142,6 +157,8 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
           "GOOGLE", std::vector<uint8_t>{0x11, 0x22, 0x33, 0x44});
   bp1Apple->sign(K(bp1Priv), block.getHeight());
   bp1Google->sign(K(bp1Priv), block.getHeight());
+  BOOST_CHECK(bp1Apple->verify(P(bp1Pub), block.getHeight()));
+  BOOST_CHECK(bp1Google->verify(P(bp1Pub), block.getHeight()));
   bp1Data->addData(bp1Apple);
   bp1Data->addData(bp1Google);
   block.addDataBP(bp1Data);
@@ -157,6 +174,8 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
           "GOOGLE", std::vector<uint8_t>{0x11, 0x22, 0x33, 0x44});
   bp2Apple->sign(K(bp2Priv), block.getHeight());
   bp2Google->sign(K(bp2Priv), block.getHeight());
+  BOOST_CHECK(bp2Apple->verify(P(bp2Pub), block.getHeight()));
+  BOOST_CHECK(bp2Google->verify(P(bp2Pub), block.getHeight()));
   bp2Data->addData(bp2Apple);
   bp2Data->addData(bp2Google);
   block.addDataBP(bp2Data);
@@ -165,10 +184,13 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
   block.finalize(K(bp1Priv));
 
   BOOST_CHECK(block.verify());
+  BOOST_CHECK(block.verifyMerkle());
 
   // 序列化测试
   std::string strJSON = SS<JSON>(block);
   std::string strBin = SS<Bin>(block);
+
+  std::cout << strJSON << std::endl;
 
   blockmirror::chain::Block blockFromJSON;
   IJ(SS<JSON>(block), blockFromJSON);

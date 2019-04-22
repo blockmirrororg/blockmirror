@@ -1,3 +1,4 @@
+#include <openssl/sha.h>
 #include <blockmirror/common.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -9,6 +10,26 @@ namespace blockmirror {
 uint64_t now_ms_since_1970() {
   return (boost::posix_time::second_clock::universal_time() - epoch)
       .total_microseconds();
+}
+
+void computeMerkleRoot(std::vector<Hash256> hashes, Hash256 &out) {
+  if (hashes.size() == 0) {
+    out.fill(0);
+    return;
+  }
+  SHA256_CTX ctx;
+  while (hashes.size() > 1) {
+    if ((hashes.size() % 2) != 0) {
+      hashes.push_back(hashes.back());
+    }
+    for (size_t i = 0; i < hashes.size() / 2; i++) {
+      SHA256_Init(&ctx);
+      SHA256_Update(&ctx, hashes[2 * i].data(), hashes[2 * i].size() * 2);
+      SHA256_Final(hashes[i].data(), &ctx);
+    }
+    hashes.resize(hashes.size() / 2);
+  }
+  out = hashes.back();
 }
 
 }  // namespace blockmirror

@@ -1,9 +1,20 @@
+/**
+ * 区块池
+ * 当发生分叉需要回滚时 能快速查找到区块
+ * 1. 添加区块时区块立即永久写入文件：前缀可以添加区块大小和校验码 投递到工作线程写入
+ * 2. 区块池中保存允许最多回滚高度的所有区块
+ * 3. 可以根据两个区块查找出分叉
+ */
 #pragma once
 
 #include <blockmirror/chain/block.h>
 
 namespace blockmirror {
 namespace store {
+
+class BlockEnumerator {
+
+};
 
 class BlockStore {
  private:

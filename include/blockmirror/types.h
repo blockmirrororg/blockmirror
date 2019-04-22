@@ -32,3 +32,13 @@ struct Hasher {
 };
 
 }  // namespace blockmirror
+
+template <size_t N>
+struct std::hash<std::array<uint8_t, N>> {
+  size_t operator()(const std::array<uint8_t, N>& s) const {
+    BOOST_STATIC_ASSERT(N > sizeof(size_t) + 1);
+    size_t size = *(size_t*)&s[1];
+    boost::endian::native_to_little_inplace(size);
+    return size;
+  }
+};

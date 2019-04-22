@@ -34,4 +34,6 @@ namespace blockmirror {
 
 uint64_t now_ms_since_1970();
 
+void computeMerkleRoot(std::vector<Hash256> hashes, Hash256 &out);
+
 }  // namespace blockmirror

@@ -27,6 +27,7 @@ struct Hasher {
   }
   template <size_t N>
   size_t operator()(const std::shared_ptr<std::array<uint8_t, N>>& s) const {
+    if (!s) return 0;
     return operator()(*s);
   }
 };

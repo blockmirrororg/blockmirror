@@ -1,25 +1,5 @@
 /**
  * 区块池
- * 
- * 出块流程:
- * 1. 主线程出块完 addBlock
- * 2. 向所有连接广播该块的HASH
- * 3. 连接收到该HASH后首先查看本机是否存在 不存在则加入pending中向对方发送 GET_BLOCK 消息
- * 4. 工作线程的定时器将缓存中的块按高度写入到文件中
- * 5. 工作线程的定时器会清除比较老的块
- * 
- * 读取区块流程:
- * 1. 如果缓存中存在直接从缓存中读取
- * 2. 否则从文件中加载
- * 
- * 网路区块流程:
- * 1. 工作线程收到广播块的消息 确认本机
- * 
- * 当发生分叉需要回滚时 能快速查找到区块
- * 1. 添加区块时区块立即永久写入文件：前缀可以添加区块大小和校验码
- * 投递到工作线程写入
- * 2. 区块池中保存允许最多回滚高度的所有区块
- * 3. 可以根据两个区块查找出分叉
  */
 #pragma once
 
@@ -103,7 +83,7 @@ class BlockStore {
    * @param back 需要回退的区块列表 包含当前区块
    * @param forward 需要应用的区块列表 包含分叉区块
    */
-  void shouldSwitch(const chain::BlockPtr &head, const chain::BlockPtr &fork,
+  void findSwitch(const chain::BlockPtr &head, const chain::BlockPtr &fork,
                     std::vector<chain::BlockPtr> &back,
                     std::vector<chain::BlockPtr> &forward);
 };

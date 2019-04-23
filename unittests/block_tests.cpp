@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
   std::string strJSON = SS<JSON>(block);
   std::string strBin = SS<Bin>(block);
 
-  std::cout << strJSON << std::endl;
+  // std::cout << strJSON << std::endl;
 
   blockmirror::chain::Block blockFromJSON;
   IJ(SS<JSON>(block), blockFromJSON);

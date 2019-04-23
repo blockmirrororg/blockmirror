@@ -43,6 +43,7 @@ class BlockHeader {
   const Hash256 &getMerkle() const { return merkle; }
   const Pubkey &getProducer() const { return producer; }
   const Hash256 &getHash() const;
+  const Hash256Ptr &getHashPtr() const { return _hash; }
   void setPrevious(const BlockHeader &parent);
   void setGenesis();
 };
@@ -53,11 +54,12 @@ class BlockHeaderSigned : public BlockHeader {
   template <typename Archive>
   void serialize(Archive &ar) {
     BlockHeader::serialize(ar);
-    ar &BOOST_SERIALIZATION_NVP(signature);
+    ar &BOOST_SERIALIZATION_NVP(coinbase) & BOOST_SERIALIZATION_NVP(signature);
   }
 
  protected:
   Signature signature;
+  TransactionPtr coinbase;
 
  public:
   using BlockHeader::BlockHeader;
@@ -65,6 +67,13 @@ class BlockHeaderSigned : public BlockHeader {
   const Signature &getSignature() const { return signature; }
   void sign(const Privkey &priv, const crypto::ECCContext &ecc = crypto::ECC);
   bool verify(const crypto::ECCContext &ecc = crypto::ECC) const;
+
+  /**
+   * @brief 设置coinbase交易
+   * @param target 奖励目标
+   * @param amount 奖励金额
+   */
+  void setCoinbase(const Pubkey &target, uint64_t amount = MINER_AMOUNT);
 };
 
 class Block : public BlockHeaderSigned {
@@ -73,16 +82,14 @@ class Block : public BlockHeaderSigned {
   template <typename Archive>
   void serialize(Archive &ar) {
     BlockHeaderSigned::serialize(ar);
-    ar &BOOST_SERIALIZATION_NVP(coinbase) &
-        BOOST_SERIALIZATION_NVP(transactions) & BOOST_SERIALIZATION_NVP(datas) &
-        BOOST_SERIALIZATION_NVP(result);
+    ar &BOOST_SERIALIZATION_NVP(transactions) & BOOST_SERIALIZATION_NVP(datas);
   }
 
  protected:
-  TransactionPtr coinbase;  // transfer only
   std::vector<TransactionSignedPtr> transactions;
   std::vector<DataBPPtr> datas;
-  std::vector<DataPtr> result;
+  // std::vector<DataPtr> result; // FIXME: 结果数据可能不需要放在区块中
+  // 应该直接更新到store
 
   std::vector<Hash256> _getHashes() const;
 
@@ -91,8 +98,8 @@ class Block : public BlockHeaderSigned {
 
   /**
    * @brief 检测默克ROOT是否正确
-   * @return true 
-   * @return false 
+   * @return true
+   * @return false
    */
   bool verifyMerkle() const;
   /**
@@ -112,12 +119,6 @@ class Block : public BlockHeaderSigned {
    */
   void addTransaction(TransactionSignedPtr &trx);
   /**
-   * @brief 设置coinbase交易
-   * @param target 奖励目标
-   * @param amount 奖励金额
-   */
-  void setCoinbase(const Pubkey &target, uint64_t amount = MINER_AMOUNT);
-  /**
    * @brief 完成区块
    * 1. 计算结果数据
    * 2. 计算默克数
@@ -126,8 +127,21 @@ class Block : public BlockHeaderSigned {
   void finalize(const Privkey &priv,
                 const crypto::ECCContext &ecc = crypto::ECC);
 };
-
 using BlockPtr = std::shared_ptr<Block>;
+
+struct BlockLess {
+  bool operator()(const Block &x, const Block &y) const {
+    if (x.getHeight() == y.getHeight()) {
+      return x.getHash() < y.getHash();
+    }
+    return x.getHeight() < y.getHeight();
+  }
+  bool operator()(const BlockPtr &x, const BlockPtr &y) const {
+    if (!x) return true;
+    if (!y) return false;
+    return operator()(*x, *y);
+  }
+};
 
 }  // namespace chain
 }  // namespace blockmirror

@@ -14,6 +14,7 @@ find_package(Boost REQUIRED COMPONENTS
     date_time
     filesystem
     serialization
+    thread
     unit_test_framework)
 
 find_package(OpenSSL REQUIRED)

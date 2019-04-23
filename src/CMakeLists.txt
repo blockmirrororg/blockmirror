@@ -8,6 +8,8 @@ add_library( blockmirror
   chain/data.cpp
   chain/block.cpp
   chain/transaction.cpp
+
+  store/block_store.cpp
   
   common.cpp
 )

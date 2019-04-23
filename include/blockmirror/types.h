@@ -31,14 +31,19 @@ struct Hasher {
   }
 };
 
-}  // namespace blockmirror
-
-template <size_t N>
-struct std::hash<std::array<uint8_t, N>> {
-  size_t operator()(const std::array<uint8_t, N>& s) const {
-    BOOST_STATIC_ASSERT(N > sizeof(size_t) + 1);
-    size_t size = *(size_t*)&s[1];
-    boost::endian::native_to_little_inplace(size);
-    return size;
+struct EqualTo {
+  template <size_t N>
+  bool operator()(const std::array<uint8_t, N>& x,
+                  const std::array<uint8_t, N>& y) const {
+    return memcmp(x.data(), y.data(), N) == 0;
+  }
+  template <size_t N>
+  bool operator()(const std::shared_ptr<std::array<uint8_t, N>>& x,
+                  const std::shared_ptr<std::array<uint8_t, N>>& y) const {
+    if (!x) return !y;
+    if (!y) return false;
+    return *x == *y;
   }
 };
+
+}  // namespace blockmirror

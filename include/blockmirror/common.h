@@ -4,9 +4,12 @@
 #include <cstdio>
 #include <iostream>
 #include <memory>
+#include <thread>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
+#include <mutex>
+#include <set>
 
 #include <boost/assert.hpp>
 #include <boost/filesystem.hpp>
@@ -20,6 +23,8 @@
 #include <boost/serialization/nvp.hpp>
 #include <boost/variant.hpp>
 #include <boost/variant/get.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <blockmirror/config.h>
 #include <blockmirror/types.h>

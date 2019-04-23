@@ -40,20 +40,19 @@ void BlockHeaderSigned::sign(const Privkey &priv,
 bool BlockHeaderSigned::verify(const crypto::ECCContext &ecc) const {
   return ecc.verify(producer, getHash(), signature);
 }
+void BlockHeaderSigned::setCoinbase(const Pubkey &target, uint64_t amount) {
+  coinbase = std::make_shared<Transaction>(script::Transfer(target, amount));
+  coinbase->setNonce();
+  coinbase->setExpire(0);
+}
 
 void Block::addDataBP(DataBPPtr &data) { datas.push_back(data); }
 
 void Block::addTransaction(TransactionSignedPtr &trx) {
   transactions.push_back(trx);
 }
-void Block::setCoinbase(const Pubkey &target, uint64_t amount) {
-  coinbase = std::make_shared<Transaction>(script::Transfer(target, amount));
-  coinbase->setNonce();
-  coinbase->setExpire(0);
-}
 void Block::finalize(const Privkey &priv, const crypto::ECCContext &ecc) {
-  // FIXME: 计算结果数据
-  // 结果数据需要根据筛选算法
+  // 结果数据在执行区块的时候计算出来 并放入 store中
   computeMerkleRoot(std::move(_getHashes()), merkle);
   sign(priv, ecc);
 }
@@ -67,18 +66,19 @@ bool Block::verifyMerkle() const {
 std::vector<Hash256> Block::_getHashes() const {
   uint32_t cnt = 0;
   std::vector<Hash256> results;
+  results.push_back(coinbase->getHash());
+    *(uint32_t *)&results.back().data()[0] =
+        boost::endian::native_to_little(cnt++);
   for (auto trx : transactions) {
-    cnt++;
     results.push_back(trx->getHash());
     *(uint32_t *)&results.back().data()[0] =
-        boost::endian::native_to_little(cnt);
+        boost::endian::native_to_little(cnt++);
   }
   for (auto bp : datas) {
     for (auto data : bp->getDatas()) {
-      cnt++;
       results.push_back(data->getHash(bp->getBP(), height));
       *(uint32_t *)&results.back().data()[0] =
-          boost::endian::native_to_little(cnt);
+          boost::endian::native_to_little(cnt++);
     }
   }
   return std::move(results);

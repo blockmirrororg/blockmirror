@@ -9,4 +9,8 @@ constexpr uint64_t MINER_AMOUNT = 100000000;    // 给BP的挖矿奖励
 constexpr size_t SERIALIZER_MAX_SIZE_T =
     1024 * 1024;  // 序列化读取
 
+constexpr size_t BLOCKSTORE_LIMIT = 256;
+
+constexpr size_t BLOCKSTORE_MAX_FILE = 1024 * 1024 * 1024;
+
 }  // namespace blockmirror

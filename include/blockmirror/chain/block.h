@@ -43,10 +43,10 @@ class BlockHeader {
   const Hash256 &getMerkle() const { return merkle; }
   const Pubkey &getProducer() const { return producer; }
   const Hash256 &getHash() const;
-  const Hash256Ptr &getHashPtr() const { 
+  const Hash256Ptr &getHashPtr() const {
     if (!_hash) getHash();
     return _hash;
-   }
+  }
   void setPrevious(const BlockHeader &parent);
   void setGenesis();
 };

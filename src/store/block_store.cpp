@@ -1,6 +1,7 @@
 #include <blockmirror/serialization/binary_iarchive.h>
 #include <blockmirror/serialization/binary_oarchive.h>
 #include <blockmirror/store/block_store.h>
+#include <boost/algorithm/hex.hpp>
 
 struct EmptyDeleter {
   void operator()(blockmirror::Hash256 *) {}
@@ -13,9 +14,20 @@ BlockStore::BlockStore() : _currentFileIndex(0) {}
 
 BlockStore::~BlockStore() { close(); }
 
-void BlockStore::load(const boost::filesystem::path &path) { _path = path; }
+void BlockStore::load(const boost::filesystem::path &path) {
+  _path = path;
+  // 从 index文件 中加载 _currentFileIndex _index
+}
 
-void BlockStore::close() {}
+void BlockStore::close() {
+  for (auto blk : _ordered) {
+    _saveBlock(blk);
+  }
+  _ordered.clear();
+  _cached.clear();
+  // FIXME:
+  // 将 _currentFileIndex _index 保存到 index文件
+}
 
 chain::BlockPtr BlockStore::_loadBlock(uint64_t index) {
   uint32_t file = getFile(index);
@@ -124,6 +136,33 @@ void BlockStore::flushBlock(size_t storeLimit) {
           _index.insert(std::make_pair(blk->getHashPtr(), indexes[i])).second);
     }
   }
+}
+
+bool BlockStore::shouldSwitch(const chain::BlockPtr &head,
+                            const chain::BlockPtr &fork,
+                            std::vector<chain::BlockPtr> &back,
+                            std::vector<chain::BlockPtr> &forward) {
+  if (fork->getHeight() <= head->getHeight()) {
+    return false;
+  }
+  // 1. 先将fork退回到同一个高度
+  chain::BlockPtr f = fork;
+  while (f->getHeight() > head->getHeight()) {
+    forward.push_back(f);
+    f = getBlock(f->getPrevious());
+  }
+  // 2. 两边开始一直退到同一个区块
+  chain::BlockPtr h = head;
+  while (f->getHash() != h->getHash()) {
+    back.push_back(h);
+    if (back.size() >= BLOCK_MAX_ROLLBACK) {
+      return false;
+    }
+    forward.push_back(f);
+    f = getBlock(f->getPrevious());
+    h = getBlock(h->getPrevious());
+  }
+  return true;
 }
 
 }  // namespace store

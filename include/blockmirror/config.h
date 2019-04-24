@@ -13,4 +13,6 @@ constexpr size_t BLOCKSTORE_LIMIT = 256;
 
 constexpr size_t BLOCKSTORE_MAX_FILE = 1024 * 1024 * 1024;
 
+constexpr size_t BLOCK_MAX_ROLLBACK = 120; // 最多回退120个区块
+
 }  // namespace blockmirror

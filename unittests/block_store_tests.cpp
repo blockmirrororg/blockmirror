@@ -71,8 +71,10 @@ BOOST_AUTO_TEST_CASE(blockstore_tests_branch) {
   auto fork = blks[9];
   std::vector<blockmirror::chain::BlockPtr> back;
   std::vector<blockmirror::chain::BlockPtr> forward;
+  // 长度不够回撤的
+  BOOST_CHECK(!store.shouldSwitch(fork, head, back, forward));
+  // 回滚细节 back 8 6 4 2 forward 9 7 5 3 1
   BOOST_CHECK(store.shouldSwitch(head, fork, back, forward));
-  // back 8 6 4 2 forward 9 7 5 3 1
   BOOST_CHECK(back[0]->getHash() == blks[8]->getHash());
   BOOST_CHECK(back[1]->getHash() == blks[6]->getHash());
   BOOST_CHECK(back[2]->getHash() == blks[4]->getHash());

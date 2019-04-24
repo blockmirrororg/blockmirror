@@ -6,11 +6,11 @@
 namespace blockmirror {
 namespace chain {
 
-Transaction::Transaction(script::Transfer &&transfer) : script(transfer) {}
-Transaction::Transaction(script::BPJoin &&join) : script(join) {}
-Transaction::Transaction(script::BPExit &&leave) : script(leave) {}
-Transaction::Transaction(script::NewFormat &&newFormat) : script(newFormat) {}
-Transaction::Transaction(script::NewData &&newData) : script(newData) {}
+Transaction::Transaction(scri::Transfer &&transfer) : script(transfer) {}
+Transaction::Transaction(scri::BPJoin &&join) : script(join) {}
+Transaction::Transaction(scri::BPExit &&leave) : script(leave) {}
+Transaction::Transaction(scri::NewFormat &&newFormat) : script(newFormat) {}
+Transaction::Transaction(scri::NewData &&newData) : script(newData) {}
 
 void Transaction::setNonce() {
   _hash.reset();

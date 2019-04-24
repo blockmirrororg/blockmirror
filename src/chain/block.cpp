@@ -41,7 +41,7 @@ bool BlockHeaderSigned::verify(const crypto::ECCContext &ecc) const {
   return ecc.verify(producer, getHash(), signature);
 }
 void BlockHeaderSigned::setCoinbase(const Pubkey &target, uint64_t amount) {
-  coinbase = std::make_shared<Transaction>(script::Transfer(target, amount));
+  coinbase = std::make_shared<Transaction>(scri::Transfer(target, amount));
   coinbase->setNonce();
   coinbase->setExpire(0);
 }

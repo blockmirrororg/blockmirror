@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
   // 1. 转账 A => B
   blockmirror::chain::TransactionSignedPtr transfer =
       std::make_shared<blockmirror::chain::TransactionSigned>(
-          blockmirror::chain::script::Transfer(P(BPub), 1000000));
+          blockmirror::chain::scri::Transfer(P(BPub), 1000000));
   transfer->setExpire(2);
   transfer->setNonce();
   transfer->addSign(K(APriv));
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
   // 2. BP加入 bp1和bp2 支持 bp3加入
   blockmirror::chain::TransactionSignedPtr bpjoin =
       std::make_shared<blockmirror::chain::TransactionSigned>(
-          blockmirror::chain::script::BPJoin(P(bp3Pub)));
+          blockmirror::chain::scri::BPJoin(P(bp3Pub)));
   bpjoin->setExpire(2);
   bpjoin->setNonce();
   bpjoin->addSign(K(bp1Priv));
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
   // 3. BP退出 bp1和bp2 投票bp3退出
   blockmirror::chain::TransactionSignedPtr bpexit =
       std::make_shared<blockmirror::chain::TransactionSigned>(
-          blockmirror::chain::script::BPExit(P(bp3Pub)));
+          blockmirror::chain::scri::BPExit(P(bp3Pub)));
   bpexit->setExpire(2);
   bpexit->setNonce();
   bpexit->addSign(K(bp1Priv));
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
   BOOST_CHECK(bpjoin->verify());
   block.addTransaction(bpexit);
   // 4. 新的数据格式 bp1和bp2 提案新的数据格式
-  using blockmirror::chain::script::NewFormat;
+  using blockmirror::chain::scri::NewFormat;
   blockmirror::chain::TransactionSignedPtr newformat =
       std::make_shared<blockmirror::chain::TransactionSigned>(NewFormat(
           "stock", "股票类型的描述",
@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
   // 5. 新的数据种类
   blockmirror::chain::TransactionSignedPtr newdata =
       std::make_shared<blockmirror::chain::TransactionSigned>(
-          blockmirror::chain::script::NewData("stock", "alibaba",
+          blockmirror::chain::scri::NewData("stock", "alibaba",
                                               "阿里巴巴在纳斯达克的股票数据"));
   newdata->setExpire(2);
   newdata->setNonce();

@@ -6,7 +6,7 @@
 
 namespace blockmirror {
 namespace chain {
-namespace script {
+namespace scri {
 // 转账: signer(必须为一个) 给 target 转账 amount
 class Transfer {
  protected:
@@ -134,7 +134,8 @@ class NewData {
   friend class blockmirror::serialization::access;
   template <typename Archive>
   void serialize(Archive &ar) {
-    ar &BOOST_SERIALIZATION_NVP(format) & BOOST_SERIALIZATION_NVP(name) & BOOST_SERIALIZATION_NVP(desc);
+    ar &BOOST_SERIALIZATION_NVP(format) & BOOST_SERIALIZATION_NVP(name) &
+        BOOST_SERIALIZATION_NVP(desc);
   }
 
  protected:
@@ -145,16 +146,17 @@ class NewData {
  public:
   NewData() = default;
   NewData(const NewData &o) : format(o.format), name(o.name) {}
-  NewData(const std::string &f, const std::string &n, const std::string &d) : format(f), name(n), desc(d) {}
+  NewData(const std::string &f, const std::string &n, const std::string &d)
+      : format(f), name(n), desc(d) {}
 
   const std::string &getName() const { return name; }
   const std::string &getFormat() const { return format; }
 };
 
-}  // namespace script
+}  // namespace scri
 
-using Script = boost::variant<script::Transfer, script::BPJoin, script::BPExit,
-                              script::NewFormat, script::NewData>;
+using Script = boost::variant<scri::Transfer, scri::BPJoin, scri::BPExit,
+                              scri::NewFormat, scri::NewData>;
 
 }  // namespace chain
 }  // namespace blockmirror

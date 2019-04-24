@@ -26,11 +26,11 @@ class Transaction {
 
  public:
   Transaction() = default;
-  Transaction(script::Transfer &&transfer);
-  Transaction(script::BPJoin &&join);
-  Transaction(script::BPExit &&leave);
-  Transaction(script::NewFormat &&newFormat);
-  Transaction(script::NewData &&newData);
+  Transaction(scri::Transfer &&transfer);
+  Transaction(scri::BPJoin &&join);
+  Transaction(scri::BPExit &&leave);
+  Transaction(scri::NewFormat &&newFormat);
+  Transaction(scri::NewData &&newData);
 
   void setNonce(uint32_t n);
   void setExpire(uint64_t e);
@@ -38,8 +38,6 @@ class Transaction {
 
   uint64_t getExpire() const { return expire; }
   uint32_t getNonce() const { return nonce; }
-  const Script &getScript() const { return script; }
-  uint32_t getType() const { return (uint32_t)script.which(); }
 
   const Hash256 &getHash() const;
 };

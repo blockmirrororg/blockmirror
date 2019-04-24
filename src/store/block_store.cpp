@@ -58,9 +58,9 @@ uint64_t BlockStore::_saveBlock(chain::BlockPtr block) {
   serialization::BinaryOArchive<std::ofstream> archive(_currentFile);
   archive << block;
   if (_currentFile.tellp() >= BLOCKSTORE_MAX_FILE) {
-    _currentFile.close();
     _currentFileIndex++;
   }
+  _currentFile.close();
   return makeIndex(file, offset);
 }
 

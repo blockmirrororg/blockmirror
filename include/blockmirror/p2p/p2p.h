@@ -8,7 +8,9 @@
  *   收到该消息后首先查看blockstore中是否存在该区块 存在则不响应
  *   否则向对方发送 GET_BLOCK 消息
  * 
- * 2. 获取区块详情(GET_BLOCK) => (BLOCK_DETAIL)
+ * 2. 获取区块详情(GET_BLOCK)
+ *   实际内容是HASH32值
+ *   查找到区块
  * 
  * 3. 获取交易
  *   1) 

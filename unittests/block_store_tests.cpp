@@ -2,18 +2,38 @@
 #include <boost/algorithm/hex.hpp>
 #include <boost/test/unit_test.hpp>
 
+#include <blockmirror/serialization/json_oarchive.h>
+using JSON = blockmirror::serialization::JSONOArchive<std::ostringstream>;
+template <typename Archive, typename T>
+std::string SS(const T &obj) {
+  std::ostringstream oss;
+  Archive archive(oss);
+  archive << obj;
+  return oss.str();
+}
+
 BOOST_AUTO_TEST_SUITE(blockstore_tests)
 
 BOOST_AUTO_TEST_CASE(blockstore_tests_simple) {
+  boost::filesystem::remove("./0.block");
   blockmirror::store::BlockStore store;
 
   blockmirror::chain::BlockPtr block1 =
       std::make_shared<blockmirror::chain::Block>();
   blockmirror::chain::BlockPtr block2 =
       std::make_shared<blockmirror::chain::Block>();
+  block1->setGenesis();
+  block1->setCoinbase({0});
+  block1->finalize({0x12, 0xb0, 0x04, 0xff, 0xf7, 0xf4, 0xb6, 0x9e,
+                    0xf8, 0x65, 0x0e, 0x76, 0x7f, 0x18, 0xf1, 0x1e,
+                    0xde, 0x15, 0x81, 0x48, 0xb4, 0x25, 0x66, 0x07,
+                    0x23, 0xb9, 0xf9, 0xa6, 0x6e, 0x61, 0xf7, 0x47});
   block2->setPrevious(*block1);
-  block1->getHash();
-  block2->getHash();
+  block2->setCoinbase({1});
+  block2->finalize({0x12, 0xb0, 0x04, 0xff, 0xf7, 0xf4, 0xb6, 0x9e,
+                    0xf8, 0x65, 0x0e, 0x76, 0x7f, 0x18, 0xf1, 0x1e,
+                    0xde, 0x15, 0x81, 0x48, 0xb4, 0x25, 0x66, 0x07,
+                    0x23, 0xb9, 0xf9, 0xa6, 0x6e, 0x61, 0xf7, 0x47});
 
   store.load(".");
 
@@ -37,6 +57,17 @@ BOOST_AUTO_TEST_CASE(blockstore_tests_simple) {
   BOOST_CHECK_EQUAL(block1.use_count(), 1);
 
   auto blk1 = store.getBlock(block1->getHashPtr());
+
+  boost::algorithm::hex(blk1->getHash(),
+                        std::ostream_iterator<char>(std::cout));
+  std::cout << (uint64_t)blk1.get() << std::endl;
+  boost::algorithm::hex(block1->getHash(),
+                        std::ostream_iterator<char>(std::cout));
+  std::cout << (uint64_t)block1.get() << std::endl;
+
+  std::cout << SS<JSON>(blk1) << std::endl;
+  std::cout << SS<JSON>(block1) << std::endl;
+
   BOOST_CHECK_EQUAL_COLLECTIONS(blk1->getHash().begin(), blk1->getHash().end(),
                                 block1->getHash().begin(),
                                 block1->getHash().end());

@@ -10,13 +10,13 @@ set( CMAKE_CXX_STANDARD 11 )
 set( CMAKE_CXX_EXTENSIONS ON )
 set( CXX_STANDARD_REQUIRED ON)
 
-#set(Secp256k1_ROOT_DIR "vcpkg dir")
-#set(OPENSSL_ROOT_DIR "vcpkg dir")
-#set(BOOST_ROOT "vcpkg dir")
-#add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
-#add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-#set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MT")
+set(Secp256k1_ROOT_DIR "D:\\Sources\\vcpkg\\installed\\x64-windows-static")
+set(OPENSSL_ROOT_DIR "D:\\Sources\\vcpkg\\installed\\x64-windows-static")
+set(BOOST_ROOT "D:\\Sources\\vcpkg\\installed\\x64-windows-static")
+add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
+add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MT")
 
 find_package(Boost REQUIRED COMPONENTS
     date_time

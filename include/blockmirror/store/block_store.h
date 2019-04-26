@@ -31,7 +31,6 @@ class BlockStore {
   boost::shared_mutex _mutex;
 
   uint32_t _currentFileIndex;
-  std::ofstream _currentFile;
   boost::mutex _fileMutex;
 
   boost::filesystem::path _path;

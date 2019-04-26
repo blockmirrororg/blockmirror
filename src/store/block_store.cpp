@@ -32,8 +32,9 @@ void BlockStore::close() {
 chain::BlockPtr BlockStore::_loadBlock(uint64_t index) {
   uint32_t file = getFile(index);
   uint32_t offset = getOffset(index);
-
   std::ifstream stream;
+  stream.exceptions(std::ifstream::failbit | std::ifstream::badbit |
+                    std::ifstream::eofbit);
   stream.open((_path / (boost::lexical_cast<std::string>(file) + ".block"))
                   .generic_string(),
               std::ios_base::binary | std::ios_base::in);
@@ -46,21 +47,22 @@ chain::BlockPtr BlockStore::_loadBlock(uint64_t index) {
 
 uint64_t BlockStore::_saveBlock(chain::BlockPtr block) {
   boost::unique_lock<boost::mutex> lock(_fileMutex);
-  if (!_currentFile.is_open()) {
-    _currentFile.open(
-        (_path /
-         (boost::lexical_cast<std::string>(_currentFileIndex) + ".block"))
-            .generic_string(),
-        std::ios_base::binary | std::ios_base::out | std::ios_base::ate);
-  }
+  std::ofstream stream;
+  stream.exceptions(std::ifstream::failbit | std::ifstream::badbit |
+                    std::ifstream::eofbit);
+  stream.open(
+      (_path / (boost::lexical_cast<std::string>(_currentFileIndex) + ".block"))
+          .generic_string(),
+      std::ios_base::binary | std::ios_base::out | std::ios_base::app |
+          std::ios_base::in);
   uint32_t file = _currentFileIndex;
-  uint32_t offset = (uint32_t)_currentFile.tellp();
-  serialization::BinaryOArchive<std::ofstream> archive(_currentFile);
+  uint32_t offset = (uint32_t)stream.tellp();
+  serialization::BinaryOArchive<std::ofstream> archive(stream);
   archive << block;
-  if (_currentFile.tellp() >= BLOCKSTORE_MAX_FILE) {
+  if (stream.tellp() >= BLOCKSTORE_MAX_FILE) {
     _currentFileIndex++;
   }
-  _currentFile.close();
+  stream.close();
   return makeIndex(file, offset);
 }
 
@@ -139,9 +141,9 @@ void BlockStore::flushBlock(size_t storeLimit) {
 }
 
 bool BlockStore::shouldSwitch(const chain::BlockPtr &head,
-                            const chain::BlockPtr &fork,
-                            std::vector<chain::BlockPtr> &back,
-                            std::vector<chain::BlockPtr> &forward) {
+                              const chain::BlockPtr &fork,
+                              std::vector<chain::BlockPtr> &back,
+                              std::vector<chain::BlockPtr> &forward) {
   back.clear();
   forward.clear();
   if (fork->getHeight() <= head->getHeight()) {

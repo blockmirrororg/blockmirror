@@ -53,7 +53,11 @@ class BinaryIArchive : private boost::noncopyable {
       uint64_t target = 0;
       uint8_t byte;
       size_t offset = 0;
+      int counter = 0;
       do {
+        if (++counter > 10) {
+          throw std::runtime_error("BinaryIArchive bad integer");
+        }
         _stream.read((char *)&byte, sizeof(byte));
         target |= ((uint64_t)(byte & 0x7F) << offset);
         offset += 7;

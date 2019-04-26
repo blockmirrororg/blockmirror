@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(blockstore_tests_simple) {
   BOOST_CHECK_EQUAL(block1.use_count(), 1);
 
   auto blk1 = store.getBlock(block1->getHashPtr());
-
+/*
   boost::algorithm::hex(blk1->getHash(),
                         std::ostream_iterator<char>(std::cout));
   std::cout << (uint64_t)blk1.get() << std::endl;
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(blockstore_tests_simple) {
 
   std::cout << SS<JSON>(blk1) << std::endl;
   std::cout << SS<JSON>(block1) << std::endl;
-
+*/
   BOOST_CHECK_EQUAL_COLLECTIONS(blk1->getHash().begin(), blk1->getHash().end(),
                                 block1->getHash().begin(),
                                 block1->getHash().end());

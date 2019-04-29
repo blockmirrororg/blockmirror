@@ -2,6 +2,7 @@
 #define MESSAGE_H
 
 #include <boost/noncopyable.hpp>
+#include <string.h>
 
 class Message
 {

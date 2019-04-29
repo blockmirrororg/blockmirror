@@ -18,7 +18,7 @@ void Acceptor::handle_accept(const boost::system::error_code& e)
 {
 	if (!e)
 	{
-		new_connection_->start();
+		//new_connection_->start();
 	}
 
 	start_accept();

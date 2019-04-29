@@ -10,6 +10,9 @@ add_library( blockmirror
   chain/transaction.cpp
 
   store/block_store.cpp
+  store/format_store.cpp
+  store/data_store.cpp
+  store/bps_store.cpp
   
   common.cpp
   

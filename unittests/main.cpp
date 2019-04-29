@@ -9,10 +9,17 @@
 
 boost::asio::io_service s_;
 boost::asio::io_service s1_;
+boost::asio::deadline_timer timer_(s_, boost::posix_time::seconds(10)); // 10秒后触发一次
 
 void handle_stop(int signo) {
 	s_.stop();
 	s1_.stop();
+}
+
+void handle_timeout() {
+	// do something
+	timer_.expires_at(timer_.expires_at() + boost::posix_time::seconds(10));
+	timer_.async_wait(boost::bind(handle_timeout));
 }
 
 int main(int argc, char* argv[]) {
@@ -34,14 +41,16 @@ int main(int argc, char* argv[]) {
 #if defined(SIGQUIT)
 		signals.add(SIGQUIT);
 #endif
+		// main thread job
 		signals.async_wait(boost::bind(&handle_stop, boost::asio::placeholders::signal_number));
+		timer_.async_wait(boost::bind(handle_timeout));
 
+		// work thread job
 		Acceptor acceptor(s1_, 8080); // 绑定的端口
 
 		std::vector<boost::shared_ptr<boost::thread>> threads;
 		for (std::size_t i = 0; i < workthreads; ++i) {
-			boost::shared_ptr<boost::thread> thread(
-				new boost::thread(boost::bind(&boost::asio::io_service::run, &s1_)));
+			boost::shared_ptr<boost::thread> thread(new boost::thread(boost::bind(&boost::asio::io_service::run, &s1_)));
 			threads.push_back(thread);
 		}
 

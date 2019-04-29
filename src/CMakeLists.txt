@@ -12,6 +12,10 @@ add_library( blockmirror
   store/block_store.cpp
   
   common.cpp
+  
+	../include/blockmirror/common.h
+	../include/blockmirror/config.h
+	../include/blockmirror/types.h
 )
 
 target_link_libraries( blockmirror 

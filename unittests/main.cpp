@@ -6,6 +6,7 @@
 #include <boost/thread/thread.hpp>
 #include <iostream>
 #include "Acceptor.h"
+#include "Connector.h"
 
 boost::asio::io_service s_;
 boost::asio::io_service s1_;
@@ -47,6 +48,7 @@ int main(int argc, char* argv[]) {
 
 		// work thread job
 		Acceptor acceptor(s1_, 8080); // °ó¶¨µÄ¶Ë¿Ú
+		Connector connector(s1_);
 
 		std::vector<boost::shared_ptr<boost::thread>> threads;
 		for (std::size_t i = 0; i < workthreads; ++i) {

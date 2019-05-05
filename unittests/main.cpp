@@ -10,7 +10,7 @@
 
 boost::asio::io_service s_;
 boost::asio::io_service s1_;
-boost::asio::deadline_timer timer_(s_, boost::posix_time::seconds(10)); // 10Ãëºó´¥·¢Ò»´Î
+boost::asio::deadline_timer timer_(s_, boost::posix_time::seconds(10)); // 10ï¿½ï¿½ó´¥·ï¿½Ò»ï¿½ï¿½
 
 void handle_stop(int signo) {
 	s_.stop();
@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
 			workthreads = boost::lexical_cast<std::size_t>(argv[1]);
 		}
 
-		// Ê¹ÓÃkillÃüÁî·¢ËÍÐÅºÅÈÃ³ÌÐò°²È«ÍË³ö
+		// Ê¹ï¿½ï¿½killï¿½ï¿½ï¿½î·¢ï¿½ï¿½ï¿½Åºï¿½ï¿½Ã³ï¿½ï¿½ï¿½È«ï¿½Ë³ï¿½
 		boost::asio::signal_set signals(s_);
 		signals.add(SIGINT);
 		signals.add(SIGTERM);
@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
 		timer_.async_wait(boost::bind(handle_timeout));
 
 		// work thread job
-		Acceptor acceptor(s1_, 8080); // °ó¶¨µÄ¶Ë¿Ú
+		Acceptor acceptor(s1_, 8080); // ï¿½ó¶¨µÄ¶Ë¿ï¿½
 		Connector connector(s1_);
 
 		std::vector<boost::shared_ptr<boost::thread>> threads;
@@ -66,4 +66,4 @@ int main(int argc, char* argv[]) {
 	}
 
 	return 0;
-}
+} 

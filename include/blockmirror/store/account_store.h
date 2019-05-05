@@ -4,14 +4,43 @@
 #pragma once
 
 #include <blockmirror/common.h>
+#include <blockmirror/serialization/access.h>
+#include <utility>
 
 namespace blockmirror {
 namespace store {
 
+class Account {
+ protected:
+  friend class blockmirror::serialization::access;
+  template <typename Archive>
+  void serialize(Archive &ar) {
+    ar &BOOST_SERIALIZATION_NVP(_p) & BOOST_SERIALIZATION_NVP(_b);
+  }
+
+ protected:
+  Pubkey _p;
+  uint64_t _b;
+
+ public:
+  Account() {
+    _p.fill(0);
+    _b = 0;
+  }
+  Account(Pubkey p, uint64_t b) : _p(p), _b(b) {}
+
+  const Pubkey &getPubkey() const { return _p; }
+  const uint64_t &getBalance() const { return _b; }
+};
+
+using AccountPtr = std::shared_ptr<Account>;
+
 class AccountStore {
  private:
   // 账户和账户余额
-  std::unordered_map<Pubkey, uint64_t> _accounts;
+  std::unordered_map<Pubkey, uint64_t, blockmirror::Hasher,
+                     blockmirror::EqualTo>
+      _accounts;
 
   boost::shared_mutex _mutex;
 
@@ -33,6 +62,10 @@ class AccountStore {
    * @brief 查询账户余额
    */
   uint64_t query(const Pubkey &pubkey);
+  /**
+   * @brief 添加账户
+   */
+  bool add(const Pubkey &pubkey,uint64_t amount);
   /**
    * @brief 转账
    */

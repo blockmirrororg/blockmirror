@@ -60,14 +60,16 @@ store::NewDataPtr DataStore::query(const std::string& name) {
 }
 
 bool DataStore::add(const store::NewDataPtr& dataPtr) {
-  boost::unique_lock<boost::shared_mutex> ulock(_mutex);
-  std::string name = dataPtr->getName();
-  auto it = _datas.find(name);
-  if (it != _datas.end()) {
-    return false;
+  if (nullptr != dataPtr) {
+    boost::unique_lock<boost::shared_mutex> ulock(_mutex);
+    std::string name = dataPtr->getName();
+    auto it = _datas.find(name);
+    if (it == _datas.end()) {
+      _datas.insert(std::make_pair(name, dataPtr));
+      return true;
+    }
   }
-  _datas.insert(std::make_pair(name, dataPtr));
-  return true;
+  return false;
 }
 
 }  // namespace store

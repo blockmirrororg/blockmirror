@@ -59,23 +59,27 @@ store::BPJoinPtr BpsStore::query(const Pubkey& key) {
 }
 
 bool BpsStore::add(const store::BPJoinPtr& joinPtr) {
-  boost::unique_lock<boost::shared_mutex> ulock(_mutex);
-  Pubkey key = joinPtr->getBP();
-  auto it = _bps.find(key);
-  if (it != _bps.end()) {
-    return false;
+  if (nullptr != joinPtr) {
+    boost::unique_lock<boost::shared_mutex> ulock(_mutex);
+    Pubkey key = joinPtr->getBP();
+    auto it = _bps.find(key);
+    if (it == _bps.end()) {
+      _bps.insert(std::make_pair(key, joinPtr));
+      return true;
+    }
   }
-  _bps.insert(std::make_pair(key, joinPtr));
-  return true;
+  return false;
 }
 
 bool BpsStore::reduce(const store::BPExitPtr& exitPtr) {
-  boost::unique_lock<boost::shared_mutex> ulock(_mutex);
-  Pubkey key = exitPtr->getBP();
-  auto it = _bps.find(key);
-  if (it != _bps.end()) {
-    _bps.erase(key);
-    return true;
+  if (nullptr != exitPtr) {
+    boost::unique_lock<boost::shared_mutex> ulock(_mutex);
+    Pubkey key = exitPtr->getBP();
+    auto it = _bps.find(key);
+    if (it != _bps.end()) {
+      _bps.erase(key);
+      return true;
+    }
   }
   return false;
 }

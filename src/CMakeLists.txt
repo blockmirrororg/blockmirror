@@ -13,6 +13,8 @@ add_library( blockmirror
   store/format_store.cpp
   store/data_store.cpp
   store/bps_store.cpp
+  store/account_store.cpp
+  store/transaction_store.cpp
   
   common.cpp
   

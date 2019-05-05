@@ -61,14 +61,16 @@ store::NewFormatPtr FormatStore::query(const std::string& name) {
 }
 
 bool FormatStore::add(const store::NewFormatPtr& formatPtr) {
-  boost::unique_lock<boost::shared_mutex> ulock(_mutex);
-  std::string name = formatPtr->getName();
-  auto it = _formats.find(name);
-  if (it != _formats.end()) {
-    return false;
+  if (nullptr != formatPtr) {
+    boost::unique_lock<boost::shared_mutex> ulock(_mutex);
+    std::string name = formatPtr->getName();
+    auto it = _formats.find(name);
+    if (it == _formats.end()) {
+      _formats.insert(std::make_pair(name, formatPtr));
+      return true;
+    }
   }
-  _formats.insert(std::make_pair(name, formatPtr));
-  return true;
+  return false;
 }
 
 }  // namespace store

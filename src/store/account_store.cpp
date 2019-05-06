@@ -1,6 +1,5 @@
-#include <blockmirror/serialization/binary_iarchive.h>
-#include <blockmirror/serialization/binary_oarchive.h>
 #include <blockmirror/store/account_store.h>
+#include <blockmirror/store/store.h>
 
 namespace blockmirror {
 namespace store {
@@ -15,39 +14,17 @@ void AccountStore::load(const boost::filesystem::path &path) {
       boost::filesystem::is_directory(path)) {
     _path = path;
   }
-
-  std::ifstream stream;
-  stream.exceptions(/*std::ifstream::failbit | */std::ifstream::badbit /*|
-   std::ifstream::eofbit*/);
-  stream.open((_path / "account").generic_string(),
-              std::ios_base::binary | std::ios_base::in);
-
-  if (stream.is_open()) {
-    while (stream.peek() != EOF) {
-      serialization::BinaryIArchive<std::ifstream> archive(stream);
-      store::AccountPtr account = std::make_shared<Account>();
-      archive >> account;
-      _accounts.insert(
-          std::make_pair(account->getPubkey(), account->getBalance()));
-    }
+  if (boost::filesystem::exists(_path / "account")) {
+    BinaryReader reader;
+    reader.open(_path / "account");
+    reader >> _accounts;
   }
-
-  stream.close();
 }
 
 void AccountStore::close() {
-  boost::unique_lock<boost::shared_mutex> ulock(_mutex);
-  std::ofstream stream;
-  stream.exceptions(std::ifstream::failbit | std::ifstream::badbit |
-                    std::ifstream::eofbit);
-  stream.open((_path / "account").generic_string(),
-              std::ios_base::binary | std::ios_base::out);
-  for (auto n : _accounts) {
-    serialization::BinaryOArchive<std::ofstream> archive(stream);
-    store::AccountPtr account = std::make_shared<Account>(n.first, n.second);
-    archive << account;
-  }
-  stream.close();
+  BinaryWritter writter;
+  writter.open(_path / "account");
+  writter << _accounts;
 }
 
 uint64_t AccountStore::query(const Pubkey &pubkey) {
@@ -57,13 +34,14 @@ uint64_t AccountStore::query(const Pubkey &pubkey) {
   return i->second;
 }
 
-bool AccountStore::add(const Pubkey &pubkey, uint64_t amount) {
-  auto it = _accounts.find(pubkey);
-  if (it == _accounts.end()) {
+void AccountStore::add(const Pubkey &pubkey, uint64_t amount) {
+  boost::unique_lock<boost::shared_mutex> lock(_mutex);
+  auto finded = _accounts.find(pubkey);
+  if (finded == _accounts.end()) {
     _accounts.insert(std::make_pair(pubkey, amount));
-    return true;
+  } else {
+    finded->second += amount;
   }
-  return false;
 }
 
 bool AccountStore::transfer(const Pubkey &from, const Pubkey &to,

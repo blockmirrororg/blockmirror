@@ -22,7 +22,7 @@ class BlockStore {
 
  private:
   // 写入文件的块
-  std::unordered_map<Hash256Ptr, uint64_t> _index;
+  std::unordered_map<Hash256Ptr, uint64_t, Hasher, EqualTo> _index;
 
   // 缓存在内存的块
   std::set<chain::BlockPtr, chain::BlockLess> _ordered;

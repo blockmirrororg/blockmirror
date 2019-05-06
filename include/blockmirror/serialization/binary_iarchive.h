@@ -125,6 +125,18 @@ class BinaryIArchive : private boost::noncopyable {
     *this >> *value;
     return *this;
   }
+  // unordered_map
+  template <typename Key, typename T, typename Hash, typename KeyEqual>
+  BinaryIArchive &operator>>(std::unordered_map<Key, T, Hash, KeyEqual> &value) {
+    size_t size = readSize();
+    for (size_t i = 0; i < size; i++) {
+      Key key;
+      T val;
+      *this >> key >> val;
+      value.insert(std::make_pair(key, val));
+    }
+    return *this;
+  }
 };
 
 }  // namespace serialization

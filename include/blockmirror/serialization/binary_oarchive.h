@@ -31,7 +31,7 @@ class BinaryOArchive : private boost::noncopyable {
 
   // !Number
   template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value,
-                                             int>::type = 0>
+                                                int>::type = 0>
   BinaryOArchive &operator<<(const T &t) {
     access::serialize(*this, const_cast<T &>(t));
     return *this;
@@ -111,6 +111,16 @@ class BinaryOArchive : private boost::noncopyable {
     } else {
       return *this << T();
     }
+  }
+  // unordered_map
+  template <typename Key, typename T, typename Hash, typename KeyEqual>
+  BinaryOArchive &operator<<(
+      const std::unordered_map<Key, T, Hash, KeyEqual> &value) {
+    *this << (uint32_t)value.size();
+    for (auto &val : value) {
+      *this << val.first << val.second;
+    }
+    return *this;
   }
 };
 

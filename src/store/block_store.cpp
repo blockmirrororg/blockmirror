@@ -1,6 +1,5 @@
-#include <blockmirror/serialization/binary_iarchive.h>
-#include <blockmirror/serialization/binary_oarchive.h>
 #include <blockmirror/store/block_store.h>
+#include <blockmirror/store/store.h>
 #include <boost/algorithm/hex.hpp>
 
 struct EmptyDeleter {
@@ -16,53 +15,51 @@ BlockStore::~BlockStore() { close(); }
 
 void BlockStore::load(const boost::filesystem::path &path) {
   _path = path;
-  // 从 index文件 中加载 _currentFileIndex _index
+
+  if (boost::filesystem::exists(_path / "index")) {
+    BinaryReader reader;
+    reader.open(_path / "index");
+    reader >> _currentFileIndex >> _index;
+  }
 }
 
 void BlockStore::close() {
-  for (auto blk : _ordered) {
-    _saveBlock(blk);
-  }
+  flushBlock(0);
   _ordered.clear();
   _cached.clear();
-  // FIXME:
-  // 将 _currentFileIndex _index 保存到 index文件
+
+  BinaryWritter writter;
+  writter.open(_path / "index");
+  writter << _currentFileIndex << _index;
 }
 
 chain::BlockPtr BlockStore::_loadBlock(uint64_t index) {
   uint32_t file = getFile(index);
   uint32_t offset = getOffset(index);
-  std::ifstream stream;
-  stream.exceptions(std::ifstream::failbit | std::ifstream::badbit |
-                    std::ifstream::eofbit);
-  stream.open((_path / (boost::lexical_cast<std::string>(file) + ".block"))
-                  .generic_string(),
-              std::ios_base::binary | std::ios_base::in);
-  stream.seekg(offset);
-  serialization::BinaryIArchive<std::ifstream> archive(stream);
+
+  BinaryReader reader;
+  reader.open(_path / (boost::lexical_cast<std::string>(file) + ".block"));
+  reader.seekg(offset);
   chain::BlockPtr block = std::make_shared<chain::Block>();
-  archive >> block;
+  reader >> block;
   return block;
 }
 
 uint64_t BlockStore::_saveBlock(chain::BlockPtr block) {
   boost::unique_lock<boost::mutex> lock(_fileMutex);
-  std::ofstream stream;
-  stream.exceptions(std::ifstream::failbit | std::ifstream::badbit |
-                    std::ifstream::eofbit);
-  stream.open(
-      (_path / (boost::lexical_cast<std::string>(_currentFileIndex) + ".block"))
-          .generic_string(),
+
+  BinaryWritter writter;
+  writter.open(
+      _path / (boost::lexical_cast<std::string>(_currentFileIndex) + ".block"),
       std::ios_base::binary | std::ios_base::out | std::ios_base::app |
           std::ios_base::in);
   uint32_t file = _currentFileIndex;
-  uint32_t offset = (uint32_t)stream.tellp();
-  serialization::BinaryOArchive<std::ofstream> archive(stream);
-  archive << block;
-  if (stream.tellp() >= BLOCKSTORE_MAX_FILE) {
+  uint32_t offset = (uint32_t)writter.tellp();
+  writter << block;
+  if (writter.tellp() >= BLOCKSTORE_MAX_FILE) {
     _currentFileIndex++;
   }
-  stream.close();
+  writter.close();
   return makeIndex(file, offset);
 }
 

@@ -10,31 +10,6 @@
 namespace blockmirror {
 namespace store {
 
-class Account {
- protected:
-  friend class blockmirror::serialization::access;
-  template <typename Archive>
-  void serialize(Archive &ar) {
-    ar &BOOST_SERIALIZATION_NVP(_p) & BOOST_SERIALIZATION_NVP(_b);
-  }
-
- protected:
-  Pubkey _p;
-  uint64_t _b;
-
- public:
-  Account() {
-    _p.fill(0);
-    _b = 0;
-  }
-  Account(Pubkey p, uint64_t b) : _p(p), _b(b) {}
-
-  const Pubkey &getPubkey() const { return _p; }
-  const uint64_t &getBalance() const { return _b; }
-};
-
-using AccountPtr = std::shared_ptr<Account>;
-
 class AccountStore {
  private:
   // 账户和账户余额
@@ -65,7 +40,7 @@ class AccountStore {
   /**
    * @brief 添加账户
    */
-  bool add(const Pubkey &pubkey,uint64_t amount);
+  void add(const Pubkey &pubkey,uint64_t amount);
   /**
    * @brief 转账
    */

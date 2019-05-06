@@ -9,8 +9,7 @@ namespace p2p {
 class MsgHeartbeat {
   friend class blockmirror::serialization::access;
   template <typename Archive>
-  void serialize(Archive &) {
-  }
+  void serialize(Archive &) {}
 };
 
 // 广播区块消息 当我获得了一个完整的区块时 向所有连接发送此消息
@@ -21,9 +20,16 @@ class MsgBroadcastBlock {
     ar &BOOST_SERIALIZATION_NVP(height) & BOOST_SERIALIZATION_NVP(hash);
   }
 
-  uint64_t height; // 所广播的高度
-  Hash256 hash; // 所广播的HASH
+  uint64_t height;  // 所广播的高度
+  Hash256 hash;     // 所广播的HASH
 };
+
+struct MessageHeader {
+  uint16_t magic;
+  uint16_t length;
+};
+
+BOOST_STATIC_ASSERT(sizeof(MessageHeader) == 4);
 
 using Message = boost::variant<MsgHeartbeat, MsgBroadcastBlock>;
 

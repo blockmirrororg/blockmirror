@@ -17,7 +17,7 @@ using BPExitPtr = std::shared_ptr<chain::scri::BPExit>;
 
 class BpsStore {
  private:
-  std::unordered_map<Pubkey, store::BPJoinPtr,blockmirror::Hasher,blockmirror::EqualTo> _bps;
+  std::set<Pubkey, Less> _bps;
 
   boost::shared_mutex _mutex;
 
@@ -38,15 +38,15 @@ class BpsStore {
   /**
    * @brief 读取数据
    */
-  store::BPJoinPtr query(const Pubkey& key);
+  bool contains(const Pubkey& key);
   /**
    * @brief 添加数据
    */
-  bool add(const store::BPJoinPtr& joinPtr);
+  bool add(const Pubkey& key);
   /**
    * @brief 减少数据
    */
-  bool reduce(const store::BPExitPtr& exitPtr);
+  bool remove(const Pubkey& key);
 };
 
 }  // namespace store

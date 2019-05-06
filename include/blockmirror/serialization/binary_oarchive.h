@@ -122,6 +122,15 @@ class BinaryOArchive : private boost::noncopyable {
     }
     return *this;
   }
+  // set
+  template <typename T, typename L>
+  BinaryOArchive &operator<<(const std::set<T, L> &value) {
+    *this << (uint32_t)value.size();
+    for (auto &val : value) {
+      *this << val;
+    }
+    return *this;
+  }
 };
 
 }  // namespace serialization

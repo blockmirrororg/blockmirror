@@ -10,10 +10,7 @@ AccountStore::AccountStore() {
 AccountStore::~AccountStore() { close(); }
 
 void AccountStore::load(const boost::filesystem::path &path) {
-  if (boost::filesystem::exists(path) &&
-      boost::filesystem::is_directory(path)) {
-    _path = path;
-  }
+  _path = path;
   if (boost::filesystem::exists(_path / "account")) {
     BinaryReader reader;
     reader.open(_path / "account");

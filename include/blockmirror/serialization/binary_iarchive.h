@@ -137,6 +137,17 @@ class BinaryIArchive : private boost::noncopyable {
     }
     return *this;
   }
+  // set
+  template <typename T, typename L>
+  BinaryIArchive &operator>>(std::set<T, L> &value) {
+    size_t size = readSize();
+    for (size_t i = 0; i < size; i++) {
+      T val;
+      *this >> val;
+      value.insert(val);
+    }
+    return *this;
+  }
 };
 
 }  // namespace serialization

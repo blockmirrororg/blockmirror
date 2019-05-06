@@ -40,7 +40,7 @@ class AccountStore {
   /**
    * @brief 添加账户
    */
-  void add(const Pubkey &pubkey,uint64_t amount);
+  bool add(const Pubkey &pubkey,uint64_t amount);
   /**
    * @brief 转账
    */

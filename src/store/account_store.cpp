@@ -31,13 +31,15 @@ uint64_t AccountStore::query(const Pubkey &pubkey) {
   return i->second;
 }
 
-void AccountStore::add(const Pubkey &pubkey, uint64_t amount) {
+bool AccountStore::add(const Pubkey &pubkey, uint64_t amount) {
   boost::unique_lock<boost::shared_mutex> lock(_mutex);
   auto finded = _accounts.find(pubkey);
   if (finded == _accounts.end()) {
-    _accounts.insert(std::make_pair(pubkey, amount));
+    auto r = _accounts.insert(std::make_pair(pubkey, amount));
+    return r.second;
   } else {
     finded->second += amount;
+    return true;
   }
 }
 

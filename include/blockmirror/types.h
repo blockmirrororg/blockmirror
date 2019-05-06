@@ -56,9 +56,9 @@ struct Less {
   template <size_t N>
   bool operator()(const std::shared_ptr<std::array<uint8_t, N>>& x,
                   const std::shared_ptr<std::array<uint8_t, N>>& y) const {
-    if (!x) return !y;
+    if (!x) return true;
     if (!y) return false;
-    return *x == *y;
+    return operator()(*x, *y);
   }
 };
 

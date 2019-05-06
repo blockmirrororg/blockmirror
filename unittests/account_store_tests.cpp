@@ -14,8 +14,8 @@ BOOST_AUTO_TEST_CASE(account_tests_ok) {
     BOOST_CHECK_EQUAL(store.query(pk1), 0);
     BOOST_CHECK_EQUAL(store.query(pk2), 0);
 
-    store.add(pk1, 1000);
-    store.add(pk2, 100);
+    BOOST_CHECK(store.add(pk1, 1000));
+    BOOST_CHECK(store.add(pk2, 100));
     BOOST_CHECK_EQUAL(store.query(pk1), 1000);
     BOOST_CHECK_EQUAL(store.query(pk2), 100);
 

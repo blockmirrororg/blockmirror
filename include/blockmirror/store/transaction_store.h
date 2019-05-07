@@ -8,12 +8,19 @@
  * 5. 初始化和关闭时：从文件加载或者写入文件
  * 需要实现接口:
  * 1. 根据HASH256判断交易是否存在<读>
- * 2. 添加交易并设置标记是否打包过<写>
- * 3. 修改交易标记<写>
- * 4. 根据高度移除交易<写>
- * 5. 拷贝全部未打包交易
+ * 2. 添加交易<写>
+ * 3. 修改交易打包高度<写>
+ * 4. 根据过期高度移除交易<写>
+ * 5. 拷贝并移除全部打包高度为0的交易<读>
+ * 6.
  */
 #pragma once
+
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/mem_fun.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index_container.hpp>
 
 #include <blockmirror/chain/transaction.h>
 #include <blockmirror/common.h>
@@ -22,47 +29,80 @@
 namespace blockmirror {
 namespace store {
 
-class TransactionMarked {
+class TransactionStore {
  protected:
   friend class blockmirror::serialization::access;
-  template <typename Archive>
+
+  template <typename Archive,
+            typename std::enable_if<Archive::IsSaving::value, int>::type = 0>
   void serialize(Archive &ar) {
-    ar &BOOST_SERIALIZATION_NVP(_transPtr) & BOOST_SERIALIZATION_NVP(_mark);
+    ar << (uint32_t)_container.size();
+    for (auto i = _container.begin(); i != _container.end(); ++i) {
+      ar << *i;
+    }
   }
 
- protected:
-  chain::TransactionPtr _transPtr;
-  uint8_t _mark;
-
- public:
-  TransactionMarked() {
-    _transPtr = nullptr;
-    _mark = 0;
+  template <typename Archive,
+            typename std::enable_if<!Archive::IsSaving::value, int>::type = 0>
+  void serialize(Archive &ar) {
+    uint32_t size;
+    ar >> size;
+    if (size > SERIALIZER_MAX_SIZE_T) {
+      throw std::runtime_error("TransactionStore::serialize bad size");
+    }
+    for (uint32_t i = 0; i < size; i++) {
+      TransactionItem item(nullptr, 0);
+      ar >> item;
+      _container.insert(item);
+    }
   }
-  TransactionMarked(chain::TransactionPtr t, uint8_t m)
-      : _transPtr(t), _mark(m) {}
-  void setMark(uint8_t m) { _mark = m; };
-  const chain::TransactionPtr getTransactionPtr() const { return _transPtr; }
-  const uint8_t getMark() const { return _mark; }
-};
 
-using TransactionMarkedPtr = std::shared_ptr<TransactionMarked>;
-
-class TransactionStore {
  private:
-  std::unordered_map<Hash256, TransactionMarkedPtr, blockmirror::Hasher,
-                     blockmirror::EqualTo>
-      _trs;
+  struct TransactionItem {
+    friend class blockmirror::serialization::access;
+    template <typename Archive>
+    void serialize(Archive &ar) {
+      ar &transaction &height;
+    }
+    chain::TransactionSignedPtr transaction;
+    uint64_t height;
+
+    TransactionItem(const chain::TransactionSignedPtr &trx, uint64_t h)
+        : transaction(trx), height(h) {}
+
+    const Hash256Ptr hash() const { return transaction->getHashPtr(); }
+
+    uint64_t expire() const { return transaction->getExpire(); }
+  };
+
+  struct tagHash {};
+  struct tagHeight {};
+  struct tagExpire {};
+
+  typedef boost::multi_index::multi_index_container<
+      TransactionItem,
+      boost::multi_index::indexed_by<
+          boost::multi_index::hashed_unique<boost::multi_index::tag<tagHash>,
+                                            BOOST_MULTI_INDEX_CONST_MEM_FUN(
+                                                TransactionItem,
+                                                const Hash256Ptr, hash),
+                                            Hasher, EqualTo>,
+          boost::multi_index::ordered_non_unique<
+              boost::multi_index::tag<tagHeight>,
+              BOOST_MULTI_INDEX_MEMBER(TransactionItem, uint64_t, height)>,
+          boost::multi_index::ordered_non_unique<
+              boost::multi_index::tag<tagExpire>,
+              BOOST_MULTI_INDEX_CONST_MEM_FUN(TransactionItem, uint64_t,
+                                              expire)> > >
+      TransactionContainer;
+
+  TransactionContainer _container;
   boost::shared_mutex _mutex;
   boost::filesystem::path _path;
 
  public:
-  const static uint8_t UNPACK_STATUS = 0;
-  const static uint8_t PACK_STATUS = 1;
-
- public:
-  TransactionStore();
-  ~TransactionStore();
+  TransactionStore() {}
+  ~TransactionStore() { close(); }
   /**
    * @brief 从文件中加载store
    */
@@ -74,23 +114,28 @@ class TransactionStore {
   /**
    * @brief 判断交易是否存在
    */
-  bool exist(const Hash256 &h);
+  bool contains(const Hash256Ptr &h);
   /**
-   * @brief 添加交易并设置标记是否打包过
+   * @brief 添加或者修改交易
+   *
+   * @param trx 交易
+   * @param height 打包区块 0表示未打包
+   * @return true 添加成功
+   * @return false 添加失败修改打包高度
    */
-  bool add(const chain::TransactionPtr &tPtr, uint8_t m = UNPACK_STATUS);
+  bool add(const chain::TransactionSignedPtr &trx, uint64_t height = 0);
   /**
-   * @brief 修改交易标记
+   * @brief 弹出所有未打包的交易
+   *
+   * @return std::vector<chain::TransactionSignedPtr>
    */
-  bool modify(const Hash256 &h, uint8_t m);
+  std::vector<chain::TransactionSignedPtr> popUnpacked();
   /**
-   * @brief 根据高度移除交易
+   * @brief 删除已经超时的交易
+   *
+   * @param height 当前高度
    */
-  size_t remove(const uint64_t &h);
-  /**
-   * @brief 拷贝全部未打包交易
-   */
-  std::vector<chain::TransactionPtr> copy();
+  void removeExpired(uint64_t height);
 };
 
 }  // namespace store

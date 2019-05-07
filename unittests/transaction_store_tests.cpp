@@ -1,72 +1,106 @@
-#include<boost/test/unit_test.hpp>
-#include<blockmirror/store/transaction_store.h>
 #include <blockmirror/common.h>
+#include <blockmirror/store/transaction_store.h>
+#include <boost/algorithm/hex.hpp>
+#include <boost/test/unit_test.hpp>
 
 BOOST_AUTO_TEST_SUITE(transaction_tests)
 
+using namespace blockmirror;
+
+template <typename Container>
+void dump(const Container &container) {
+  boost::algorithm::hex(container, std::ostream_iterator<char>(std::cout));
+  std::cout << std::endl;
+}
+
 BOOST_AUTO_TEST_CASE(transaction_tests_ok) {
+  auto trx1 = std::make_shared<chain::TransactionSigned>(
+      chain::scri::Transfer({0}, 100));
+  auto trx2 = std::make_shared<chain::TransactionSigned>(
+      chain::scri::Transfer({0}, 1000));
+  auto trx3 = std::make_shared<chain::TransactionSigned>(
+      chain::scri::Transfer({0}, 10000));
+  auto trx4 = std::make_shared<chain::TransactionSigned>(
+      chain::scri::Transfer({0}, 100000));
+  auto trxnon = std::make_shared<chain::TransactionSigned>(
+      chain::scri::Transfer({0}, 1000000));
+  
+  trx1->setExpire(1);
+  trx2->setExpire(2);
+  trx3->setExpire(3);
+  trx4->setExpire(4);
 
-    blockmirror::store::TransactionStore ts1;
-    boost::filesystem::path p("/ze");
-    ts1.load(p);
+  boost::filesystem::remove("./transaction");
+  {
+    store::TransactionStore store;
+    store.load(".");
+    BOOST_CHECK(store.add(trx1));
+    BOOST_CHECK(store.add(trx2, 1));
+    BOOST_CHECK(store.add(trx3, 2));
+    BOOST_CHECK(store.add(trx4));
+    BOOST_CHECK(!store.add(trx1));
+    BOOST_CHECK(!store.add(trx2, 1));
+    BOOST_CHECK(!store.add(trx3, 2));
+    BOOST_CHECK(!store.add(trx4));
 
-    blockmirror::Pubkey pk1{1,2,3,4,5,6,7,8};
-    blockmirror::Pubkey pk2{1,2,3,4,5,5};
+    BOOST_CHECK(store.contains(trx1->getHashPtr()));
+    BOOST_CHECK(store.contains(trx2->getHashPtr()));
+    BOOST_CHECK(store.contains(trx3->getHashPtr()));
+    BOOST_CHECK(store.contains(trx4->getHashPtr()));
+    BOOST_CHECK(!store.contains(trxnon->getHashPtr()));
 
-    blockmirror::chain::TransactionPtr tPtr1 = 
-    std::make_shared<blockmirror::chain::Transaction>(blockmirror::chain::scri::Transfer(pk1, 1000000));
-    blockmirror::chain::TransactionPtr tPtr2 = 
-    std::make_shared<blockmirror::chain::Transaction>(blockmirror::chain::scri::Transfer(pk2, 2000000));
+    auto hash4 = std::make_shared<Hash256>(trx4->getHash());
+    BOOST_CHECK(store.contains(hash4));
 
-    //ts1.add(tPtr1);
-    //ts1.add(tPtr2,1);
-    //blockmirror::Hash256 h1 = tPtr1->getHash();
-    //blockmirror::Hash256 h2 = tPtr2->getHash();
+    auto unpacked = store.popUnpacked();
+    BOOST_CHECK(!store.contains(trx1->getHashPtr()));
+    BOOST_CHECK(store.contains(trx2->getHashPtr()));
+    BOOST_CHECK(store.contains(trx3->getHashPtr()));
+    BOOST_CHECK(!store.contains(trx4->getHashPtr()));
 
-/*     for(size_t i = 0; i < h1.size(); i++)
-    {
-        //std::cout<<h1[i]<<",";
+    EqualTo equal;
+    BOOST_CHECK_EQUAL(unpacked.size(), 2);
+    for (auto i = unpacked.begin(); i != unpacked.end(); ++i) {
+      BOOST_CHECK(equal((*i)->getHash(), trx1->getHash()) ||
+                  equal((*i)->getHash(), trx4->getHash()));
     }
-    std::cout<<std::endl; */
+    BOOST_CHECK(store.add(trx1));
+    BOOST_CHECK(store.add(trx4));
 
-/*     for(size_t i = 0; i < h2.size(); i++)
-    {
-        std::cout<<h2[i]<<",";
+    store.removeExpired(2);
+    BOOST_CHECK(!store.contains(trx1->getHashPtr()));
+    BOOST_CHECK(!store.contains(trx2->getHashPtr()));
+    BOOST_CHECK(store.contains(trx3->getHashPtr()));
+    BOOST_CHECK(store.contains(trx4->getHashPtr()));
+
+    BOOST_CHECK(!store.add(trx3, 5));
+    BOOST_CHECK(!store.add(trx4, 2));
+    unpacked = store.popUnpacked();
+    BOOST_CHECK(unpacked.empty());
+
+    BOOST_CHECK(!store.add(trx3));
+    BOOST_CHECK(!store.add(trx4));
+    unpacked = store.popUnpacked();
+    BOOST_CHECK_EQUAL(unpacked.size(), 2);
+    for (auto i = unpacked.begin(); i != unpacked.end(); ++i) {
+      BOOST_CHECK(equal((*i)->getHash(), trx3->getHash()) ||
+                  equal((*i)->getHash(), trx4->getHash()));
     }
-    std::cout<<std::endl; */
-
     
-    //bool b1 = ts1.exist(h1);
-    //bool b2 = ts1.exist(h2);
-
-    //std::cout<<"b1 is:"<<b1<<std::endl;
-    //std::cout<<"b2 is:"<<b2<<std::endl;
-
-    ts1.remove(3);
-
-    std::vector<blockmirror::chain::TransactionPtr> vv;
-    vv = ts1.copy();
-
-    std::cout<<"vv size:"<<vv.size()<<std::endl;
-    for(size_t i = 0; i < vv.size(); i++)
-    {
-        blockmirror::Hash256 h = vv[i]->getHash();
-        for(auto j:h)
-        {
-            std::cout<<j;
-        }
-        std::cout<<std::endl;
-
-        std::cout<<"b is:"<<ts1.exist(h)<<std::endl;
-        std::cout<<"expire:"<<vv[i]->getExpire()<<std::endl;
-
-        //ts1.modify(h,blockmirror::store::TransactionStore::PACK_STATUS);
-    }
-    
-
-    ts1.close(); 
-
-    std::cout<<"transaction test end."<<std::endl;
+    BOOST_CHECK(store.add(trx1));
+    BOOST_CHECK(store.add(trx2, 1));
+    BOOST_CHECK(store.add(trx3, 2));
+    BOOST_CHECK(store.add(trx4));
+  }
+  {
+    store::TransactionStore store;
+    store.load(".");
+    BOOST_CHECK(store.contains(trx1->getHashPtr()));
+    BOOST_CHECK(store.contains(trx2->getHashPtr()));
+    BOOST_CHECK(store.contains(trx3->getHashPtr()));
+    BOOST_CHECK(store.contains(trx4->getHashPtr()));
+    BOOST_CHECK(!store.contains(trxnon->getHashPtr()));
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

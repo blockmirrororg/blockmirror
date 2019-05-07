@@ -1,3 +1,10 @@
+file(GLOB BLOCKMIRROR_0 "${CMAKE_SOURCE_DIR}/include/blockmirror/*.h")
+file(GLOB BLOCKMIRROR_1 "${CMAKE_SOURCE_DIR}/include/blockmirror/store/*.h")
+file(GLOB BLOCKMIRROR_2 "${CMAKE_SOURCE_DIR}/include/blockmirror/chain/*.h")
+file(GLOB BLOCKMIRROR_3 "${CMAKE_SOURCE_DIR}/include/blockmirror/crypto/*.h")
+file(GLOB BLOCKMIRROR_4 "${CMAKE_SOURCE_DIR}/include/blockmirror/p2p/*.h")
+file(GLOB BLOCKMIRROR_5 "${CMAKE_SOURCE_DIR}/include/blockmirror/serialization/*.h")
+file(GLOB BLOCKMIRROR_6 "${CMAKE_SOURCE_DIR}/include/blockmirror/rpc/*.h" "${CMAKE_SOURCE_DIR}/src/rpc/*.cpp")
 
 add_library( blockmirror
   secp256k1_contrib/lax_der_parsing.c
@@ -17,10 +24,15 @@ add_library( blockmirror
   store/transaction_store.cpp
   
   common.cpp
-  
-	../include/blockmirror/common.h
-	../include/blockmirror/config.h
-	../include/blockmirror/types.h
+	
+	${BLOCKMIRROR_0}
+	${BLOCKMIRROR_1}
+	${BLOCKMIRROR_2}
+	${BLOCKMIRROR_3}
+	${BLOCKMIRROR_4}
+	${BLOCKMIRROR_5}
+	${BLOCKMIRROR_6}
+
 )
 
 target_link_libraries( blockmirror 

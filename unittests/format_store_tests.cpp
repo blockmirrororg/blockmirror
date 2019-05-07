@@ -5,36 +5,69 @@ BOOST_AUTO_TEST_SUITE(format_tests)
 
 BOOST_AUTO_TEST_CASE(format_tests_ok) {
 
-    blockmirror::store::FormatStore ft1;
-    boost::filesystem::path p("/ze");
-    ft1.load(p);
-
-    std::vector<uint8_t> v{1,2,3};
-    blockmirror::chain::scri::NewFormat n1
-    {std::string{"111"},std::string{"222"},v,v,v};
+    std::vector<uint8_t> v1{1,2,3};
     blockmirror::store::NewFormatPtr p1 = 
-    std::make_shared<blockmirror::chain::scri::NewFormat>(n1);
-    ft1.add(p1);
+    std::make_shared<blockmirror::chain::scri::NewFormat>(std::string{"111"},std::string{"222"},v1,v1,v1);
 
-    blockmirror::store::NewFormatPtr p2 = ft1.query(std::string("222"));
-    if (p2 == nullptr) {
-        std::cout<<"nullptr"<<std::endl;
-    }
-    else{
-        std::cout<<p2->getName()<<std::endl;
-    }
+    std::vector<uint8_t> v2{5,5,5};
+    blockmirror::store::NewFormatPtr p2 = 
+    std::make_shared<blockmirror::chain::scri::NewFormat>(std::string{"aaa"},std::string{"ccc"},v2,v2,v2);
+    boost::filesystem::remove("./format");
+    {
+        blockmirror::store::FormatStore store;
+        store.load(".");
 
-    blockmirror::store::NewFormatPtr p3 = ft1.query(std::string("111"));
-    if (p3 == nullptr) {
-        std::cout<<"nullptr"<<std::endl;
-    }
-    else{
-        std::cout<<p3->getName()<<std::endl;
-    }
+        BOOST_CHECK(!store.query("111"));
+        BOOST_CHECK(!store.query("222"));
+        BOOST_CHECK(!store.query("aaa"));
 
-    ft1.close();
+        BOOST_CHECK(store.add(p1));
+        BOOST_CHECK(store.add(p2));
 
-    std::cout<<"format test end."<<std::endl;
+        BOOST_CHECK(store.query("111"));
+        BOOST_CHECK(!store.query("222"));
+        BOOST_CHECK(store.query("aaa"));
+    }
+    size_t filesize = 0;
+    {
+        blockmirror::store::FormatStore store;
+        store.load("./");
+
+        BOOST_CHECK(store.query("111"));
+        BOOST_CHECK(store.query("aaa"));
+
+        BOOST_CHECK_EQUAL(store.add(p1),0);
+        BOOST_CHECK_EQUAL(store.add(p2),0);
+
+        store.close();
+
+        filesize = boost::filesystem::file_size("./format");
+    }
+    {
+        size_t s = boost::filesystem::file_size("./format");
+        BOOST_CHECK_EQUAL(filesize,s);
+
+        blockmirror::store::FormatStore store;
+        store.load(".");
+
+        BOOST_CHECK(store.query("111"));
+        BOOST_CHECK(store.query("aaa"));
+
+        blockmirror::store::NewFormatPtr p3 = store.query("111");
+        BOOST_CHECK_EQUAL(p3->getName(),"111");
+        BOOST_CHECK_EQUAL(p3->getDesc(),"222");
+        BOOST_CHECK(p3->getDataFormat()==v1);
+        BOOST_CHECK(p3->getResultScript()==v1);
+        BOOST_CHECK(p3->getValidScript()==v1);
+
+        blockmirror::store::NewFormatPtr p5 = store.query("aaa");
+        BOOST_CHECK_EQUAL(p5->getName(),"aaa");
+        BOOST_CHECK_EQUAL(p5->getDesc(),"ccc");
+        BOOST_CHECK(p5->getDataFormat()==v2);
+        BOOST_CHECK(p5->getResultScript()==v2);
+        BOOST_CHECK(p5->getValidScript()==v2);
+
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

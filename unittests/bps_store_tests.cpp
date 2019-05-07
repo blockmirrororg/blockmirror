@@ -1,49 +1,75 @@
-#include<boost/test/unit_test.hpp>
-#include<blockmirror/store/bps_store.h>
+#include <blockmirror/store/bps_store.h>
+#include <boost/test/unit_test.hpp>
 
 BOOST_AUTO_TEST_SUITE(bps_tests)
 
 BOOST_AUTO_TEST_CASE(bps_tests_ok) {
+  blockmirror::Pubkey pk1{1, 2, 3, 4, 5, 6, 7, 8};
+  blockmirror::Pubkey pk2{1, 2, 3, 4, 5, 5};
+  boost::filesystem::remove("./bps");
+  {
+    blockmirror::store::BpsStore store;
+    store.load(".");
 
-    blockmirror::store::BpsStore bs1;
-    boost::filesystem::path p("/ze");
-    bs1.load(p);
+    BOOST_CHECK_EQUAL(store.contains(pk1),0);
+    BOOST_CHECK_EQUAL(store.contains(pk2),0);
+    BOOST_CHECK_EQUAL(store.remove(pk1),0);
+    BOOST_CHECK_EQUAL(store.remove(pk2),0);
 
-    blockmirror::Pubkey pk1{1,2,3,4,5,6,7,8};
-    blockmirror::Pubkey pk2{1,2,3,4,5,5};
-    blockmirror::chain::scri::BPJoin bpj1
-    {pk1};
-    blockmirror::store::BPJoinPtr p1 = 
-    std::make_shared<blockmirror::chain::scri::BPJoin>(bpj1);
-    bs1.add(p1);
+    BOOST_CHECK(store.add(pk1));
+    BOOST_CHECK(store.add(pk2));
+    BOOST_CHECK_EQUAL(store.contains(pk1),1);
+    BOOST_CHECK_EQUAL(store.contains(pk2),1);
 
-    blockmirror::store::BPJoinPtr p2 = bs1.query(pk1);
-    if (p2 == nullptr) {
-        std::cout<<"nullptr"<<std::endl;
-    }
-    else{
-        blockmirror::Pubkey pk = p2->getBP();
-        for(auto i:pk)
-        std::cout<<(int)i<<"";
+    BOOST_CHECK_EQUAL(store.remove(pk1),1);
+    BOOST_CHECK_EQUAL(store.remove(pk2),1);
+    BOOST_CHECK_EQUAL(store.contains(pk1),0);
+    BOOST_CHECK_EQUAL(store.contains(pk2),0);
+  }
+  size_t filesize = 0;
+  {
+    blockmirror::store::BpsStore store;
+    store.load(".");
 
-        std::cout<<std::endl;
-    }
+    BOOST_CHECK_EQUAL(store.contains(pk1),0);
+    BOOST_CHECK_EQUAL(store.contains(pk2),0);
 
-    blockmirror::store::BPJoinPtr p3 = bs1.query(pk2);
-    if (p3 == nullptr) {
-        std::cout<<"nullptr"<<std::endl;
-    }
-    else{
-        blockmirror::Pubkey pk = p3->getBP();
-        for(auto i:pk)
-        std::cout<<(int)i<<"";
+    BOOST_CHECK(store.add(pk1));
+    BOOST_CHECK(store.add(pk2));
 
-        std::cout<<std::endl;
-    }
+    store.close();
+    filesize = boost::filesystem::file_size("./bps");
+  }
+  {
+    size_t s = boost::filesystem::file_size("./bps");
+    BOOST_CHECK_EQUAL(filesize,s);
 
-    bs1.close(); 
+    blockmirror::store::BpsStore store;
+    store.load(".");
 
-    std::cout<<"bps test end."<<std::endl;
+    BOOST_CHECK(store.contains(pk1));
+    BOOST_CHECK(store.contains(pk2));
+
+    BOOST_CHECK_EQUAL(store.remove(pk1),1);
+
+    BOOST_CHECK_EQUAL(store.contains(pk1),0);
+    BOOST_CHECK_EQUAL(store.contains(pk2),1);
+  }
+  {
+    blockmirror::store::BpsStore store;
+    store.load(".");
+
+    BOOST_CHECK_EQUAL(store.contains(pk1),0);
+    BOOST_CHECK_EQUAL(store.contains(pk2),1);
+    BOOST_CHECK_EQUAL(store.add(pk2),0);
+
+    BOOST_CHECK_EQUAL(store.remove(pk1),0);
+    BOOST_CHECK_EQUAL(store.remove(pk2),1);
+
+    BOOST_CHECK_EQUAL(store.add(pk1),1);
+    BOOST_CHECK_EQUAL(store.add(pk2),1);
+  }
+
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -1,6 +1,5 @@
-#include <blockmirror/serialization/binary_iarchive.h>
-#include <blockmirror/serialization/binary_oarchive.h>
 #include <blockmirror/store/format_store.h>
+#include <blockmirror/store/store.h>
 
 namespace blockmirror {
 namespace store {
@@ -12,46 +11,21 @@ FormatStore::FormatStore() {
 FormatStore::~FormatStore() { close(); }
 
 void FormatStore::load(const boost::filesystem::path& path) {
-  if (boost::filesystem::exists(path) &&
-      boost::filesystem::is_directory(path)) {
-    _path = path;
+  _path = path;
+  if (boost::filesystem::exists((_path / "format"))) {
+    BinaryReader reader;
+    reader.open(_path / "format");
+    reader >> _formats;
   }
-
-  std::ifstream stream;
-  stream.exceptions(/*std::ifstream::failbit | */std::ifstream::badbit /*|
-   std::ifstream::eofbit*/);
-  stream.open((_path / "format").generic_string(),
-              std::ios_base::binary | std::ios_base::in);
-
-  if (stream.is_open()) {
-    while (stream.peek() != EOF) {
-      serialization::BinaryIArchive<std::ifstream> archive(stream);
-      store::NewFormatPtr newFormat =
-          std::make_shared<chain::scri::NewFormat>();
-      archive >> newFormat;
-      std::string name = newFormat->getName();
-      _formats.insert(std::make_pair(name, newFormat));
-    }
-  }
-
-  stream.close();
 }
 
 void FormatStore::close() {
-  boost::unique_lock<boost::shared_mutex> ulock(_mutex);
-  std::ofstream stream;
-  stream.exceptions(std::ifstream::failbit | std::ifstream::badbit |
-                    std::ifstream::eofbit);
-  stream.open((_path / "format").generic_string(),
-              std::ios_base::binary | std::ios_base::out);
-  for (auto n : _formats) {
-    serialization::BinaryOArchive<std::ofstream> archive(stream);
-    archive << n.second;
-  }
-  stream.close();
+  BinaryWritter writter;
+  writter.open(_path / "format");
+  writter << _formats;
 }
 
-store::NewFormatPtr FormatStore::query(const std::string& name) {
+const store::NewFormatPtr FormatStore::query(const std::string& name) {
   boost::shared_lock<boost::shared_mutex> slock(_mutex);
   auto it = _formats.find(name);
   if (it == _formats.end()) {
@@ -61,16 +35,9 @@ store::NewFormatPtr FormatStore::query(const std::string& name) {
 }
 
 bool FormatStore::add(const store::NewFormatPtr& formatPtr) {
-  if (nullptr != formatPtr) {
-    boost::unique_lock<boost::shared_mutex> ulock(_mutex);
-    std::string name = formatPtr->getName();
-    auto it = _formats.find(name);
-    if (it == _formats.end()) {
-      _formats.insert(std::make_pair(name, formatPtr));
-      return true;
-    }
-  }
-  return false;
+  boost::unique_lock<boost::shared_mutex> ulock(_mutex);
+  auto p = _formats.insert(std::make_pair(formatPtr->getName(), formatPtr));
+  return p.second;
 }
 
 }  // namespace store

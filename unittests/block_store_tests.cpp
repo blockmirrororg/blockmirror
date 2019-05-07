@@ -15,9 +15,6 @@ std::string SS(const T &obj) {
 BOOST_AUTO_TEST_SUITE(blockstore_tests)
 
 BOOST_AUTO_TEST_CASE(blockstore_tests_simple) {
-  boost::filesystem::remove("./0.block");
-  blockmirror::store::BlockStore store;
-
   blockmirror::chain::BlockPtr block1 =
       std::make_shared<blockmirror::chain::Block>();
   blockmirror::chain::BlockPtr block2 =
@@ -35,46 +32,49 @@ BOOST_AUTO_TEST_CASE(blockstore_tests_simple) {
                     0xde, 0x15, 0x81, 0x48, 0xb4, 0x25, 0x66, 0x07,
                     0x23, 0xb9, 0xf9, 0xa6, 0x6e, 0x61, 0xf7, 0x47});
 
-  store.load(".");
+  boost::filesystem::remove("./0.block");
+  boost::filesystem::remove("./index");
+  {
+    blockmirror::store::BlockStore store;
+    store.load(".");
 
-  BOOST_CHECK_EQUAL(nullptr, store.getBlock(block1->getHash()).get());
-  BOOST_CHECK_EQUAL(nullptr, store.getBlock(block2->getHash()).get());
+    BOOST_CHECK(store.addBlock(block1));
+    BOOST_CHECK(store.addBlock(block2));
+    BOOST_CHECK(!store.addBlock(block2)); // 重复添加
 
-  BOOST_CHECK(store.addBlock(block1));
-  BOOST_CHECK(store.addBlock(block2));
-  BOOST_CHECK(!store.addBlock(block2));
+    BOOST_CHECK(store.contains(block1->getHashPtr()));
+    BOOST_CHECK(store.contains(block1->getHash()));
+    BOOST_CHECK(store.contains(block2->getHashPtr()));
+    BOOST_CHECK(store.contains(block2->getHash()));
 
-  BOOST_CHECK(store.contains(block1->getHashPtr()));
-  BOOST_CHECK(store.contains(block1->getHash()));
-  BOOST_CHECK(store.contains(block2->getHashPtr()));
-  BOOST_CHECK(store.contains(block2->getHash()));
+    BOOST_CHECK_EQUAL(block1.get(), store.getBlock(block1->getHash()).get());
+    BOOST_CHECK_EQUAL(block2.get(), store.getBlock(block2->getHash()).get());
 
-  BOOST_CHECK_EQUAL(block1.get(), store.getBlock(block1->getHash()).get());
-  BOOST_CHECK_EQUAL(block2.get(), store.getBlock(block2->getHash()).get());
+    BOOST_CHECK_EQUAL(block1.use_count(), 3);
+    store.flushBlock(1);  // 强制内存中只剩下一个块
+    BOOST_CHECK_EQUAL(block1.use_count(), 1);
 
-  BOOST_CHECK_EQUAL(block1.use_count(), 3);
-  store.flushBlock(1);  // 此时block1已经入了硬盘
-  BOOST_CHECK_EQUAL(block1.use_count(), 1);
-
-  auto blk1 = store.getBlock(block1->getHashPtr());
-/*
-  boost::algorithm::hex(blk1->getHash(),
-                        std::ostream_iterator<char>(std::cout));
-  std::cout << (uint64_t)blk1.get() << std::endl;
-  boost::algorithm::hex(block1->getHash(),
-                        std::ostream_iterator<char>(std::cout));
-  std::cout << (uint64_t)block1.get() << std::endl;
-
-  std::cout << SS<JSON>(blk1) << std::endl;
-  std::cout << SS<JSON>(block1) << std::endl;
-*/
-  BOOST_CHECK_EQUAL_COLLECTIONS(blk1->getHash().begin(), blk1->getHash().end(),
-                                block1->getHash().begin(),
-                                block1->getHash().end());
-  BOOST_CHECK_NE(blk1.get(), block1.get());
+    // 从文件中重新读出来第一个块
+    auto blk1 = store.getBlock(block1->getHashPtr());
+    BOOST_CHECK_EQUAL_COLLECTIONS(
+        blk1->getHash().begin(), blk1->getHash().end(),
+        block1->getHash().begin(), block1->getHash().end());
+    BOOST_CHECK_NE(blk1.get(), block1.get());
+  }
+  // second stage
+  {
+    blockmirror::store::BlockStore store;
+    store.load(".");
+    
+    BOOST_CHECK(store.contains(block1->getHashPtr()));
+    BOOST_CHECK(store.contains(block2->getHashPtr()));
+  }
 }
 
 BOOST_AUTO_TEST_CASE(blockstore_tests_branch) {
+  boost::filesystem::remove("./0.block");
+  boost::filesystem::remove("./index");
+
   blockmirror::store::BlockStore store;
   std::vector<blockmirror::chain::BlockPtr> blks;
   for (size_t i = 0; i < 10; i++) {

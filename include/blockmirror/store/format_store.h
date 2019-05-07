@@ -5,18 +5,17 @@
  */
 #pragma once
 
-#include<blockmirror/common.h>
-#include<blockmirror/chain/script.h>
+#include <blockmirror/chain/script.h>
+#include <blockmirror/common.h>
 
-namespace blockmirror{
-namespace store{
+namespace blockmirror {
+namespace store {
 
 using NewFormatPtr = std::shared_ptr<chain::scri::NewFormat>;
 
 class FormatStore {
  private:
-
-  std::unordered_map<std::string,store::NewFormatPtr> _formats;
+  std::unordered_map<std::string, store::NewFormatPtr> _formats;
 
   boost::shared_mutex _mutex;
 
@@ -29,7 +28,7 @@ class FormatStore {
    * @brief 从文件中加载store
    * @param path 路径
    */
-  void load(const boost::filesystem::path &path);
+  void load(const boost::filesystem::path& path);
   /**
    * @brief 退出程序时需要关闭 主线程 工作线程已关闭
    */
@@ -37,12 +36,12 @@ class FormatStore {
   /**
    * @brief 读取格式
    */
-  store::NewFormatPtr query(const std::string& name);
+  const store::NewFormatPtr query(const std::string& name);
   /**
    * @brief 添加格式
    */
   bool add(const store::NewFormatPtr& formatPtr);
 };
 
-}// namespace blockmirror
-}// namespace store
+}  // namespace store
+}  // namespace blockmirror

@@ -47,4 +47,19 @@ struct EqualTo {
   }
 };
 
+struct Less {
+  template <size_t N>
+  bool operator()(const std::array<uint8_t, N>& x,
+                  const std::array<uint8_t, N>& y) const {
+    return memcmp(x.data(), y.data(), N) < 0;
+  }
+  template <size_t N>
+  bool operator()(const std::shared_ptr<std::array<uint8_t, N>>& x,
+                  const std::shared_ptr<std::array<uint8_t, N>>& y) const {
+    if (!x) return true;
+    if (!y) return false;
+    return operator()(*x, *y);
+  }
+};
+
 }  // namespace blockmirror

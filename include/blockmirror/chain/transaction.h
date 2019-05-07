@@ -40,6 +40,10 @@ class Transaction {
   uint32_t getNonce() const { return nonce; }
 
   const Hash256 &getHash() const;
+  const Hash256Ptr getHashPtr() const {
+    if (!_hash) getHash();
+    return _hash;
+  }
 };
 using TransactionPtr = std::shared_ptr<Transaction>;
 

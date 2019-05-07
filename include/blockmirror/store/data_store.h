@@ -38,7 +38,7 @@ class DataStore {
   /**
    * @brief 读取数据
    */
-  store::NewDataPtr query(const std::string& name);
+  const store::NewDataPtr query(const std::string& name);
   /**
    * @brief 添加数据
    */

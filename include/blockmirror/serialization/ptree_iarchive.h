@@ -4,6 +4,7 @@
 #include <blockmirror/serialization/access.h>
 #include <boost/endian/conversion.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/hex.hpp>
 
 namespace blockmirror {
 namespace serialization {

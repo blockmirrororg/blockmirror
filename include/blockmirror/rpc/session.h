@@ -38,7 +38,7 @@ class Session : public std::enable_shared_from_this<Session> {
   };
 
   tcp::socket socket_;
-  boost::asio::strand<boost::asio::io_context::executor_type> strand_;
+  boost::asio::strand<tcp::socket::executor_type> strand_;
   boost::beast::flat_buffer buffer_;
   http::request<http::string_body> req_;
   std::shared_ptr<void> res_;

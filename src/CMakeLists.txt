@@ -35,6 +35,7 @@ add_library( blockmirror
 )
 
 target_link_libraries( blockmirror 
+   ${ADDITION_LIBRARIES}
    ${Boost_LIBRARIES}
    ${OPENSSL_LIBRARIES}
    ${Secp256k1_LIBRARY}

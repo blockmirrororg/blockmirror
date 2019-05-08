@@ -4,20 +4,21 @@
 #include <boost/asio.hpp>
 #include "Connection.h"
 
-class Acceptor
-{
-public:
-	Acceptor(boost::asio::io_service &s, unsigned short port);
+class Acceptor {
+ public:
+  Acceptor(boost::asio::io_context &ioc, unsigned short port);
 
-private:
-	void start_accept();
-	void handle_accept(const boost::system::error_code& e);
-	void handle_stop(int signo);
+ public:
+  void start_accept();
 
-private:
-	boost::asio::io_service &io_service_;
-	boost::asio::ip::tcp::acceptor acceptor_;
-	connection_ptr new_connection_;
+ private:
+  void handle_accept(const boost::system::error_code &e);
+  void handle_stop(int signo);
+
+ private:
+  boost::asio::io_context &io_context_;
+  boost::asio::ip::tcp::acceptor acceptor_;
+  connection_ptr new_connection_;
 };
 
 #endif

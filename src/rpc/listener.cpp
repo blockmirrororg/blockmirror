@@ -5,9 +5,8 @@
 namespace blockmirror {
 namespace rpc {
 
-Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint,
-                   std::shared_ptr<std::string const> const& doc_root)
-    : acceptor_(ioc), socket_(ioc), doc_root_(doc_root) {
+Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint)
+    : acceptor_(ioc), socket_(ioc), doc_root_() {
   boost::system::error_code ec;
 
   acceptor_.open(endpoint.protocol(), ec);

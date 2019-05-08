@@ -78,6 +78,7 @@ class BlockHeaderSigned : public BlockHeader {
    */
   void setCoinbase(const Pubkey &target, uint64_t amount = MINER_AMOUNT);
 };
+using BlockHeaderSignedPtr = std::shared_ptr<BlockHeaderSigned>;
 
 class Block : public BlockHeaderSigned {
  protected:

@@ -40,18 +40,18 @@ bool DataStore::add(const store::NewDataPtr& dataPtr) {
   return p.second;
 }
 
-bool DataStore::add(const chain::DataPtr& dataPtr)
-{
-	boost::unique_lock<boost::shared_mutex> ulock(_mutex);
-	std::string name = dataPtr->getName();
-	auto it = datas_.find(name);
-	if (it == datas_.end())
-	{
-		datas_.insert(std::make_pair(name, dataPtr));
-		return true;
-	}
-	return false;
-}
+//bool DataStore::add(const chain::DataPtr& dataPtr)
+//{
+//	boost::unique_lock<boost::shared_mutex> ulock(_mutex);
+//	std::string name = dataPtr->getName();
+//	auto it = datas_.find(name);
+//	if (it == datas_.end())
+//	{
+//		datas_.insert(std::make_pair(name, dataPtr));
+//		return true;
+//	}
+//	return false;
+//}
 
 }  // namespace store
 }  // namespace blockmirror

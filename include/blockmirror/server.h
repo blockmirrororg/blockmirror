@@ -3,8 +3,10 @@
 
 #include <blockmirror/rpc/listener.h>
 #include <boost/noncopyable.hpp>
-#include "Acceptor.h"
-#include "Connector.h"
+#include <blockmirror/p2p/acceptor.h>
+#include <blockmirror/p2p/connector.h>
+
+namespace blockmirror {
 
 class Server : private boost::noncopyable {
  public:
@@ -25,12 +27,14 @@ class Server : private boost::noncopyable {
   boost::asio::signal_set signals_;
 
   // p2p
-  Acceptor acceptor_;
-  Connector connector_;
+  blockmirror::p2p::Acceptor acceptor_;
+  blockmirror::p2p::Connector connector_;
   // rpc
   blockmirror::rpc::Listener listener_;
 
   std::size_t thread_pool_size_;
 };
+
+}  // namespace blockmirror
 
 #endif

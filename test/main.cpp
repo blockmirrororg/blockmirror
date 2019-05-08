@@ -3,7 +3,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <iostream>
-#include "server.h"
+#include <blockmirror/server.h>
 
 int main(int argc, char* argv[]) {
   try {
@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
       num_threads = boost::lexical_cast<std::size_t>(argv[1]);
     }
 
-    Server server(num_threads);
+    blockmirror::Server server(num_threads);
     server.run();
   } catch (std::exception& e) {
     std::cerr << "exception: " << e.what() << "\n";

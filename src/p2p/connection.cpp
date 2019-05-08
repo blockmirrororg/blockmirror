@@ -1,7 +1,10 @@
 
-#include "Connection.h"
+#include <blockmirror/p2p/connection.h>
+#include <blockmirror/p2p/handler_manager.h>
 #include <boost/bind.hpp>
-#include "HandlerManager.h"
+
+namespace blockmirror {
+namespace p2p {
 
 Connection::Connection(boost::asio::io_context& ioc)
     : socket_(ioc), remote_type_(0) {}
@@ -87,3 +90,6 @@ void Connection::handle_write(const boost::system::error_code& e,
     }
   }
 }
+
+}  // namespace p2p
+}  // namespace blockmirror

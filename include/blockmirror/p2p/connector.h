@@ -3,6 +3,9 @@
 
 #include <boost/asio.hpp>
 
+namespace blockmirror {
+namespace p2p {
+
 class Connector {
  public:
   Connector(
@@ -30,5 +33,8 @@ class Connector {
   unsigned char remote_type_;
   unsigned char local_type_;
 };
+
+}  // namespace p2p
+}  // namespace blockmirror
 
 #endif

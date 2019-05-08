@@ -16,7 +16,6 @@ using tcp = boost::asio::ip::tcp;
 class Listener : public std::enable_shared_from_this<Listener> {
   tcp::acceptor acceptor_;
   tcp::socket socket_;
-  std::shared_ptr<std::string const> doc_root_;
 
  public:
   Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint);

@@ -1,6 +1,9 @@
 
-#include "Acceptor.h"
+#include <blockmirror/p2p/acceptor.h>
 #include <boost/bind.hpp>
+
+namespace blockmirror {
+namespace p2p {
 
 Acceptor::Acceptor(boost::asio::io_context& ioc, unsigned short port)
     : io_context_(ioc),
@@ -21,3 +24,6 @@ void Acceptor::handle_accept(const boost::system::error_code& e) {
 
   start_accept();
 }
+
+}  // namespace p2p
+}  // namespace blockmirror

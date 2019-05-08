@@ -1,7 +1,10 @@
 
-#include "Connector.h"
+#include <blockmirror/p2p/connector.h>
 #include <boost/bind.hpp>
 #include <iostream>
+
+namespace blockmirror {
+namespace p2p {
 
 Connector::Connector(
     boost::asio::io_context& ioc,
@@ -57,3 +60,6 @@ void Connector::handle_resolve(
     std::cout << "Error: " << err.message() << "\n";
   }
 }
+
+}  // namespace p2p
+}  // namespace blockmirror

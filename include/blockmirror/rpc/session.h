@@ -40,14 +40,12 @@ class Session : public std::enable_shared_from_this<Session> {
   tcp::socket socket_;
   boost::asio::strand<boost::asio::io_context::executor_type> strand_;
   boost::beast::flat_buffer buffer_;
-  std::shared_ptr<std::string const> doc_root_;
   http::request<http::string_body> req_;
   std::shared_ptr<void> res_;
   send_lambda lambda_;
 
  public:
-  explicit Session(tcp::socket socket,
-                   std::shared_ptr<std::string const> const& doc_root);
+  explicit Session(tcp::socket socket);
 
   void run();
   void do_read();
@@ -58,8 +56,7 @@ class Session : public std::enable_shared_from_this<Session> {
 
  private:
   template <class Body, class Allocator, class Send>
-  void handle_request(boost::beast::string_view doc_root,
-                      http::request<Body, http::basic_fields<Allocator>>&& req,
+  void handle_request(http::request<Body, http::basic_fields<Allocator>>&& req,
                       Send&& send);
 };
 

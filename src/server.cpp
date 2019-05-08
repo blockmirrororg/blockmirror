@@ -1,7 +1,9 @@
 
-#include "server.h"
+#include <blockmirror/server.h>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+
+namespace blockmirror {
 
 Server::Server(std::size_t thread_pool_size)
     : io_context_(),
@@ -57,3 +59,5 @@ void Server::run() {
     threads[i]->join();
   }
 }
+
+}  // namespace blockmirror

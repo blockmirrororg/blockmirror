@@ -2,7 +2,10 @@
 #define ACCEPTOR_H
 
 #include <boost/asio.hpp>
-#include "Connection.h"
+#include "connection.h"
+
+namespace blockmirror {
+namespace p2p {
 
 class Acceptor {
  public:
@@ -20,5 +23,8 @@ class Acceptor {
   boost::asio::ip::tcp::acceptor acceptor_;
   connection_ptr new_connection_;
 };
+
+}  // namespace p2p
+}  // namespace blockmirror
 
 #endif

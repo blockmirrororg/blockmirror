@@ -6,7 +6,7 @@ namespace blockmirror {
 namespace rpc {
 
 Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint)
-    : acceptor_(ioc), socket_(ioc), doc_root_() {
+    : acceptor_(ioc), socket_(ioc) {
   boost::system::error_code ec;
 
   acceptor_.open(endpoint.protocol(), ec);
@@ -37,13 +37,13 @@ void Listener::run() {
 
 void Listener::do_accept() {
   acceptor_.async_accept(socket_,
-                         std::bind(&Listener::on_accept, shared_from_this(),
+                         std::bind(&Listener::on_accept, this,
                                    std::placeholders::_1));
 }
 
 void Listener::on_accept(boost::system::error_code ec) {
   if (!ec) {
-    std::make_shared<Session>(std::move(socket_), doc_root_)->run();
+    std::make_shared<Session>(std::move(socket_))->run();
   }
 
   do_accept();

@@ -2,9 +2,9 @@
 
 #include <blockmirror/common.h>
 #include <blockmirror/serialization/access.h>
+#include <boost/algorithm/hex.hpp>
 #include <boost/endian/conversion.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/algorithm/hex.hpp>
 
 namespace blockmirror {
 namespace serialization {
@@ -39,7 +39,7 @@ class PTreeIArchive : private boost::noncopyable {
 
   // !Number
   template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value,
-                                             int>::type = 0>
+                                                int>::type = 0>
   PTreeIArchive &operator>>(T &t) {
     access::serialize(*this, t);
     return *this;
@@ -76,7 +76,7 @@ class PTreeIArchive : private boost::noncopyable {
   // Vector
   template <typename T>
   PTreeIArchive &operator>>(std::vector<T> &arr) {
-    for (auto& item : _tree.get_child("")) {
+    for (auto &item : _tree.get_child("")) {
       PTreeIArchive child(item.second);
       arr.push_back(T());
       child >> arr.back();

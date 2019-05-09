@@ -2,7 +2,7 @@
 #define ACCEPTOR_H
 
 #include <boost/asio.hpp>
-#include "connection.h"
+#include "channel.h"
 
 namespace blockmirror {
 namespace p2p {
@@ -21,7 +21,7 @@ class Acceptor {
  private:
   boost::asio::io_context &io_context_;
   boost::asio::ip::tcp::acceptor acceptor_;
-  connection_ptr new_connection_;
+  channel_ptr new_channel_;
 };
 
 }  // namespace p2p

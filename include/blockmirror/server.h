@@ -5,6 +5,7 @@
 #include <blockmirror/p2p/connector.h>
 #include <blockmirror/rpc/listener.h>
 #include <boost/noncopyable.hpp>
+#include <list>
 
 namespace blockmirror {
 
@@ -34,6 +35,8 @@ class Server : private boost::noncopyable {
   blockmirror::rpc::Listener listener_;
 
   std::size_t thread_pool_size_;
+
+
 };
 
 }  // namespace blockmirror

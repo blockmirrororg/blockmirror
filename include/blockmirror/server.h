@@ -35,6 +35,8 @@ class Server : private boost::noncopyable {
   blockmirror::rpc::Listener listener_;
 
   std::size_t thread_pool_size_;
+
+
 };
 
 }  // namespace blockmirror

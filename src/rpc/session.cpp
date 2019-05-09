@@ -4,6 +4,7 @@
 #include <blockmirror/serialization/ptree_iarchive.h>
 #include <blockmirror/store/data_store.h>
 #include <blockmirror/store/transaction_store.h>
+#include <blockmirror/chain/context.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -87,23 +88,25 @@ void Session::handle_request(
     return res;
   };
 
-  if (req.method() != http::verb::put)  // put transaction and put data
+  if (req.method() != http::verb::post)  // put transaction and put data
     return send(bad_request("Unknown HTTP-method"));
 
-  if (req.target() == "transaction") {
+
+  std::stringstream ss(req.body());
+  boost::property_tree::ptree ptree;
+  boost::property_tree::read_json(ss, ptree);
+  blockmirror::serialization::PTreeIArchive archive(ptree);
+
+  if (req.target() == "put_transaction") {
     blockmirror::chain::TransactionSignedPtr transaction =
         std::make_shared<blockmirror::chain::TransactionSigned>();
-    std::string strTransaction = req.body();  // json format
-    IJ(strTransaction, transaction);
-    transaction->setExpire(2);
-    transaction->setNonce();
-    transaction->verify();
+	archive >> transaction;
+	chain::Context &c = chain::Context::get();
+	c.check(transaction);
+	store::TransactionStore &ts = c.get_transaction_store();
+	ts.add(transaction);
 
-    blockmirror::store::TransactionStore ts;
-    boost::filesystem::path p("/ze");
-    ts.load(p);
-    ts.add(transaction);
-  } else if (req.target() == "data") {
+  } else if (req.target() == "put_data") {
     blockmirror::chain::DataSignedPtr data =
         std::make_shared<blockmirror::chain::DataSigned>();
     std::string strData = req.body();  // json format

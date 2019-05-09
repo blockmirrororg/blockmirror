@@ -39,12 +39,12 @@ HandlerManager& HandlerManager::get() {
   return handler_manager;
 }
 
-void HandlerManager::dispatch_message_handler(Connection& connection) {
-  Message& message = connection.get_message();
+void HandlerManager::dispatch_message_handler(Channel& channel) {
+  Message& message = channel.get_message();
   unsigned short msg_type;
   message >> msg_type;
   boost::unordered_map<unsigned int, MessageHandler*>::iterator pos =
-      message_handlers_.find(make_id(connection.remote_type(), msg_type));
+      message_handlers_.find(make_id(channel.remote_type(), msg_type));
   if (pos != message_handlers_.end()) {
     pos->second->handle_message();
   }

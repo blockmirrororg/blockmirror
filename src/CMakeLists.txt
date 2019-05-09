@@ -1,6 +1,6 @@
 file(GLOB BLOCKMIRROR_0 "${CMAKE_SOURCE_DIR}/include/blockmirror/*.h")
 file(GLOB BLOCKMIRROR_1 "${CMAKE_SOURCE_DIR}/include/blockmirror/store/*.h")
-file(GLOB BLOCKMIRROR_2 "${CMAKE_SOURCE_DIR}/include/blockmirror/chain/*.h")
+file(GLOB BLOCKMIRROR_2 "${CMAKE_SOURCE_DIR}/include/blockmirror/chain/*.h" "chain/*.cpp")
 file(GLOB BLOCKMIRROR_3 "${CMAKE_SOURCE_DIR}/include/blockmirror/crypto/*.h")
 file(GLOB BLOCKMIRROR_4 "${CMAKE_SOURCE_DIR}/include/blockmirror/p2p/*.h" "${CMAKE_SOURCE_DIR}/src/p2p/*.cpp")
 file(GLOB BLOCKMIRROR_5 "${CMAKE_SOURCE_DIR}/include/blockmirror/serialization/*.h")
@@ -12,11 +12,6 @@ add_library( blockmirror
   secp256k1_contrib/lax_der_privatekey_parsing.c
 
   crypto/ecc.cpp
-  
-  chain/data.cpp
-  chain/block.cpp
-  chain/transaction.cpp
-  chain/context.cpp
 
   store/block_store.cpp
   store/format_store.cpp

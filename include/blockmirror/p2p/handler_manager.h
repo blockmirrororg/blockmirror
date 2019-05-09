@@ -1,7 +1,7 @@
 #ifndef HANDLER_MANAGER_H
 #define HANDLER_MANAGER_H
 
-#include <blockmirror/p2p/connection.h>
+#include <blockmirror/p2p/channel.h>
 #include <blockmirror/p2p/message_handler.h>
 #include <blockmirror/p2p/request_ack_handler.h>
 #include <boost/unordered_map.hpp>
@@ -20,7 +20,7 @@ class HandlerManager {
                           App_Async_Ack_Handler &);
 
   static HandlerManager &get();
-  void dispatch_message_handler(Connection &connection);
+  void dispatch_message_handler(Channel &channel);
 
  private:
   unsigned int make_id(unsigned char remote_type, unsigned short msg_type);

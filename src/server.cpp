@@ -23,7 +23,7 @@ void Server::handle_stop(int signo) {
 
 void Server::handle_timeout() {
   // do something
-
+	
   timer_.expires_at(timer_.expires_at() + boost::posix_time::seconds(10));
   timer_.async_wait(boost::bind(&Server::handle_timeout, this));
 }

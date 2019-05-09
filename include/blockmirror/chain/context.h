@@ -82,6 +82,20 @@ class Context {
   bool hasBlock(const T& hash) {
     return _block.contains(hash);
   }
+
+  static Context &get() {
+    static Context context;
+	return context;
+  }
+
+  store::TransactionStore &get_transaction_store()
+  {
+	  return _transaction;
+  }
+  //bool add(const chain::TransactionSignedPtr &trx, uint64_t height = 0) {
+
+  //  return _transaction.add(trx, height);
+  //}
 };
 
 class StoreVisitor : public boost::static_visitor<> {

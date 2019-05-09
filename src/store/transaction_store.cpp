@@ -36,6 +36,7 @@ bool TransactionStore::add(const chain::TransactionSignedPtr &trx,
   return r.second;
 }
 
+// lvjl
 std::vector<chain::TransactionSignedPtr> TransactionStore::popUnpacked() {
   std::vector<chain::TransactionSignedPtr> r;
   boost::unique_lock<boost::shared_mutex> lock(_mutex);

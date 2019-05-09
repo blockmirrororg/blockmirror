@@ -13,6 +13,8 @@ int main(int argc, char* argv[]) {
     }
 
     blockmirror::Server server(num_threads);
+	server.add_connector("127.0.0.1", 7700); // for p2p
+	server.add_connector("127.0.0.1", 7701);
     server.run();
   } catch (std::exception& e) {
     std::cerr << "exception: " << e.what() << "\n";

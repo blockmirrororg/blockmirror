@@ -1,10 +1,10 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <blockmirror/rpc/listener.h>
-#include <boost/noncopyable.hpp>
 #include <blockmirror/p2p/acceptor.h>
 #include <blockmirror/p2p/connector.h>
+#include <blockmirror/rpc/listener.h>
+#include <boost/noncopyable.hpp>
 
 namespace blockmirror {
 
@@ -14,6 +14,7 @@ class Server : private boost::noncopyable {
 
  public:
   void run();
+  void add_connector(const char *ip, unsigned short port);
 
  private:
   void handle_stop(int signo);
@@ -28,7 +29,7 @@ class Server : private boost::noncopyable {
 
   // p2p
   blockmirror::p2p::Acceptor acceptor_;
-  blockmirror::p2p::Connector connector_;
+  std::list<std::shared_ptr<blockmirror::p2p::Connector> > connectors_;
   // rpc
   blockmirror::rpc::Listener listener_;
 

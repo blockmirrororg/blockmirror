@@ -1,5 +1,4 @@
-#ifndef MESSAGE_H
-#define MESSAGE_H
+#pragma once
 
 #include <string.h>
 #include <boost/noncopyable.hpp>
@@ -49,5 +48,3 @@ Message& Message::operator>>(T& t) {
 
 }  // namespace p2p
 }  // namespace blockmirror
-
-#endif

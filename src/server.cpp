@@ -9,7 +9,6 @@ Server::Server(std::size_t thread_pool_size)
     : io_context_(),
       io_context1_(),
       acceptor_(io_context1_, 80),
-      connector_(io_context1_),
       timer_(io_context_, boost::posix_time::seconds(10)),
       signals_(io_context_),
       listener_(
@@ -43,7 +42,9 @@ void Server::run() {
   // work thread job
   // p2p
   acceptor_.start_accept();
-  connector_.start();
+  for (auto pos = connectors_.begin(); pos != connectors_.end(); ++pos) {
+    (*pos)->start();
+  }
   // rpc
   listener_.run();
 
@@ -58,6 +59,11 @@ void Server::run() {
   for (std::size_t i = 0; i < thread_pool_size_; ++i) {
     threads[i]->join();
   }
+}
+
+void Server::add_connector(const char *ip, unsigned short port)
+{
+	connectors_.push_back(std::make_shared<blockmirror::p2p::Connector>(io_context1_, ip, port));
 }
 
 }  // namespace blockmirror

@@ -2,16 +2,15 @@
 #define CONNECTOR_H
 
 #include <boost/asio.hpp>
+#include <boost/enable_shared_from_this.hpp>
 
 namespace blockmirror {
 namespace p2p {
 
-class Connector {
+class Connector : public boost::enable_shared_from_this<Connector> {
  public:
-  Connector(
-      boost::asio::io_context& ioc,
-      /*const char* ip, unsigned short port, */ unsigned char remote_type = 0,
-      unsigned char local_type = 0);
+  Connector(boost::asio::io_context& ioc, const char* ip, unsigned short port,
+            unsigned char remote_type = 0, unsigned char local_type = 0);
 
   void start(bool now = true);
 
@@ -19,14 +18,14 @@ class Connector {
   void handle_connect(const boost::system::error_code& ec);
   void handle_write(const boost::system::error_code& ec);
   void handle_timer();
-  void handle_resolve(
-      const boost::system::error_code& err,
-      boost::asio::ip::tcp::resolver::iterator endpoint_iterator);
+  // void handle_resolve(
+  //    const boost::system::error_code& err,
+  //    boost::asio::ip::tcp::resolver::iterator endpoint_iterator);
 
  private:
   boost::asio::ip::tcp::socket socket_;
-  // boost::asio::ip::tcp::endpoint endpoint_;
-  boost::asio::ip::tcp::resolver resolver_;
+  boost::asio::ip::tcp::endpoint endpoint_;
+  // boost::asio::ip::tcp::resolver resolver_;
 
   boost::asio::deadline_timer timer_;
   boost::asio::io_context& io_context_;

@@ -38,6 +38,7 @@ class Transaction {
 
   uint64_t getExpire() const { return expire; }
   uint32_t getNonce() const { return nonce; }
+  Script getScript() const { return script; }
 
   const Hash256 &getHash() const;
   const Hash256Ptr getHashPtr() const {

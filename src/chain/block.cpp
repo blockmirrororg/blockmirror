@@ -51,6 +51,11 @@ void Block::addDataBP(DataBPPtr &data) { datas.push_back(data); }
 void Block::addTransaction(TransactionSignedPtr &trx) {
   transactions.push_back(trx);
 }
+
+const std::vector<TransactionSignedPtr>& Block::getTransactions() {
+  return transactions;
+}
+
 void Block::finalize(const Privkey &priv, const crypto::ECCContext &ecc) {
   // 结果数据在执行区块的时候计算出来 并放入 store中
   computeMerkleRoot(std::move(_getHashes()), merkle);
@@ -67,8 +72,8 @@ std::vector<Hash256> Block::_getHashes() const {
   uint32_t cnt = 0;
   std::vector<Hash256> results;
   results.push_back(coinbase->getHash());
-    *(uint32_t *)&results.back().data()[0] =
-        boost::endian::native_to_little(cnt++);
+  *(uint32_t *)&results.back().data()[0] =
+      boost::endian::native_to_little(cnt++);
   for (auto trx : transactions) {
     results.push_back(trx->getHash());
     *(uint32_t *)&results.back().data()[0] =

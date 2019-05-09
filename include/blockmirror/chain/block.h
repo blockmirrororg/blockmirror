@@ -28,11 +28,11 @@ class BlockHeader {
  protected:
   mutable Hash256Ptr _hash;
 
-  uint64_t timestamp; // 区块产生的时间戳
-  uint64_t height; // 区块的当前高度
-  Hash256 previous; // 上一个区块的HASH值
-  Hash256 merkle; // 区块所有交易和所有数据的默克尔根
-  Pubkey producer; // 区块生产者的公钥
+  uint64_t timestamp;  // 区块产生的时间戳
+  uint64_t height;     // 区块的当前高度
+  Hash256 previous;    // 上一个区块的HASH值
+  Hash256 merkle;      // 区块所有交易和所有数据的默克尔根
+  Pubkey producer;     // 区块生产者的公钥
 
  public:
   BlockHeader() = default;
@@ -61,8 +61,8 @@ class BlockHeaderSigned : public BlockHeader {
   }
 
  protected:
-  Signature signature; // 区块生产者对这个区块的签名
-  TransactionPtr coinbase; // 这个区块的奖励交易
+  Signature signature;      // 区块生产者对这个区块的签名
+  TransactionPtr coinbase;  // 这个区块的奖励交易
 
  public:
   using BlockHeader::BlockHeader;
@@ -90,8 +90,8 @@ class Block : public BlockHeaderSigned {
   }
 
  protected:
-  std::vector<TransactionSignedPtr> transactions; // 区块中所有的交易
-  std::vector<DataBPPtr> datas; // 区块中所有的数据
+  std::vector<TransactionSignedPtr> transactions;  // 区块中所有的交易
+  std::vector<DataBPPtr> datas;                    // 区块中所有的数据
   // std::vector<DataPtr> result; // FIXME: 结果数据可能不需要放在区块中
   // 应该直接更新到store
 
@@ -122,6 +122,10 @@ class Block : public BlockHeaderSigned {
    * @param trx 交易
    */
   void addTransaction(TransactionSignedPtr &trx);
+  /**
+   * @brief 获取区块的交易
+   */
+  const std::vector<TransactionSignedPtr> &getTransactions();
   /**
    * @brief 完成区块
    * 1. 计算结果数据

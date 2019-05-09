@@ -136,6 +136,12 @@ class TransactionStore {
    * @param height 当前高度
    */
   void removeExpired(uint64_t height);
+  /**
+   * @brief 删除交易
+   *
+   * @param trx 交易
+   */
+  bool remove(const chain::TransactionSignedPtr &trx);
 };
 
 }  // namespace store

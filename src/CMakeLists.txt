@@ -16,6 +16,7 @@ add_library( blockmirror
   chain/data.cpp
   chain/block.cpp
   chain/transaction.cpp
+  chain/context.cpp
 
   store/block_store.cpp
   store/format_store.cpp

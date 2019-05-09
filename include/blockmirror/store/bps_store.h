@@ -47,6 +47,10 @@ class BpsStore {
    * @brief 减少数据
    */
   bool remove(const Pubkey& key);
+  /**
+   * @brief 获取BP总数
+   */
+  uint getBPAmount() { return _bps.size(); }
 };
 
 }  // namespace store

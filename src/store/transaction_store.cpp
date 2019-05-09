@@ -30,9 +30,8 @@ bool TransactionStore::add(const chain::TransactionSignedPtr &trx,
   boost::unique_lock<boost::shared_mutex> lock(_mutex);
   auto r = _container.emplace(trx, height);
   if (!r.second) {
-    _container.modify(r.first, [height](TransactionItem &v) {
-      v.height = height;
-    });
+    _container.modify(r.first,
+                      [height](TransactionItem &v) { v.height = height; });
   }
   return r.second;
 }
@@ -60,6 +59,12 @@ void TransactionStore::removeExpired(uint64_t height) {
     if (i->expire() > height) return;
     i = idx.erase(i);
   }
+}
+
+bool TransactionStore::remove(const chain::TransactionSignedPtr &trx) {
+  boost::unique_lock<boost::shared_mutex> lock(_mutex);
+  auto &idx = _container.get<tagHash>();
+  return idx.erase(trx->getHashPtr()) > 0;
 }
 
 }  // namespace store

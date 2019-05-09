@@ -41,6 +41,10 @@ class FormatStore {
    * @brief 添加格式
    */
   bool add(const store::NewFormatPtr& formatPtr);
+  /**
+   * @brief 删除格式
+   */
+  bool remove(const std::string& name);
 };
 
 }  // namespace store

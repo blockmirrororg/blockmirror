@@ -5,6 +5,7 @@
 #include <blockmirror/p2p/connector.h>
 #include <blockmirror/rpc/listener.h>
 #include <boost/noncopyable.hpp>
+#include <list>
 
 namespace blockmirror {
 

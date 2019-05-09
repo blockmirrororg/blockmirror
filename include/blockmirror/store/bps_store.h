@@ -50,7 +50,7 @@ class BpsStore {
   /**
    * @brief 获取BP总数
    */
-  uint getBPAmount() { return _bps.size(); }
+  uint32_t getBPAmount() { return _bps.size(); }
 };
 
 }  // namespace store

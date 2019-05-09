@@ -87,7 +87,7 @@ bool Context::check(const chain::TransactionSignedPtr& trx) {
         count++;
       }
     }
-    uint amount = _bps.getBPAmount();
+    uint32_t amount = _bps.getBPAmount();
     if (0 == amount ||
         (float)(count / amount) <= blockmirror::BP_PERCENT_SIGNER) {
       return false;

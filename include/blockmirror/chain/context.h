@@ -14,6 +14,7 @@ namespace chain {
 
 class Context {
  private:
+  friend class StoreVisitor;
   store::AccountStore _account;
   store::BlockStore _block;
   store::BpsStore _bps;
@@ -25,10 +26,16 @@ class Context {
 
   /**
    * @brief 执行一笔交易
-   * 
-   * @param trx 
+   *
+   * @param trx
    */
-  void _apply(const chain::TransactionSignedPtr &trx);
+  void _apply(const chain::TransactionSignedPtr& trx);
+  /**
+   * @brief 回滚一笔交易
+   *
+   * @param trx
+   */
+  void _rollback(const chain::TransactionSignedPtr& trx);
 
  public:
   Context();
@@ -42,14 +49,14 @@ class Context {
    *
    * @param block
    */
-  void apply(const chain::BlockPtr &block);
+  void apply(const chain::BlockPtr& block);
 
   /**
    * @brief 回滚一个区块
    *
    * @param block
    */
-  void rollback(const chain::BlockPtr &block);
+  void rollback(const chain::BlockPtr& block);
 
   /**
    * @brief 检测当前交易是否可能被接受
@@ -60,7 +67,7 @@ class Context {
    * @return true
    * @return false
    */
-  bool check(const chain::TransactionSignedPtr &trx);
+  bool check(const chain::TransactionSignedPtr& trx);
 
   /**
    * @brief 检测当前区块是否可能被接受
@@ -69,10 +76,10 @@ class Context {
    * @return true
    * @return false
    */
-  bool check(const chain::BlockHeaderSignedPtr &block);
+  bool check(const chain::BlockHeaderSignedPtr& block);
 
-  template<typename T>
-  bool hasBlock(const T &hash) {
+  template <typename T>
+  bool hasBlock(const T& hash) {
     return _block.contains(hash);
   }
 
@@ -89,6 +96,54 @@ class Context {
 
   //  return _transaction.add(trx, height);
   //}
+};
+
+class StoreVisitor : public boost::static_visitor<> {
+ private:
+  Context& _context;
+  Pubkey& _signer;
+  uint8_t _type;  // 0 正向操作 1 反向操作
+
+ public:
+  StoreVisitor(Context& context, Pubkey& signer, uint8_t type)
+      : _context(context), _signer(signer), _type(type){};
+  void operator()(scri::Transfer& t) const {
+    if (0 == _type) {
+      _context._account.transfer(_signer, t.getTarget(), t.getAmount());
+    } else if (1 == _type) {
+      _context._account.transfer(t.getTarget(), _signer, t.getAmount());
+    }
+  }
+  void operator()(scri::BPJoin& b) const {
+    if (0 == _type) {
+      _context._bps.add(b.getBP());
+    } else if (1 == _type) {
+      _context._bps.remove(b.getBP());
+    }
+  }
+  void operator()(scri::BPExit& b) const {
+    if (0 == _type) {
+      _context._bps.remove(b.getBP());
+    } else if (1 == _type) {
+      _context._bps.add(b.getBP());
+    }
+  }
+  void operator()(scri::NewFormat& n) const {
+    store::NewFormatPtr nPtr = std::make_shared<scri::NewFormat>(n);
+    if (0 == _type) {
+      _context._format.add(nPtr);
+    } else if (1 == _type) {
+      _context._format.remove(nPtr->getName());
+    }
+  }
+  void operator()(scri::NewData& n) const {
+    store::NewDataPtr nPtr = std::make_shared<scri::NewData>(n);
+    if (0 == _type) {
+      _context._data.add(nPtr);
+    } else if (1 == _type) {
+      _context._data.remove(nPtr->getName());
+    }
+  }
 };
 
 }  // namespace chain

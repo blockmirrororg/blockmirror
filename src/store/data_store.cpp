@@ -40,7 +40,12 @@ bool DataStore::add(const store::NewDataPtr& dataPtr) {
   return p.second;
 }
 
-//bool DataStore::add(const chain::DataPtr& dataPtr)
+bool DataStore::remove(const std::string& name) {
+  boost::unique_lock<boost::shared_mutex> lock(_mutex);
+  return _datas.erase(name) > 0;
+}
+
+// bool DataStore::add(const chain::DataPtr& dataPtr)
 //{
 //	boost::unique_lock<boost::shared_mutex> ulock(_mutex);
 //	std::string name = dataPtr->getName();

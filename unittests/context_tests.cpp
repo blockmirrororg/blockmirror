@@ -55,11 +55,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
 
     block2->setPrevious(*block1);
     block2->setCoinbase({1});
-    block2->finalize(K(APriv));
 
-    block3->setPrevious(*block2);
-    block3->setCoinbase({1});
-    block3->finalize(K(BPriv));
     
     //block2
     blockmirror::chain::TransactionSignedPtr tPtr =
@@ -97,8 +93,11 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
         blockmirror::chain::scri::NewFormat("aaa","ggg",{1,3,5,7,9},{2,4,6,8},{6,6,6}));
     tPtr5->addSign(K(APriv));
     block2->addTransaction(tPtr5);
+    block2->finalize(K(APriv));
 
     //block3
+    block3->setPrevious(*block2);
+    block3->setCoinbase({1});
     blockmirror::chain::TransactionSignedPtr tPtr6 =
     std::make_shared<blockmirror::chain::TransactionSigned>(
         blockmirror::chain::scri::BPJoin(P(BPub)));
@@ -110,6 +109,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
         blockmirror::chain::scri::NewFormat("bbb","ccc",{15,3,55,75,9},{28,4,65,8},{60,76,6}));
     tPtr7->addSign(K(APriv));
     block3->addTransaction(tPtr7);
+    block3->finalize(K(BPriv));
 
     
     blockmirror::chain::Context c;

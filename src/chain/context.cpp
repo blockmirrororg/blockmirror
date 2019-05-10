@@ -159,6 +159,7 @@ bool Context::apply(const chain::BlockPtr& block) {
 
   auto backup = _head;
   _head = block;
+  
   const std::vector<TransactionSignedPtr> v = block->getTransactions();
   auto it = v.begin();
   for (; it != v.end(); ++it) {

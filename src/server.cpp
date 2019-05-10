@@ -2,6 +2,7 @@
 #include <blockmirror/server.h>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include <boost/make_shared.hpp>
 
 namespace blockmirror {
 
@@ -63,7 +64,7 @@ void Server::run() {
 
 void Server::add_connector(const char *ip, unsigned short port)
 {
-	connectors_.push_back(std::make_shared<blockmirror::p2p::Connector>(io_context1_, ip, port));
+	connectors_.push_back(boost::make_shared<blockmirror::p2p::Connector>(io_context1_, ip, port));
 }
 
 }  // namespace blockmirror

@@ -19,8 +19,8 @@ Connector::Connector(boost::asio::io_context& ioc, const char* ip,
 
 void Connector::start(bool now) {
   if (now) {
-     socket_.async_connect(endpoint_, boost::bind(&Connector::handle_connect,
-     this, boost::asio::placeholders::error));
+     socket_.async_connect(endpoint_, boost::bind(&Connector::handle_connect, shared_from_this(),
+                               boost::asio::placeholders::error));
 
     //boost::asio::ip::tcp::resolver::query query("www.boost.org", "http");
     //resolver_.async_resolve(query,
@@ -29,7 +29,7 @@ void Connector::start(bool now) {
     //                                    boost::asio::placeholders::iterator));
   } else {
     timer_.expires_from_now(boost::posix_time::seconds(5));
-    timer_.async_wait(boost::bind(&Connector::handle_timer, this));
+    timer_.async_wait(boost::bind(&Connector::handle_timer, shared_from_this()));
   }
 }
 
@@ -39,13 +39,15 @@ void Connector::handle_connect(const boost::system::error_code& ec) {
   } else {
     socket_.close();
     timer_.expires_from_now(boost::posix_time::seconds(5));
-    timer_.async_wait(boost::bind(&Connector::handle_timer, this));
+    timer_.async_wait(
+        boost::bind(&Connector::handle_timer, shared_from_this()));
   }
 }
 
 void Connector::handle_timer() {
-   socket_.async_connect(endpoint_, boost::bind(&Connector::handle_connect,
-   shared_from_this(), boost::asio::placeholders::error));
+  socket_.async_connect(
+      endpoint_, boost::bind(&Connector::handle_connect, shared_from_this(),
+                             boost::asio::placeholders::error));
 }
 
 //void Connector::handle_resolve(

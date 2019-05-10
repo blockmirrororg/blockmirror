@@ -30,7 +30,7 @@ class Server : private boost::noncopyable {
 
   // p2p
   blockmirror::p2p::Acceptor acceptor_;
-  std::list<std::shared_ptr<blockmirror::p2p::Connector> > connectors_;
+  std::list<boost::shared_ptr<blockmirror::p2p::Connector> > connectors_;
   // rpc
   blockmirror::rpc::Listener listener_;
 

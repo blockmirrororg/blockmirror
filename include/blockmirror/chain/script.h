@@ -152,6 +152,7 @@ class NewData {
   const std::string &getName() const { return name; }
   const std::string &getFormat() const { return format; }
 };
+using NewDataPtr = std::shared_ptr<NewData>;
 
 }  // namespace scri
 

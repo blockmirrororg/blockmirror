@@ -136,7 +136,10 @@ bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
     return false;
   }
 
-  if (!_transaction.add(trx, rollback ? 0 : _head->getHeight())) {
+  bool ret = _transaction.add(trx, rollback ? 0 : _head->getHeight());
+  if (!rollback && !ret) {
+    return false;
+  } else if (rollback && ret) {
     return false;
   }
 

@@ -34,73 +34,140 @@ std::string BPriv =
 
 BOOST_AUTO_TEST_CASE(context_tests_ok) {
     
+    boost::filesystem::remove("./0.block");
+    boost::filesystem::remove("./index");
     boost::filesystem::remove("./account");
     boost::filesystem::remove("./bps");
     boost::filesystem::remove("./data");
     boost::filesystem::remove("./format");
     boost::filesystem::remove("./transaction");
 
-    blockmirror::chain::BlockPtr blockPtr = 
-    std::make_shared<blockmirror::chain::Block>();
 
-    //blockPtr->setCoinbase(P(APub),1000);
-    {
-        blockmirror::store::AccountStore store;
-        store.load(".");
-        store.add(P(APub),1000);
-    }  
+    blockmirror::chain::BlockPtr block1 =
+      std::make_shared<blockmirror::chain::Block>();
+    blockmirror::chain::BlockPtr block2 =
+      std::make_shared<blockmirror::chain::Block>();
+    blockmirror::chain::BlockPtr block3 =
+      std::make_shared<blockmirror::chain::Block>();
+    block1->setGenesis();
+    block1->setCoinbase({0});
+    block1->finalize(K(APriv));
+
+    block2->setPrevious(*block1);
+    block2->setCoinbase({1});
+    block2->finalize(K(APriv));
+
+    block3->setPrevious(*block2);
+    block3->setCoinbase({1});
+    block3->finalize(K(BPriv));
     
+    //block2
     blockmirror::chain::TransactionSignedPtr tPtr =
     std::make_shared<blockmirror::chain::TransactionSigned>(
         blockmirror::chain::scri::Transfer(P(BPub), 100));
     tPtr->addSign(K(APriv));
-    blockPtr->addTransaction(tPtr);
+    block2->addTransaction(tPtr);
 
     blockmirror::chain::TransactionSignedPtr tPtr1 =
     std::make_shared<blockmirror::chain::TransactionSigned>(
         blockmirror::chain::scri::BPJoin(P(APub)));
     tPtr1->addSign(K(APriv));
-    blockPtr->addTransaction(tPtr1);
+    block2->addTransaction(tPtr1);
 
     blockmirror::chain::TransactionSignedPtr tPtr2 =
     std::make_shared<blockmirror::chain::TransactionSigned>(
         blockmirror::chain::scri::BPJoin(P(BPub)));
     tPtr2->addSign(K(BPriv));
-    blockPtr->addTransaction(tPtr2);
+    block2->addTransaction(tPtr2);
 
     blockmirror::chain::TransactionSignedPtr tPtr3 =
     std::make_shared<blockmirror::chain::TransactionSigned>(
         blockmirror::chain::scri::BPExit(P(BPub)));
     tPtr3->addSign(K(BPriv));
-    blockPtr->addTransaction(tPtr3);
+    block2->addTransaction(tPtr3);
 
     blockmirror::chain::TransactionSignedPtr tPtr4 =
     std::make_shared<blockmirror::chain::TransactionSigned>(
         blockmirror::chain::scri::NewData("aaa","111","rrt"));
     tPtr4->addSign(K(BPriv));
-    blockPtr->addTransaction(tPtr4);
+    block2->addTransaction(tPtr4);
 
     blockmirror::chain::TransactionSignedPtr tPtr5 =
     std::make_shared<blockmirror::chain::TransactionSigned>(
         blockmirror::chain::scri::NewFormat("aaa","ggg",{1,3,5,7,9},{2,4,6,8},{6,6,6}));
     tPtr5->addSign(K(APriv));
-    blockPtr->addTransaction(tPtr5);
+    block2->addTransaction(tPtr5);
+
+    //block3
+    blockmirror::chain::TransactionSignedPtr tPtr6 =
+    std::make_shared<blockmirror::chain::TransactionSigned>(
+        blockmirror::chain::scri::BPJoin(P(BPub)));
+    tPtr6->addSign(K(BPriv));
+    block3->addTransaction(tPtr6);
+
+    blockmirror::chain::TransactionSignedPtr tPtr7 =
+    std::make_shared<blockmirror::chain::TransactionSigned>(
+        blockmirror::chain::scri::NewFormat("bbb","ccc",{15,3,55,75,9},{28,4,65,8},{60,76,6}));
+    tPtr7->addSign(K(APriv));
+    block3->addTransaction(tPtr7);
+
     
-    { 
-        blockmirror::chain::Context c;
+    blockmirror::chain::Context c;
+    {
         c.load();
-        c.apply(blockPtr);
+        c.apply(block1);
+/*         {
+            c.close();
+            blockmirror::store::AccountStore accountStore;
+            accountStore.load(".");
+            std::cout<<accountStore.query(P(APub))<<std::endl;
+            std::cout<<accountStore.query(P(BPub))<<std::endl;
+            c.load();
+        } */
+        c.apply(block2);
+/*         {
+            c.close();
+            blockmirror::store::AccountStore accountStore;
+            accountStore.load(".");
+            std::cout<<accountStore.query(P(APub))<<std::endl;
+            std::cout<<accountStore.query(P(BPub))<<std::endl;
+            c.load();
+        } */
+        c.apply(block3);
+/*         {
+            c.close();
+            blockmirror::store::AccountStore accountStore;
+            accountStore.load(".");
+            std::cout<<accountStore.query(P(APub))<<std::endl;
+            std::cout<<accountStore.query(P(BPub))<<std::endl;
+            c.load();
+        } */
         c.close();
- 
+
+        {
+            blockmirror::store::BlockStore store;
+            store.load(".");
+            BOOST_CHECK(store.addBlock(block1));
+            BOOST_CHECK(store.addBlock(block2));
+            BOOST_CHECK(store.addBlock(block3));
+
+            BOOST_CHECK(store.contains(block1->getHashPtr()));
+            BOOST_CHECK(store.contains(block1->getHash()));
+            BOOST_CHECK(store.contains(block2->getHashPtr()));
+            BOOST_CHECK(store.contains(block2->getHash()));
+            BOOST_CHECK(store.contains(block3->getHashPtr()));
+            BOOST_CHECK(store.contains(block3->getHash()));
+        }
+            
         blockmirror::store::AccountStore accountStore;
         accountStore.load(".");
-        BOOST_CHECK_EQUAL(accountStore.query(P(APub)), 900);
-        BOOST_CHECK_EQUAL(accountStore.query(P(BPub)), 100);
+        BOOST_CHECK_EQUAL(accountStore.query(P(APub)), 199999900);
+        BOOST_CHECK_EQUAL(accountStore.query(P(BPub)), 100000100);
 
         blockmirror::store::BpsStore bpsStore;
         bpsStore.load(".");
         BOOST_CHECK_EQUAL(bpsStore.contains(P(APub)),1);
-        BOOST_CHECK_EQUAL(bpsStore.contains(P(BPub)),0);
+        BOOST_CHECK_EQUAL(bpsStore.contains(P(BPub)),1);
 
         blockmirror::store::DataStore dataStore;
         dataStore.load(".");
@@ -109,6 +176,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
         blockmirror::store::FormatStore formatStore;
         formatStore.load(".");
         BOOST_CHECK(formatStore.query("aaa"));
+        BOOST_CHECK(formatStore.query("bbb"));
 
         blockmirror::store::TransactionStore transactionStore;
         transactionStore.load(".");
@@ -120,15 +188,16 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
         BOOST_CHECK_EQUAL(transactionStore.contains(tPtr5->getHashPtr()),1);
     }
     {
-        blockmirror::chain::Context c;
         c.load();
-        c.rollback(blockPtr);
+        c.rollback(block3);
+        c.rollback(block2);
+        c.rollback(block1);
         c.close();
         
         blockmirror::store::AccountStore store;
         store.load(".");
-        BOOST_CHECK_EQUAL(store.query(P(APub)), 1000);
-        BOOST_CHECK_EQUAL(store.query(P(BPub)), 0);
+        BOOST_CHECK_EQUAL(store.query(P(APub)), 200000000);
+        BOOST_CHECK_EQUAL(store.query(P(BPub)), 100000000);
 
         blockmirror::store::BpsStore bpsStore;
         bpsStore.load(".");
@@ -142,21 +211,22 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
         blockmirror::store::FormatStore formatStore;
         formatStore.load(".");
         BOOST_CHECK(!formatStore.query("aaa"));
+        BOOST_CHECK(!formatStore.query("bbb"));
 
         blockmirror::store::TransactionStore transactionStore;
         transactionStore.load(".");
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr->getHashPtr()),0);
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr1->getHashPtr()),0);
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr2->getHashPtr()),0);
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr3->getHashPtr()),0);
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr4->getHashPtr()),0);
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr5->getHashPtr()),0);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr->getHashPtr()),1);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr1->getHashPtr()),1);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr2->getHashPtr()),1);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr3->getHashPtr()),1);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr4->getHashPtr()),1);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr5->getHashPtr()),1);
     }
     {
         blockmirror::store::AccountStore store;
         store.load(".");
-        BOOST_CHECK_EQUAL(store.query(P(APub)), 1000);
-        BOOST_CHECK_EQUAL(store.query(P(BPub)), 0);
+        BOOST_CHECK_EQUAL(store.query(P(APub)), 200000000);
+        BOOST_CHECK_EQUAL(store.query(P(BPub)), 100000000);
 
         blockmirror::store::BpsStore bpsStore;
         bpsStore.load(".");
@@ -170,15 +240,16 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
         blockmirror::store::FormatStore formatStore;
         formatStore.load(".");
         BOOST_CHECK(!formatStore.query("aaa"));
+        BOOST_CHECK(!formatStore.query("bbb"));
 
         blockmirror::store::TransactionStore transactionStore;
         transactionStore.load(".");
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr->getHashPtr()),0);
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr1->getHashPtr()),0);
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr2->getHashPtr()),0);
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr3->getHashPtr()),0);
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr4->getHashPtr()),0);
-        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr5->getHashPtr()),0);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr->getHashPtr()),1);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr1->getHashPtr()),1);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr2->getHashPtr()),1);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr3->getHashPtr()),1);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr4->getHashPtr()),1);
+        BOOST_CHECK_EQUAL(transactionStore.contains(tPtr5->getHashPtr()),1);
     }
 }
 

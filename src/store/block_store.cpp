@@ -60,7 +60,7 @@ uint64_t BlockStore::_saveBlock(chain::BlockPtr block) {
     _currentFileIndex++;
   }
   writter.close();
-  return makeIndex(file, offset);
+  return makeIndex(offset,file);
 }
 
 bool BlockStore::contains(const Hash256Ptr &hash) {

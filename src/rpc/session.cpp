@@ -1,33 +1,15 @@
 
+#include <blockmirror/chain/context.h>
 #include <blockmirror/chain/transaction.h>
 #include <blockmirror/rpc/session.h>
 #include <blockmirror/serialization/ptree_iarchive.h>
 #include <blockmirror/store/data_store.h>
 #include <blockmirror/store/transaction_store.h>
-#include <blockmirror/chain/context.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
 namespace blockmirror {
 namespace rpc {
-
-std::string bp1Pub =
-    "02ECCAE0C5766164670E17C7F6796294375BE8CD3F3F135C035CE8C3024D54B6D4";
-
-blockmirror::Pubkey P(const std::string& str) {
-  blockmirror::Pubkey pub;
-  boost::algorithm::unhex(str, pub.begin());
-  return pub;
-}
-
-template <typename T>
-void IJ(const std::string& value, T& out) {
-  std::stringstream ss(value);
-  boost::property_tree::ptree ptree;
-  boost::property_tree::read_json(ss, ptree);
-  blockmirror::serialization::PTreeIArchive archive(ptree);
-  archive >> out;
-}
 
 Session::Session(tcp::socket socket)
     : socket_(std::move(socket)),
@@ -80,17 +62,23 @@ void Session::handle_request(
   auto const bad_request = [&req](boost::beast::string_view why) {
     http::response<http::string_body> res{http::status::bad_request,
                                           req.version()};
-    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-    res.set(http::field::content_type, "text/html");
     res.keep_alive(req.keep_alive());
     res.body() = why.to_string();
     res.prepare_payload();
     return res;
   };
 
+  auto const server_error = [&req](boost::beast::string_view what) {
+    http::response<http::string_body> res{http::status::internal_server_error,
+                                          req.version()};
+    res.keep_alive(req.keep_alive());
+    res.body() = "An error occurred: '" + what.to_string() + "'";
+    res.prepare_payload();
+    return res;
+  };
+
   if (req.method() != http::verb::post)  // put transaction and put data
     return send(bad_request("Unknown HTTP-method"));
-
 
   std::stringstream ss(req.body());
   boost::property_tree::ptree ptree;
@@ -100,30 +88,42 @@ void Session::handle_request(
   if (req.target() == "put_transaction") {
     blockmirror::chain::TransactionSignedPtr transaction =
         std::make_shared<blockmirror::chain::TransactionSigned>();
-	archive >> transaction;
-	chain::Context &c = chain::Context::get();
-	c.check(transaction);
-	store::TransactionStore &ts = c.get_transaction_store();
-	ts.add(transaction);
+    try {
+      archive >> transaction;
+    } catch (...) {
+      return send(server_error("exception caught"));
+    }
+    chain::Context& c = chain::Context::get();
+    if (!c.check(transaction)) {
+      return send(bad_request("Illegal param"));
+    }
+    store::TransactionStore& ts = c.get_transaction_store();
+    if (!ts.add(transaction)) {
+      return send(server_error("repeat put"));
+    }
+
+    http::response<http::empty_body> res{http::status::ok, req.version()};
+    res.keep_alive(req.keep_alive());
+    return send(std::move(res));
 
   } else if (req.target() == "put_data") {
-    blockmirror::chain::DataSignedPtr data =
-        std::make_shared<blockmirror::chain::DataSigned>();
-    std::string strData = req.body();  // json format
-    IJ(strData, data);
-    uint64_t height = 100;
-    data->verify(P(bp1Pub), height);
+    chain::DataSignedPtr data = std::make_shared<chain::DataSigned>();
+    try {
+      archive >> data;
+    } catch (...) {
+      return send(server_error("exception caught"));
+    }
+    chain::Context& c = chain::Context::get();
+    /*if (!c.check(data))*/ {
+      return send(bad_request("Illegal param"));
+    }
+    store::DataStore& ds = c.get_data_store();
+    /*if (!ds.add(data))*/ {
+      return send(server_error("repeat put"));
+    }
 
-    blockmirror::store::DataStore ds;
-    boost::filesystem::path p("/ze");
-    ds.load(p);
-    // ds.add(data);
-  }
-
-  if (req.keep_alive()) {
-    do_read();
   } else {
-    do_close();
+    return send(bad_request("Illegal request-target"));
   }
 }
 

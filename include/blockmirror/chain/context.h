@@ -88,14 +88,9 @@ class Context {
 	return context;
   }
 
-  store::TransactionStore &get_transaction_store()
-  {
-	  return _transaction;
-  }
-  //bool add(const chain::TransactionSignedPtr &trx, uint64_t height = 0) {
+  store::TransactionStore& get_transaction_store() { return _transaction; }
 
-  //  return _transaction.add(trx, height);
-  //}
+  store::DataStore& get_data_store() { return _data; }
 };
 
 class StoreVisitor : public boost::static_visitor<> {

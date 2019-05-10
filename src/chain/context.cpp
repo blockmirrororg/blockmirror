@@ -136,7 +136,10 @@ bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
     return false;
   }
 
-  if (!_transaction.add(trx, rollback ? 0 : _head->getHeight())) {
+  bool ret = _transaction.add(trx, rollback ? 0 : _head->getHeight());
+  if (!rollback && !ret) {
+    return false;
+  } else if (rollback && ret) {
     return false;
   }
 
@@ -156,6 +159,7 @@ bool Context::apply(const chain::BlockPtr& block) {
 
   auto backup = _head;
   _head = block;
+  
   const std::vector<TransactionSignedPtr> v = block->getTransactions();
   auto it = v.begin();
   for (; it != v.end(); ++it) {

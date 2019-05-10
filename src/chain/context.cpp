@@ -26,28 +26,28 @@ class CheckVisitor : public boost::static_visitor<bool> {
  public:
   CheckVisitor(Context& context, const TransactionSignedPtr& trx)
       : _context(context), _transaction(trx){};
-  bool operator()(scri::Transfer& t) const {
+  bool operator()(const scri::Transfer& t) const {
     if (_transaction->getSignatures().size() != 1) return false;
     auto& signer = *_transaction->getSignatures().begin();
     if (_context._account.query(signer.signer) < t.getAmount()) return false;
     return true;
   }
-  bool operator()(scri::BPJoin& b) const {
+  bool operator()(const scri::BPJoin& b) const {
     if (!_checkBPSigner()) return false;
     if (_context._bps.contains(b.getBP())) return false;
     return true;
   }
-  bool operator()(scri::BPExit& b) const {
+  bool operator()(const scri::BPExit& b) const {
     if (!_checkBPSigner()) return false;
     if (!_context._bps.contains(b.getBP())) return false;
     return true;
   }
-  bool operator()(scri::NewFormat& n) const {
+  bool operator()(const scri::NewFormat& n) const {
     if (!_checkBPSigner()) return false;
     if (_context._format.query(n.getName())) return false;
     return true;
   }
-  bool operator()(scri::NewData& n) const {
+  bool operator()(const scri::NewData& n) const {
     if (!_checkBPSigner()) return false;
     if (_context._data.query(n.getName())) return false;
     return true;
@@ -63,28 +63,28 @@ class StoreVisitor : public boost::static_visitor<bool> {
  public:
   StoreVisitor(Context& context, Pubkey& signer, uint8_t type)
       : _context(context), _signer(signer), _type(type){};
-  bool operator()(scri::Transfer& t) const {
+  bool operator()(const scri::Transfer& t) const {
     if (0 == _type) {
       return _context._account.transfer(_signer, t.getTarget(), t.getAmount());
     } else if (1 == _type) {
       return _context._account.transfer(t.getTarget(), _signer, t.getAmount());
     }
   }
-  bool operator()(scri::BPJoin& b) const {
+  bool operator()(const scri::BPJoin& b) const {
     if (0 == _type) {
       return _context._bps.add(b.getBP());
     } else if (1 == _type) {
       return _context._bps.remove(b.getBP());
     }
   }
-  bool operator()(scri::BPExit& b) const {
+  bool operator()(const scri::BPExit& b) const {
     if (0 == _type) {
       return _context._bps.remove(b.getBP());
     } else if (1 == _type) {
       return _context._bps.add(b.getBP());
     }
   }
-  bool operator()(scri::NewFormat& n) const {
+  bool operator()(const scri::NewFormat& n) const {
     store::NewFormatPtr nPtr = std::make_shared<scri::NewFormat>(n);
     if (0 == _type) {
       return _context._format.add(nPtr);
@@ -92,7 +92,7 @@ class StoreVisitor : public boost::static_visitor<bool> {
       return _context._format.remove(nPtr->getName());
     }
   }
-  bool operator()(scri::NewData& n) const {
+  bool operator()(const scri::NewData& n) const {
     store::NewDataPtr nPtr = std::make_shared<scri::NewData>(n);
     if (0 == _type) {
       return _context._data.add(nPtr);
@@ -163,7 +163,7 @@ bool Context::apply(const chain::BlockPtr& block) {
       break;
     }
   }
-  if (it != v.end()) {
+  if (it != v.end() || !_account.add(block->getProducer(), MINER_AMOUNT)) {
     _head = backup;
     for (auto i = v.begin(); i != it; ++i) {
       if (!_apply(*i, true)) {
@@ -196,6 +196,7 @@ bool Context::rollback(const chain::BlockPtr& block) {
       }
     }
   }
+
   _head = _block.getBlock(_head->getPrevious());
   return true;
 }

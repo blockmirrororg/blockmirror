@@ -3,6 +3,105 @@
 namespace blockmirror {
 namespace chain {
 
+class CheckVisitor : public boost::static_visitor<bool> {
+ private:
+  Context& _context;
+  const TransactionSignedPtr& _transaction;
+
+  bool _checkBPSigner() const {
+    auto& sigs = _transaction->getSignatures();
+    for (auto& i : sigs) {
+      if (!_context._bps.contains(i.signer)) {
+        return false;
+      }
+    }
+    uint32_t amount = _context._bps.getBPAmount();
+    if (amount == 0) return true;
+    if ((float)(sigs.size() / amount) < blockmirror::BP_PERCENT_SIGNER) {
+      return false;
+    }
+    return true;
+  }
+
+ public:
+  CheckVisitor(Context& context, const TransactionSignedPtr& trx)
+      : _context(context), _transaction(trx){};
+  bool operator()(scri::Transfer& t) const {
+    if (_transaction->getSignatures().size() != 1) return false;
+    auto& signer = *_transaction->getSignatures().begin();
+    if (_context._account.query(signer.signer) < t.getAmount()) return false;
+    return true;
+  }
+  bool operator()(scri::BPJoin& b) const {
+    if (!_checkBPSigner()) return false;
+    if (_context._bps.contains(b.getBP())) return false;
+    return true;
+  }
+  bool operator()(scri::BPExit& b) const {
+    if (!_checkBPSigner()) return false;
+    if (!_context._bps.contains(b.getBP())) return false;
+    return true;
+  }
+  bool operator()(scri::NewFormat& n) const {
+    if (!_checkBPSigner()) return false;
+    if (_context._format.query(n.getName())) return false;
+    return true;
+  }
+  bool operator()(scri::NewData& n) const {
+    if (!_checkBPSigner()) return false;
+    if (_context._data.query(n.getName())) return false;
+    return true;
+  }
+};
+
+class StoreVisitor : public boost::static_visitor<bool> {
+ private:
+  Context& _context;
+  Pubkey& _signer;
+  uint8_t _type;  // 0 正向操作 1 反向操作
+
+ public:
+  StoreVisitor(Context& context, Pubkey& signer, uint8_t type)
+      : _context(context), _signer(signer), _type(type){};
+  bool operator()(scri::Transfer& t) const {
+    if (0 == _type) {
+      return _context._account.transfer(_signer, t.getTarget(), t.getAmount());
+    } else if (1 == _type) {
+      return _context._account.transfer(t.getTarget(), _signer, t.getAmount());
+    }
+  }
+  bool operator()(scri::BPJoin& b) const {
+    if (0 == _type) {
+      return _context._bps.add(b.getBP());
+    } else if (1 == _type) {
+      return _context._bps.remove(b.getBP());
+    }
+  }
+  bool operator()(scri::BPExit& b) const {
+    if (0 == _type) {
+      return _context._bps.remove(b.getBP());
+    } else if (1 == _type) {
+      return _context._bps.add(b.getBP());
+    }
+  }
+  bool operator()(scri::NewFormat& n) const {
+    store::NewFormatPtr nPtr = std::make_shared<scri::NewFormat>(n);
+    if (0 == _type) {
+      return _context._format.add(nPtr);
+    } else if (1 == _type) {
+      return _context._format.remove(nPtr->getName());
+    }
+  }
+  bool operator()(scri::NewData& n) const {
+    store::NewDataPtr nPtr = std::make_shared<scri::NewData>(n);
+    if (0 == _type) {
+      return _context._data.add(nPtr);
+    } else if (1 == _type) {
+      return _context._data.remove(nPtr->getName());
+    }
+  }
+};
+
 Context::Context() {}
 
 Context::~Context() {}
@@ -24,44 +123,89 @@ void Context::close() {
   _transaction.close();
 }
 
-void Context::_apply(const TransactionSignedPtr& trx) {
-  if (_transaction.add(trx)) {
-    const std::vector<SignaturePair> v = trx->getSignatures();
-    if (!v.empty()) {
-      Pubkey signer = v[0].signer;
-      Script script = trx->getScript();
-      boost::apply_visitor(StoreVisitor(*this, signer, 0), script);
+bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
+  const std::vector<SignaturePair>& v = trx->getSignatures();
+  if (v.empty()) {
+    return false;
+  }
+
+  Pubkey signer = v[0].signer;
+  Script script = trx->getScript();
+  if (!boost::apply_visitor(StoreVisitor(*this, signer, rollback ? 1 : 0),
+                            script)) {
+    return false;
+  }
+
+  if (!_transaction.add(trx, rollback ? 0 : _head->getHeight())) {
+    return false;
+  }
+
+  return true;
+}
+
+bool Context::apply(const chain::BlockPtr& block) {
+  if (_head) {
+    if (block->getHeight() != _head->getHeight() + 1) {
+      return false;
+    }
+  } else {
+    if (block->getHeight() != 1) {
+      return false;
     }
   }
-}
 
-void Context::_rollback(const chain::TransactionSignedPtr& trx) {
-  if (_transaction.remove(trx)) {
-    const std::vector<SignaturePair> v = trx->getSignatures();
-    if (!v.empty()) {
-      Pubkey signer = v[0].signer;
-      Script script = trx->getScript();
-      boost::apply_visitor(StoreVisitor(*this, signer, 1), script);
+  auto backup = _head;
+  _head = block;
+  const std::vector<TransactionSignedPtr> v = block->getTransactions();
+  auto it = v.begin();
+  for (; it != v.end(); ++it) {
+    if (!_apply(*it)) {
+      break;
     }
   }
+  if (it != v.end()) {
+    _head = backup;
+    for (auto i = v.begin(); i != it; ++i) {
+      if (!_apply(*i, true)) {
+        throw std::runtime_error("bad apply");
+      }
+    }
+    return false;
+  }
+
+  return true;
 }
 
-void Context::apply(const chain::BlockPtr& block) {
-  const std::vector<TransactionSignedPtr> v = block->getTransactions();
-  for (auto it = v.begin(); it != v.end(); ++it) {
-    _apply(*it);
+bool Context::rollback(const chain::BlockPtr& block) {
+  if (_head) {
+    if (!EqualTo()(block->getHash(), _head->getHash())) {
+      return false;
+    }
   }
-}
-
-void Context::rollback(const chain::BlockPtr& block) {
   const std::vector<TransactionSignedPtr> v = block->getTransactions();
-  for (auto it = v.rbegin(); it != v.rend(); ++it) {
-    _rollback(*it);
+  auto it = v.rbegin();
+  for (; it != v.rend(); ++it) {
+    if (!_apply(*it, true)) {
+      break;
+    }
   }
+  if (it != v.rend()) {
+    for (auto i = v.rbegin(); i != it; ++i) {
+      if (!_apply(*i)) {
+        throw std::runtime_error("bad rollback");
+      }
+    }
+  }
+  _head = _block.getBlock(_head->getPrevious());
+  return true;
 }
 
 bool Context::check(const chain::TransactionSignedPtr& trx) {
   if (!trx) return false;
+
+  if (_transaction.contains(trx->getHashPtr())) {
+    return false;
+  }
 
   if (!trx->verify()) {
     return false;
@@ -73,28 +217,7 @@ bool Context::check(const chain::TransactionSignedPtr& trx) {
     }
   }
 
-  // 脚本是否可执行
-  Script script = trx->getScript();
-  const std::vector<SignaturePair> v = trx->getSignatures();
-  if (scri::Transfer* t = boost::get<scri::Transfer>(&script)) {
-    if (1 != v.size() || _account.query(v[0].signer) < t->getAmount()) {
-      return false;
-    }
-  } else {
-    int count = 0;
-    for (auto i : v) {
-      if (_bps.contains(i.signer)) {
-        count++;
-      }
-    }
-    uint32_t amount = _bps.getBPAmount();
-    if (0 == amount ||
-        (float)(count / amount) <= blockmirror::BP_PERCENT_SIGNER) {
-      return false;
-    }
-  }
-
-  if (_transaction.contains(trx->getHashPtr())) {
+  if (!boost::apply_visitor(CheckVisitor(*this, trx), trx->getScript())) {
     return false;
   }
 

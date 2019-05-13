@@ -33,7 +33,7 @@ class Session : public std::enable_shared_from_this<Session> {
               self_.strand_,
               std::bind(&Session::on_write, self_.shared_from_this(),
                         std::placeholders::_1, std::placeholders::_2,
-                        sp->need_eof())));
+                        !sp->keep_alive())));
     }
   };
 

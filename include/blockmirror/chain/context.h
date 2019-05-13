@@ -83,7 +83,6 @@ class Context {
   }
 
   store::TransactionStore& get_transaction_store() { return _transaction; }
-
   store::DataStore& get_data_store() { return _data; }
 };
 

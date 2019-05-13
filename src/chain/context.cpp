@@ -220,9 +220,11 @@ bool Context::check(const chain::TransactionSignedPtr& trx) {
     }
   }
 
-  if (!boost::apply_visitor(CheckVisitor(*this, trx), trx->getScript())) {
+  // by lvjl
+  // 下面2行在vs2017编译不过
+  /*if (!boost::apply_visitor(CheckVisitor(*this, trx), trx->getScript())) {
     return false;
-  }
+  }*/
 
   return true;
 }

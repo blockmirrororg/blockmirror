@@ -32,9 +32,11 @@ void Session::on_read(boost::system::error_code ec,
                       std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
-  if (ec == http::error::end_of_stream) return do_close();
+  if (ec == http::error::end_of_stream)
+    return do_close();
 
-  if (ec) return;
+  if (ec)
+    return;
 
   handle_request(std::move(req_), lambda_);
 }
@@ -58,7 +60,7 @@ void Session::do_close() {
 template <class Body, class Allocator, class Send>
 void Session::handle_request(
     http::request<Body, http::basic_fields<Allocator>>&& req, Send&& send) {
-  // Returns a bad request response
+
   auto const bad_request = [&req](boost::beast::string_view why) {
     http::response<http::string_body> res{http::status::bad_request,
                                           req.version()};
@@ -67,12 +69,18 @@ void Session::handle_request(
     res.prepare_payload();
     return res;
   };
-
   auto const server_error = [&req](boost::beast::string_view what) {
     http::response<http::string_body> res{http::status::internal_server_error,
                                           req.version()};
     res.keep_alive(req.keep_alive());
     res.body() = "An error occurred: '" + what.to_string() + "'";
+    res.prepare_payload();
+    return res;
+  };
+  auto const ok_repeat = [&req](boost::beast::string_view what) {
+    http::response<http::string_body> res{http::status::ok, req.version()};
+    res.keep_alive(req.keep_alive());
+    res.body() = what.to_string();
     res.prepare_payload();
     return res;
   };
@@ -82,44 +90,49 @@ void Session::handle_request(
 
   std::stringstream ss(req.body());
   boost::property_tree::ptree ptree;
-  boost::property_tree::read_json(ss, ptree);
-  blockmirror::serialization::PTreeIArchive archive(ptree);
 
   if (req.target() == "put_transaction") {
     blockmirror::chain::TransactionSignedPtr transaction =
         std::make_shared<blockmirror::chain::TransactionSigned>();
     try {
+      boost::property_tree::read_json(ss, ptree);
+      blockmirror::serialization::PTreeIArchive archive(ptree);
       archive >> transaction;
-    } catch (...) {
-      return send(server_error("exception caught"));
+    } catch (std::exception& e) {
+      return send(server_error(e.what()));
     }
     chain::Context& c = chain::Context::get();
     if (!c.check(transaction)) {
-      return send(bad_request("Illegal param"));
+      return send(bad_request("check failed"));
     }
     store::TransactionStore& ts = c.get_transaction_store();
     if (!ts.add(transaction)) {
-      return send(server_error("repeat put"));
+      return send(ok_repeat("repeat put, modified!"));
     }
 
     http::response<http::empty_body> res{http::status::ok, req.version()};
     res.keep_alive(req.keep_alive());
+
     return send(std::move(res));
 
   } else if (req.target() == "put_data") {
-    chain::DataSignedPtr data = std::make_shared<chain::DataSigned>();
+    blockmirror::chain::TransactionSignedPtr transaction =
+      std::make_shared<blockmirror::chain::TransactionSigned>();
     try {
-      archive >> data;
-    } catch (...) {
-      return send(server_error("exception caught"));
+      boost::property_tree::read_json(ss, ptree);
+      blockmirror::serialization::PTreeIArchive archive(ptree);
+      archive >> transaction;
+    }
+    catch (std::exception& e) {
+      return send(server_error(e.what()));
     }
     chain::Context& c = chain::Context::get();
-    /*if (!c.check(data))*/ {
-      return send(bad_request("Illegal param"));
+    if (!c.check(transaction)) {
+      return send(bad_request("check failed"));
     }
-    store::DataStore& ds = c.get_data_store();
-    /*if (!ds.add(data))*/ {
-      return send(server_error("repeat put"));
+    store::TransactionStore& ts = c.get_transaction_store();
+    if (!ts.add(transaction)) {
+      return send(ok_repeat("repeat put, modified!"));
     }
 
   } else {

@@ -19,8 +19,9 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     set(Secp256k1_ROOT_DIR "D:/Sources/vcpkg/installed/x64-windows-static")
     set(OPENSSL_ROOT_DIR "D:/Sources/vcpkg/installed/x64-windows-static")
     set(BOOST_ROOT "D:/Sources/vcpkg/installed/x64-windows-static")
+    set(ADDITION_LIBRARIES spdlog)
 else()
-    set(ADDITION_LIBRARIES pthread)
+    set(ADDITION_LIBRARIES pthread spdlog)
 endif()
 
 set(Boost_NO_BOOST_CMAKE ON)
@@ -37,6 +38,7 @@ find_package(OpenSSL REQUIRED)
 
 find_package(secp256k1 REQUIRED)
 
+add_subdirectory( 3dparty )
 add_subdirectory( src )
 add_subdirectory( unittests )
 add_subdirectory( test )

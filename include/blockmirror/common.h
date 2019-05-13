@@ -26,14 +26,20 @@
 #include <boost/thread/thread.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <spdlog/spdlog.h>
+
 #include <blockmirror/config.h>
 #include <blockmirror/types.h>
 
 #define ASSERT BOOST_ASSERT
 #define VERIFY BOOST_VERIFY
-#define LOG printf
-#define WARN printf
-#define ERR printf
+
+#define B_TRACE spdlog::trace
+#define B_DEBUG spdlog::debug
+#define B_LOG spdlog::info
+#define B_WARN spdlog::warn
+#define B_ERR spdlog::error
+#define B_CRITICAL spdlog::critical
 
 namespace blockmirror {
 

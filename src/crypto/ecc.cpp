@@ -40,7 +40,7 @@ bool ECCContext::verify(const Pubkey &pub, const Hash256 &hash,
   secp256k1_pubkey pubkey;
   secp256k1_ecdsa_signature &signature = (secp256k1_ecdsa_signature &)sig;
   if (!secp256k1_ec_pubkey_parse(_context, &pubkey, pub.data(), pub.size())) {
-    WARN("secp256k1_ec_pubkey_parse");
+    B_WARN("secp256k1_ec_pubkey_parse");
     return false;
   }
   return secp256k1_ecdsa_verify(_context, &signature, hash.data(), &pubkey);

@@ -125,6 +125,8 @@ void Context::load() {
     store::BinaryReader reader;
     reader.open(path / "head");
     reader >> _head;
+  } else {
+    
   }
 }
 void Context::close() {
@@ -245,7 +247,7 @@ bool Context::apply(const chain::BlockPtr& block) {
 
 bool Context::rollback() {
   if (!_head) {
-    WARN("Context::rollback no head\n");
+    B_WARN("no head");
     return false;
   }
   // coinbase
@@ -279,29 +281,29 @@ bool Context::rollback() {
 
 bool Context::check(const chain::TransactionSignedPtr& trx) {
   if (!trx) {
-    LOG("bad transaction\n");
+    B_LOG("bad transaction");
     return false;
   };
 
   if (_transaction.contains(trx->getHashPtr())) {
-    LOG("duplicate transaction\n");
+    B_LOG("duplicate transaction");
     return false;
   }
 
   if (!trx->verify()) {
-    LOG("bad transaction signatures\n");
+    B_LOG("bad transaction signatures");
     return false;
   }
 
   if (_head) {
     if (trx->getExpire() <= _head->getHeight()) {
-      LOG("bad transaction expire\n");
+      B_LOG("bad transaction expire");
       return false;
     }
   }
 
   if (!boost::apply_visitor(CheckVisitor(*this, trx), trx->getScript())) {
-    LOG("execute failure\n");
+    B_LOG("execute failure");
     return false;
   }
 
@@ -309,21 +311,27 @@ bool Context::check(const chain::TransactionSignedPtr& trx) {
 }
 
 bool Context::check(const chain::BlockHeaderSignedPtr& block) {
-  if (!block) return false;
+  if (!block) {
+    B_LOG("bad block");
+    return false;
+  }
 
   if (_head) {
     // 最大可回滚
     if (block->getHeight() + BLOCK_MAX_ROLLBACK < _head->getHeight()) {
+      B_LOG("too old block");
       return false;
     }
   }
 
   // FIXME: 这里有隐含的问题，具体情况以后考虑
   if (!_bps.contains(block->getProducer())) {
+    B_LOG("bad producer");
     return false;
   }
 
   if (!block->verify()) {
+    B_LOG("bad block signatures");
     return false;
   }
 

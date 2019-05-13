@@ -41,6 +41,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
     boost::filesystem::remove("./data");
     boost::filesystem::remove("./format");
     boost::filesystem::remove("./transaction");
+    boost::filesystem::remove("./head");
 
 
     blockmirror::chain::BlockPtr block1 =
@@ -111,54 +112,14 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
     block3->addTransaction(tPtr7);
     block3->finalize(K(BPriv));
 
-    
-    blockmirror::chain::Context c;
     {
+        blockmirror::chain::Context c;
         c.load();
         BOOST_CHECK(c.apply(block1));
-/*         {
-            c.close();
-            blockmirror::store::AccountStore accountStore;
-            accountStore.load(".");
-            std::cout<<accountStore.query(P(APub))<<std::endl;
-            std::cout<<accountStore.query(P(BPub))<<std::endl;
-            c.load();
-        } */
         BOOST_CHECK(c.apply(block2));
-/*         {
-            c.close();
-            blockmirror::store::AccountStore accountStore;
-            accountStore.load(".");
-            std::cout<<accountStore.query(P(APub))<<std::endl;
-            std::cout<<accountStore.query(P(BPub))<<std::endl;
-            c.load();
-        } */
         BOOST_CHECK(c.apply(block3));
-/*         {
-            c.close();
-            blockmirror::store::AccountStore accountStore;
-            accountStore.load(".");
-            std::cout<<accountStore.query(P(APub))<<std::endl;
-            std::cout<<accountStore.query(P(BPub))<<std::endl;
-            c.load();
-        } */
         c.close();
 
-        {
-            blockmirror::store::BlockStore store;
-            store.load(".");
-            BOOST_CHECK(store.addBlock(block1));
-            BOOST_CHECK(store.addBlock(block2));
-            BOOST_CHECK(store.addBlock(block3));
-
-            BOOST_CHECK(store.contains(block1->getHashPtr()));
-            BOOST_CHECK(store.contains(block1->getHash()));
-            BOOST_CHECK(store.contains(block2->getHashPtr()));
-            BOOST_CHECK(store.contains(block2->getHash()));
-            BOOST_CHECK(store.contains(block3->getHashPtr()));
-            BOOST_CHECK(store.contains(block3->getHash()));
-        }
-            
         blockmirror::store::AccountStore accountStore;
         accountStore.load(".");
         BOOST_CHECK_EQUAL(accountStore.query(P(APub)), 199999900);
@@ -187,7 +148,24 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
         BOOST_CHECK_EQUAL(transactionStore.contains(tPtr4->getHashPtr()),1);
         BOOST_CHECK_EQUAL(transactionStore.contains(tPtr5->getHashPtr()),1);
     }
+
     {
+        blockmirror::store::BlockStore store;
+        store.load(".");
+        BOOST_CHECK(store.addBlock(block1));
+        BOOST_CHECK(store.addBlock(block2));
+        BOOST_CHECK(store.addBlock(block3));
+
+        BOOST_CHECK(store.contains(block1->getHashPtr()));
+        BOOST_CHECK(store.contains(block1->getHash()));
+        BOOST_CHECK(store.contains(block2->getHashPtr()));
+        BOOST_CHECK(store.contains(block2->getHash()));
+        BOOST_CHECK(store.contains(block3->getHashPtr()));
+        BOOST_CHECK(store.contains(block3->getHash()));
+    }
+
+    {
+        blockmirror::chain::Context c;
         c.load();
         BOOST_CHECK(c.rollback());
         BOOST_CHECK(c.rollback());

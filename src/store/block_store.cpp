@@ -51,8 +51,7 @@ uint64_t BlockStore::_saveBlock(chain::BlockPtr block) {
   BinaryWritter writter;
   writter.open(
       _path / (boost::lexical_cast<std::string>(_currentFileIndex) + ".block"),
-      std::ios_base::binary | std::ios_base::out | std::ios_base::app |
-          std::ios_base::in);
+      std::ios_base::binary | std::ios_base::out | std::ios_base::app);
   uint32_t file = _currentFileIndex;
   uint32_t offset = (uint32_t)writter.tellp();
   writter << block;
@@ -60,7 +59,7 @@ uint64_t BlockStore::_saveBlock(chain::BlockPtr block) {
     _currentFileIndex++;
   }
   writter.close();
-  return makeIndex(offset,file);
+  return makeIndex(offset, file);
 }
 
 bool BlockStore::contains(const Hash256Ptr &hash) {

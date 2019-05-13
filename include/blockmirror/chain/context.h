@@ -1,7 +1,7 @@
 #pragma once
 
-#include <blockmirror/chain/transaction.h>
 #include <blockmirror/common.h>
+#include <blockmirror/chain/transaction.h>
 #include <blockmirror/store/account_store.h>
 #include <blockmirror/store/block_store.h>
 #include <blockmirror/store/bps_store.h>
@@ -40,6 +40,7 @@ class Context {
   void load();
   void close();
 
+  chain::BlockPtr genBlock(const Privkey &key, const Pubkey &reward);
   /**
    * @brief 执行一个区块
    *

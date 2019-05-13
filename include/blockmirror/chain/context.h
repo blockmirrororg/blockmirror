@@ -49,10 +49,8 @@ class Context {
 
   /**
    * @brief 回滚一个区块
-   *
-   * @param block
    */
-  bool rollback(const chain::BlockPtr& block);
+  bool rollback();
 
   /**
    * @brief 检测当前交易是否可能被接受

@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
     blockmirror::chain::Context c;
     {
         c.load();
-        c.apply(block1);
+        BOOST_CHECK(c.apply(block1));
 /*         {
             c.close();
             blockmirror::store::AccountStore accountStore;
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
             std::cout<<accountStore.query(P(BPub))<<std::endl;
             c.load();
         } */
-        c.apply(block2);
+        BOOST_CHECK(c.apply(block2));
 /*         {
             c.close();
             blockmirror::store::AccountStore accountStore;
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
             std::cout<<accountStore.query(P(BPub))<<std::endl;
             c.load();
         } */
-        c.apply(block3);
+        BOOST_CHECK(c.apply(block3));
 /*         {
             c.close();
             blockmirror::store::AccountStore accountStore;
@@ -189,9 +189,9 @@ BOOST_AUTO_TEST_CASE(context_tests_ok) {
     }
     {
         c.load();
-        c.rollback(block3);
-        c.rollback(block2);
-        c.rollback(block1);
+        BOOST_CHECK(c.rollback());
+        BOOST_CHECK(c.rollback());
+        BOOST_CHECK(c.rollback());
         c.close();
         
         blockmirror::store::AccountStore store;

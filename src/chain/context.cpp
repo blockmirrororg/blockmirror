@@ -159,7 +159,7 @@ bool Context::apply(const chain::BlockPtr& block) {
 
   auto backup = _head;
   _head = block;
-  
+
   const std::vector<TransactionSignedPtr> v = block->getTransactions();
   auto it = v.begin();
   for (; it != v.end(); ++it) {
@@ -180,13 +180,11 @@ bool Context::apply(const chain::BlockPtr& block) {
   return true;
 }
 
-bool Context::rollback(const chain::BlockPtr& block) {
-  if (_head) {
-    if (!EqualTo()(block->getHash(), _head->getHash())) {
-      return false;
-    }
+bool Context::rollback() {
+  if (!_head) {
+    return false;
   }
-  const std::vector<TransactionSignedPtr> v = block->getTransactions();
+  const std::vector<TransactionSignedPtr> v = _head->getTransactions();
   auto it = v.rbegin();
   for (; it != v.rend(); ++it) {
     if (!_apply(*it, true)) {

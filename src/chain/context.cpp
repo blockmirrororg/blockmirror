@@ -58,11 +58,11 @@ class CheckVisitor : public boost::static_visitor<bool> {
 class StoreVisitor : public boost::static_visitor<bool> {
  private:
   Context& _context;
-  Pubkey& _signer;
+  const Pubkey& _signer;
   uint8_t _type;  // 0 正向操作 1 反向操作
 
  public:
-  StoreVisitor(Context& context, Pubkey& signer, uint8_t type)
+  StoreVisitor(Context& context, const Pubkey& signer, uint8_t type)
       : _context(context), _signer(signer), _type(type){};
   bool operator()(const scri::Transfer& t) const {
     if (0 == _type) {
@@ -70,6 +70,7 @@ class StoreVisitor : public boost::static_visitor<bool> {
     } else if (1 == _type) {
       return _context._account.transfer(t.getTarget(), _signer, t.getAmount());
     }
+    return false;
   }
   bool operator()(const scri::BPJoin& b) const {
     if (0 == _type) {
@@ -77,6 +78,7 @@ class StoreVisitor : public boost::static_visitor<bool> {
     } else if (1 == _type) {
       return _context._bps.remove(b.getBP());
     }
+    return false;
   }
   bool operator()(const scri::BPExit& b) const {
     if (0 == _type) {
@@ -84,6 +86,7 @@ class StoreVisitor : public boost::static_visitor<bool> {
     } else if (1 == _type) {
       return _context._bps.add(b.getBP());
     }
+    return false;
   }
   bool operator()(const scri::NewFormat& n) const {
     store::NewFormatPtr nPtr = std::make_shared<scri::NewFormat>(n);
@@ -92,6 +95,7 @@ class StoreVisitor : public boost::static_visitor<bool> {
     } else if (1 == _type) {
       return _context._format.remove(nPtr->getName());
     }
+    return false;
   }
   bool operator()(const scri::NewData& n) const {
     store::NewDataPtr nPtr = std::make_shared<scri::NewData>(n);
@@ -100,6 +104,7 @@ class StoreVisitor : public boost::static_visitor<bool> {
     } else if (1 == _type) {
       return _context._data.remove(nPtr->getName());
     }
+    return false;
   }
 };
 
@@ -108,16 +113,30 @@ Context::Context() {}
 Context::~Context() {}
 
 void Context::load() {
-  _account.load(".");
-  _block.load(".");
-  _bps.load(".");
-  _data.load(".");
-  _format.load(".");
-  _transaction.load(".");
+  boost::filesystem::path path = ".";
+  _account.load(path);
+  _block.load(path);
+  _bps.load(path);
+  _data.load(path);
+  _format.load(path);
+  _transaction.load(path);
 
-  loadHead(".");
+  if (boost::filesystem::exists(path / "head")) {
+    store::BinaryReader reader;
+    reader.open(path / "head");
+    reader >> _head;
+  }
 }
 void Context::close() {
+    boost::filesystem::path path = ".";
+  if (_head) {
+    store::BinaryWritter writter;
+    writter.open(path / "head");
+    writter << _head;
+    printf("writing head\n");
+  } else {
+    boost::filesystem::remove(path / "head");
+  }
   _account.close();
   _block.close();
   _bps.close();
@@ -150,10 +169,8 @@ bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
     return false;
   }
 
-  Pubkey signer = v[0].signer;
-  Script script = trx->getScript();
-  if (!boost::apply_visitor(StoreVisitor(*this, signer, rollback ? 1 : 0),
-                            script)) {
+  if (!boost::apply_visitor(StoreVisitor(*this, v[0].signer, rollback ? 1 : 0),
+                            trx->getScript())) {
     return false;
   }
 
@@ -166,6 +183,37 @@ bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
     } */
 
   return true;
+}
+
+chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward) {
+  chain::BlockPtr newBlock = std::make_shared<chain::Block>();
+  if (!_head) {
+    newBlock->setGenesis();
+  } else {
+    newBlock->setPrevious(*_head);
+  }
+  // 执行coinbase
+  if (!_account.add(reward, MINER_AMOUNT)) {
+    return nullptr;
+  }
+  newBlock->setCoinbase(reward);
+
+  auto trxs = _transaction.popUnpacked();
+  // 执行所有交易
+  for (auto& trx : trxs) {
+    if (_apply(trx)) {
+      newBlock->addTransaction(trx);
+    }
+  }
+  // FIXME: 添加接口add(vector<trx>)
+  for (auto& trx : newBlock->getTransactions()) {
+    _transaction.add(trx, newBlock->getHeight());
+  }
+  // FIXME: 从临时数据池中设置所有数据
+  newBlock->finalize(key);
+  _head = newBlock;
+  _block.addBlock(newBlock);
+  return newBlock;
 }
 
 bool Context::apply(const chain::BlockPtr& block) {
@@ -182,6 +230,15 @@ bool Context::apply(const chain::BlockPtr& block) {
   auto backup = _head;
   _head = block;
 
+  // coinbase
+  const auto& coinbase = boost::get<blockmirror::chain::scri::Transfer>(
+      block->getCoinbase()->getScript());
+  if (coinbase.getAmount() != MINER_AMOUNT) {
+    return false;
+  }
+  if (!_account.add(coinbase.getTarget(), coinbase.getAmount())) {
+    return false;
+  }
   const std::vector<TransactionSignedPtr> v = block->getTransactions();
   auto it = v.begin();
   for (; it != v.end(); ++it) {
@@ -189,12 +246,15 @@ bool Context::apply(const chain::BlockPtr& block) {
       break;
     }
   }
-  if (it != v.end() || !_account.add(block->getProducer(), MINER_AMOUNT)) {
+  if (it != v.end()) {
     _head = backup;
     for (auto i = v.begin(); i != it; ++i) {
       if (!_apply(*i, true)) {
         throw std::runtime_error("bad apply");
       }
+    }
+    if (!_account.add(coinbase.getTarget(), -(int64_t)coinbase.getAmount())) {
+      throw std::runtime_error("bad apply");
     }
     return false;
   }
@@ -204,8 +264,12 @@ bool Context::apply(const chain::BlockPtr& block) {
 
 bool Context::rollback() {
   if (!_head) {
+    WARN("Context::rollback no head\n");
     return false;
   }
+  // coinbase
+  const auto& coinbase = boost::get<blockmirror::chain::scri::Transfer>(
+      _head->getCoinbase()->getScript());
   const std::vector<TransactionSignedPtr> v = _head->getTransactions();
   auto it = v.rbegin();
   for (; it != v.rend(); ++it) {
@@ -213,12 +277,19 @@ bool Context::rollback() {
       break;
     }
   }
-  if (it != v.rend()) {
+  bool shouldRevert = (it != v.rend());
+  if (!shouldRevert) {
+    if (!_account.add(coinbase.getTarget(), -(int64_t)coinbase.getAmount())) {
+      shouldRevert = true;
+    }
+  }
+  if (shouldRevert) {
     for (auto i = v.rbegin(); i != it; ++i) {
       if (!_apply(*i)) {
         throw std::runtime_error("bad rollback");
       }
     }
+    return false;
   }
 
   _head = _block.getBlock(_head->getPrevious());
@@ -242,11 +313,9 @@ bool Context::check(const chain::TransactionSignedPtr& trx) {
     }
   }
 
-  // by lvjl
-  // 下面2行在vs2017编译不过
-  /*if (!boost::apply_visitor(CheckVisitor(*this, trx), trx->getScript())) {
+  if (!boost::apply_visitor(CheckVisitor(*this, trx), trx->getScript())) {
     return false;
-  }*/
+  }
 
   return true;
 }

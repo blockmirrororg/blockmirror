@@ -77,6 +77,7 @@ class BlockHeaderSigned : public BlockHeader {
    * @param amount 奖励金额
    */
   void setCoinbase(const Pubkey &target, uint64_t amount = MINER_AMOUNT);
+  const TransactionPtr &getCoinbase() { return coinbase; }
 };
 using BlockHeaderSignedPtr = std::shared_ptr<BlockHeaderSigned>;
 

@@ -23,13 +23,15 @@ else()
     set(ADDITION_LIBRARIES pthread)
 endif()
 
+set(CMAKE_BUILD_TYPE "Debug")
+
 set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost 1.67 REQUIRED COMPONENTS
     thread
     date_time
     filesystem
     system
-    signals
+    #signals
     serialization
     chrono
     unit_test_framework)

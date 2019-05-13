@@ -8,6 +8,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/config.hpp>
+#include <blockmirror/chain/context.h>
 
 namespace blockmirror {
 namespace rpc {
@@ -43,9 +44,10 @@ class Session : public std::enable_shared_from_this<Session> {
   http::request<http::string_body> req_;
   std::shared_ptr<void> res_;
   send_lambda lambda_;
+  blockmirror::chain::Context &_context;
 
  public:
-  explicit Session(tcp::socket socket);
+  explicit Session(tcp::socket socket, blockmirror::chain::Context &context);
 
   void run();
   void do_read();

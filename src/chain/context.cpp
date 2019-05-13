@@ -297,23 +297,30 @@ bool Context::rollback() {
 }
 
 bool Context::check(const chain::TransactionSignedPtr& trx) {
-  if (!trx) return false;
+  if (!trx) {
+    LOG("bad transaction\n");
+    return false;
+  };
 
   if (_transaction.contains(trx->getHashPtr())) {
+    LOG("duplicate transaction\n");
     return false;
   }
 
   if (!trx->verify()) {
+    LOG("bad transaction signatures\n");
     return false;
   }
 
   if (_head) {
     if (trx->getExpire() <= _head->getHeight()) {
+      LOG("bad transaction expire\n");
       return false;
     }
   }
 
   if (!boost::apply_visitor(CheckVisitor(*this, trx), trx->getScript())) {
+    LOG("execute failure\n");
     return false;
   }
 

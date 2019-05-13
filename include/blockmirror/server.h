@@ -1,6 +1,7 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <blockmirror/chain/context.h>
 #include <blockmirror/p2p/acceptor.h>
 #include <blockmirror/p2p/connector.h>
 #include <blockmirror/rpc/listener.h>
@@ -11,32 +12,28 @@ namespace blockmirror {
 
 class Server : private boost::noncopyable {
  public:
-  explicit Server(std::size_t thread_pool_size);
+  explicit Server();
 
  public:
   void run();
   void add_connector(const char *ip, unsigned short port);
 
  private:
-  void handle_stop(int signo);
-  void handle_timeout();
+  void handleSignals(int signo);
 
  private:
-  boost::asio::io_context io_context_;   // for main thread
-  boost::asio::io_context io_context1_;  // for work thread
+  boost::asio::io_context _mainContext;  // for main thread
+  boost::asio::io_context _workContext;  // for work thread
 
-  boost::asio::deadline_timer timer_;
-  boost::asio::signal_set signals_;
+  boost::asio::signal_set _signals;
+
+  blockmirror::chain::Context _context;
 
   // p2p
-  blockmirror::p2p::Acceptor acceptor_;
-  std::list<boost::shared_ptr<blockmirror::p2p::Connector> > connectors_;
+  blockmirror::p2p::Acceptor _p2pAcceptor;
+  std::list<boost::shared_ptr<blockmirror::p2p::Connector> > _p2pConnecting;
   // rpc
-  blockmirror::rpc::Listener listener_;
-
-  std::size_t thread_pool_size_;
-
-
+  blockmirror::rpc::Listener _rpcListener;
 };
 
 }  // namespace blockmirror

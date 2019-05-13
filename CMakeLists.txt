@@ -24,6 +24,8 @@ else()
     set(ADDITION_LIBRARIES pthread spdlog)
 endif()
 
+set(CMAKE_BUILD_TYPE "Debug")
+
 set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost 1.67 REQUIRED COMPONENTS
     thread

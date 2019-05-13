@@ -145,6 +145,24 @@ void Context::close() {
   _data.close();
   _format.close();
   _transaction.close();
+
+  closeHead();
+}
+
+void Context::loadHead(const boost::filesystem::path& path) {
+  _path = path;
+  if (boost::filesystem::exists((_path / "head"))) {
+    _head = std::make_shared<chain::Block>();
+    blockmirror::store::BinaryReader reader;
+    reader.open(_path / "head");
+    reader >> _head;
+  }
+}
+
+void Context::closeHead() {
+  blockmirror::store::BinaryWritter writter;
+  writter.open(_path / "head");
+  writter << _head;
 }
 
 bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
@@ -158,12 +176,13 @@ bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
     return false;
   }
 
-  bool ret = _transaction.add(trx, rollback ? 0 : _head->getHeight());
-  if (!rollback && !ret) {
-    return false;
-  } else if (rollback && ret) {
-    return false;
-  }
+  _transaction.add(trx, rollback ? 0 : _head->getHeight());
+  /*   bool ret = _transaction.add(trx, rollback ? 0 : _head->getHeight());
+    if (!rollback && !ret) {
+      return false;
+    } else if (rollback && ret) {
+      return false;
+    } */
 
   return true;
 }

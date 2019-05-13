@@ -91,8 +91,6 @@ void Session::handle_request(
   std::stringstream ss(req.body());
   boost::property_tree::ptree ptree;
 
-  std::cout<<req.target()<<std::endl;
-
   if (req.target() == "/put_transaction") {
     blockmirror::chain::TransactionSignedPtr transaction =
         std::make_shared<blockmirror::chain::TransactionSigned>();

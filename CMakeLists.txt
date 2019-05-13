@@ -29,7 +29,6 @@ find_package(Boost 1.67 REQUIRED COMPONENTS
     date_time
     filesystem
     system
-    signals
     serialization
     chrono
     unit_test_framework)

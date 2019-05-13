@@ -7,6 +7,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/config.hpp>
+#include <blockmirror/chain/context.h>
 
 namespace blockmirror {
 namespace rpc {
@@ -16,9 +17,10 @@ using tcp = boost::asio::ip::tcp;
 class Listener : public std::enable_shared_from_this<Listener> {
   tcp::acceptor acceptor_;
   tcp::socket socket_;
+  blockmirror::chain::Context &_context;
 
  public:
-  Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint);
+  Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint, blockmirror::chain::Context &ctx);
 
   void run();
   void do_accept();

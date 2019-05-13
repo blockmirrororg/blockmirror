@@ -11,10 +11,11 @@
 namespace blockmirror {
 namespace rpc {
 
-Session::Session(tcp::socket socket)
+Session::Session(tcp::socket socket, blockmirror::chain::Context& context)
     : socket_(std::move(socket)),
       strand_(socket_.get_executor()),
-      lambda_(*this) {}
+      lambda_(*this),
+      _context(context) {}
 
 void Session::run() { do_read(); }
 
@@ -32,11 +33,9 @@ void Session::on_read(boost::system::error_code ec,
                       std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
-  if (ec == http::error::end_of_stream)
-    return do_close();
+  if (ec == http::error::end_of_stream) return do_close();
 
-  if (ec)
-    return;
+  if (ec) return;
 
   handle_request(std::move(req_), lambda_);
 }
@@ -60,7 +59,6 @@ void Session::do_close() {
 template <class Body, class Allocator, class Send>
 void Session::handle_request(
     http::request<Body, http::basic_fields<Allocator>>&& req, Send&& send) {
-
   auto const bad_request = [&req](boost::beast::string_view why) {
     http::response<http::string_body> res{http::status::bad_request,
                                           req.version()};
@@ -91,6 +89,8 @@ void Session::handle_request(
   std::stringstream ss(req.body());
   boost::property_tree::ptree ptree;
 
+  chain::Context& c = _context;
+
   if (req.target() == "/put_transaction") {
     blockmirror::chain::TransactionSignedPtr transaction =
         std::make_shared<blockmirror::chain::TransactionSigned>();
@@ -101,7 +101,6 @@ void Session::handle_request(
     } catch (std::exception& e) {
       return send(server_error(e.what()));
     }
-    chain::Context& c = chain::Context::get();
     if (!c.check(transaction)) {
       return send(bad_request("check failed"));
     }
@@ -117,16 +116,14 @@ void Session::handle_request(
 
   } else if (req.target() == "/put_data") {
     blockmirror::chain::TransactionSignedPtr transaction =
-      std::make_shared<blockmirror::chain::TransactionSigned>();
+        std::make_shared<blockmirror::chain::TransactionSigned>();
     try {
       boost::property_tree::read_json(ss, ptree);
       blockmirror::serialization::PTreeIArchive archive(ptree);
       archive >> transaction;
-    }
-    catch (std::exception& e) {
+    } catch (std::exception& e) {
       return send(server_error(e.what()));
     }
-    chain::Context& c = chain::Context::get();
     if (!c.check(transaction)) {
       return send(bad_request("check failed"));
     }

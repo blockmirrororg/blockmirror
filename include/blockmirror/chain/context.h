@@ -78,10 +78,6 @@ class Context {
     return _block.contains(hash);
   }
 
-  static Context& get() {
-    static Context context;
-    return context;
-  }
 
   store::TransactionStore& get_transaction_store() { return _transaction; }
   store::DataStore& get_data_store() { return _data; }

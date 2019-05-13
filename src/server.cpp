@@ -6,65 +6,63 @@
 
 namespace blockmirror {
 
-Server::Server(std::size_t thread_pool_size)
-    : io_context_(),
-      io_context1_(),
-      acceptor_(io_context1_, 80),
-      timer_(io_context_, boost::posix_time::seconds(10)),
-      signals_(io_context_),
-      listener_(
-          io_context1_,
-          boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v4(), 8080}),
-      thread_pool_size_(thread_pool_size) {}
+Server::Server()
+    : _mainContext(),
+      _workContext(),
+      _p2pAcceptor(_workContext, 80),
+      _signals(_mainContext),
+      _rpcListener(
+          _workContext,
+          boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v4(), 8080},
+          _context) {}
 
-void Server::handle_stop(int signo) {
-  io_context_.stop();
-  io_context1_.stop();
-}
-
-void Server::handle_timeout() {
-  // do something
-	
-  timer_.expires_at(timer_.expires_at() + boost::posix_time::seconds(10));
-  timer_.async_wait(boost::bind(&Server::handle_timeout, this));
+void Server::handleSignals(int signo) {
+  std::cout << "got signal: " << signo << std::endl;
+  _mainContext.stop();
+  _workContext.stop();
 }
 
 void Server::run() {
-  signals_.add(SIGINT);
-  signals_.add(SIGTERM);
+  _signals.add(SIGINT);
+  _signals.add(SIGTERM);
 #if defined(SIGQUIT)
-  signals_.add(SIGQUIT);
+  _signals.add(SIGQUIT);
 #endif
   // main thread job
-  signals_.async_wait(boost::bind(&Server::handle_stop, this,
+  _signals.async_wait(boost::bind(&Server::handleSignals, this,
                                   boost::asio::placeholders::signal_number));
-  timer_.async_wait(boost::bind(&Server::handle_timeout, this));
 
-  // work thread job
-  // p2p
-  acceptor_.start_accept();
-  for (auto pos = connectors_.begin(); pos != connectors_.end(); ++pos) {
-    (*pos)->start();
-  }
+  _context.load();
+
+  // FIXME: Debug only
+  // _context.debugInit();
+
   // rpc
-  listener_.run();
+  _rpcListener.run();
 
   std::vector<boost::shared_ptr<std::thread>> threads;
-  for (std::size_t i = 0; i < thread_pool_size_; ++i) {
+  for (std::size_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
     boost::shared_ptr<std::thread> thread(new std::thread(
-        boost::bind(&boost::asio::io_context::run, &io_context1_)));
+        boost::bind(&boost::asio::io_context::run, &_workContext)));
     threads.push_back(thread);
   }
 
-  io_context_.run();
-  for (std::size_t i = 0; i < thread_pool_size_; ++i) {
-    threads[i]->join();
+  try {
+    _mainContext.run();
+  } catch (...) {
+    std::cerr << "got unknown exception" << std::endl;
   }
+
+  for (auto thread : threads) {
+    thread->join();
+  }
+
+  _context.close();
 }
 
-void Server::add_connector(const char *ip, unsigned short port)
-{
-	connectors_.push_back(boost::make_shared<blockmirror::p2p::Connector>(io_context1_, ip, port));
+void Server::add_connector(const char *ip, unsigned short port) {
+  _p2pConnecting.push_back(
+      boost::make_shared<blockmirror::p2p::Connector>(_workContext, ip, port));
 }
 
 }  // namespace blockmirror

@@ -91,7 +91,7 @@ void Session::handle_request(
   std::stringstream ss(req.body());
   boost::property_tree::ptree ptree;
 
-  if (req.target() == "put_transaction") {
+  if (req.target() == "/put_transaction") {
     blockmirror::chain::TransactionSignedPtr transaction =
         std::make_shared<blockmirror::chain::TransactionSigned>();
     try {
@@ -115,7 +115,7 @@ void Session::handle_request(
 
     return send(std::move(res));
 
-  } else if (req.target() == "put_data") {
+  } else if (req.target() == "/put_data") {
     blockmirror::chain::TransactionSignedPtr transaction =
       std::make_shared<blockmirror::chain::TransactionSigned>();
     try {

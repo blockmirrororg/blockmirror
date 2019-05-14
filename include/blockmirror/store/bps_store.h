@@ -1,7 +1,11 @@
 /**
- * 1. 添加
- * 2. 读取
- * 参考 BPJoin 和 BPExit 交易
+ * 管理BP的状态 <只能在主线程中使用>
+ * 1. 负责管理当前BP的集合
+ * 2. 根据公钥判断是否在BP集合中
+ * 3. 根据公钥查找在BP集合中的位置
+ * 4. 添加和删除BP
+ * 5. 压入和弹出BP变更记录
+ * 6. 计算某个BP出块的时间偏移
  */
 
 #pragma once
@@ -12,16 +16,25 @@
 namespace blockmirror {
 namespace store {
 
-using BPJoinPtr = std::shared_ptr<chain::scri::BPJoin>;
-using BPExitPtr = std::shared_ptr<chain::scri::BPExit>;
-
 class BpsStore {
  private:
-  std::set<Pubkey, Less> _bps;
-
-  boost::shared_mutex _mutex;
+  // BP变更记录
+  struct ChangeRecords {
+    template <typename Archive>
+    void serialize(Archive& ar) {
+      ar& timestamp& index;
+    }
+    ChangeRecords() {};
+    ChangeRecords(uint64_t idx, uint64_t t) : index(idx), timestamp(t) {}
+    uint64_t timestamp;  // 变更时间戳 可对应到具体区块
+    uint64_t index;      // 变更时该区块的BP位置
+  };
+  std::vector<ChangeRecords> _changes;
+  // BP列表
+  std::vector<Pubkey> _bps;
 
   boost::filesystem::path _path;
+  bool _loaded;
 
  public:
   BpsStore();
@@ -39,6 +52,7 @@ class BpsStore {
    * @brief 读取数据
    */
   bool contains(const Pubkey& key);
+  int find(const Pubkey &key);
   /**
    * @brief 添加数据
    */
@@ -50,7 +64,23 @@ class BpsStore {
   /**
    * @brief 获取BP总数
    */
-  uint32_t getBPAmount() { return _bps.size(); }
+  uint32_t getBPAmount() { return (uint32_t)_bps.size(); }
+  /**
+   * @brief 计算某个BP出块的时间偏移
+   *
+   * @param key 出块公钥
+   * @param now 当前时间戳
+   * @return int 小于0不存在 大于0需要的偏移
+   */
+  int calcBPOffset(const Pubkey& key, uint64_t now = now_ms_since_1970());
+  /**
+   * @brief BP变动时应该将改变压入链中
+   *
+   * @param idx 造成改变所在的位置
+   * @param timestamp 时间戳
+   */
+  void pushBpChange(uint64_t idx, uint64_t timestamp);
+  void popBpChange();
 };
 
 }  // namespace store

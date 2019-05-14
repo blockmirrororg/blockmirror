@@ -34,6 +34,7 @@ class BlockStore {
   boost::mutex _fileMutex;
 
   boost::filesystem::path _path;
+  bool _loaded;
 
   chain::BlockPtr _loadBlock(uint64_t index);
   uint64_t _saveBlock(chain::BlockPtr block);

@@ -9,11 +9,15 @@ struct EmptyDeleter {
 namespace blockmirror {
 namespace store {
 
-BlockStore::BlockStore() : _currentFileIndex(0) {}
+BlockStore::BlockStore() : _currentFileIndex(0), _loaded(false) {}
 
-BlockStore::~BlockStore() { close(); }
+BlockStore::~BlockStore() {
+  if (_loaded) close();
+}
 
 void BlockStore::load(const boost::filesystem::path &path) {
+  ASSERT(!_loaded);
+  _loaded = true;
   _path = path;
 
   if (boost::filesystem::exists(_path / "index")) {
@@ -24,6 +28,8 @@ void BlockStore::load(const boost::filesystem::path &path) {
 }
 
 void BlockStore::close() {
+  ASSERT(_loaded);
+  _loaded = false;
   flushBlock(0);
   _ordered.clear();
   _cached.clear();
@@ -51,8 +57,7 @@ uint64_t BlockStore::_saveBlock(chain::BlockPtr block) {
   BinaryWritter writter;
   writter.open(
       _path / (boost::lexical_cast<std::string>(_currentFileIndex) + ".block"),
-      std::ios_base::binary | std::ios_base::out | std::ios_base::app |
-          std::ios_base::in);
+      std::ios_base::binary | std::ios_base::out | std::ios_base::app);
   uint32_t file = _currentFileIndex;
   uint32_t offset = (uint32_t)writter.tellp();
   writter << block;
@@ -60,7 +65,7 @@ uint64_t BlockStore::_saveBlock(chain::BlockPtr block) {
     _currentFileIndex++;
   }
   writter.close();
-  return makeIndex(offset,file);
+  return makeIndex(offset, file);
 }
 
 bool BlockStore::contains(const Hash256Ptr &hash) {

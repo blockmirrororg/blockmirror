@@ -4,13 +4,17 @@
 namespace blockmirror {
 namespace store {
 
-FormatStore::FormatStore() {
+FormatStore::FormatStore() : _loaded(false) {
   _path = boost::filesystem::initial_path<boost::filesystem::path>();
 }
 
-FormatStore::~FormatStore() { close(); }
+FormatStore::~FormatStore() {
+  if (_loaded) close();
+}
 
 void FormatStore::load(const boost::filesystem::path& path) {
+  ASSERT(!_loaded);
+  _loaded = true;
   _path = path;
   if (boost::filesystem::exists((_path / "format"))) {
     BinaryReader reader;
@@ -20,6 +24,8 @@ void FormatStore::load(const boost::filesystem::path& path) {
 }
 
 void FormatStore::close() {
+  ASSERT(_loaded);
+  _loaded = false;
   BinaryWritter writter;
   writter.open(_path / "format");
   writter << _formats;

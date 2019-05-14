@@ -7,15 +7,15 @@
 #include <blockmirror/store/transaction_store.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/property_tree/json_parser.hpp>
-//#include <windows.h>
 
 namespace blockmirror {
 namespace rpc {
 
-Session::Session(tcp::socket socket)
+Session::Session(tcp::socket socket, blockmirror::chain::Context& context)
     : socket_(std::move(socket)),
       strand_(socket_.get_executor()),
-      lambda_(*this) {}
+      lambda_(*this),
+      _context(context) {}
 
 void Session::run() { do_read(); }
 
@@ -113,6 +113,8 @@ void Session::deal_post(http::request<Body, http::basic_fields<Allocator> >&&req
   std::stringstream ss(req.body());
   boost::property_tree::ptree ptree;
 
+  chain::Context& c = _context;
+
   if (req.target() == "/put_transaction") {
     blockmirror::chain::TransactionSignedPtr transaction =
       std::make_shared<blockmirror::chain::TransactionSigned>();
@@ -124,7 +126,6 @@ void Session::deal_post(http::request<Body, http::basic_fields<Allocator> >&&req
     catch (std::exception& e) {
       return send(server_error(e.what()));
     }
-    chain::Context& c = chain::Context::get();
     if (!c.check(transaction)) {
       return send(bad_request("check failed"));
     }
@@ -132,20 +133,18 @@ void Session::deal_post(http::request<Body, http::basic_fields<Allocator> >&&req
     if (!ts.add(transaction)) {
       return send(ok_repeat("repeat put, modified!"));
     }
-
   }
+
   else if (req.target() == "/put_data") {
     blockmirror::chain::TransactionSignedPtr transaction =
-      std::make_shared<blockmirror::chain::TransactionSigned>();
+        std::make_shared<blockmirror::chain::TransactionSigned>();
     try {
       boost::property_tree::read_json(ss, ptree);
       blockmirror::serialization::PTreeIArchive archive(ptree);
       archive >> transaction;
-    }
-    catch (std::exception& e) {
+    } catch (std::exception& e) {
       return send(server_error(e.what()));
     }
-    chain::Context& c = chain::Context::get();
     if (!c.check(transaction)) {
       return send(bad_request("check failed"));
     }

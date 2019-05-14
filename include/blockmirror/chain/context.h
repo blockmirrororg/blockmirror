@@ -1,7 +1,7 @@
 #pragma once
 
-#include <blockmirror/chain/transaction.h>
 #include <blockmirror/common.h>
+#include <blockmirror/chain/transaction.h>
 #include <blockmirror/store/account_store.h>
 #include <blockmirror/store/block_store.h>
 #include <blockmirror/store/bps_store.h>
@@ -26,6 +26,7 @@ class Context {
   store::DataSignatureStore _dataSignature;
   chain::BlockPtr _head;
 
+  bool _loaded;
   /**
    * @brief 执行一笔交易
    *
@@ -41,6 +42,7 @@ class Context {
   void load();
   void close();
 
+  chain::BlockPtr genBlock(const Privkey &key, const Pubkey &reward);
   /**
    * @brief 执行一个区块
    *
@@ -50,10 +52,8 @@ class Context {
 
   /**
    * @brief 回滚一个区块
-   *
-   * @param block
    */
-  bool rollback(const chain::BlockPtr& block);
+  bool rollback();
 
   /**
    * @brief 检测当前交易是否可能被接受
@@ -80,10 +80,6 @@ class Context {
     return _block.contains(hash);
   }
 
-  static Context& get() {
-    static Context context;
-    return context;
-  }
 
   store::TransactionStore& getTransactionStore() { return _transaction; }
   store::DataStore& getDataStore() { return _data; }

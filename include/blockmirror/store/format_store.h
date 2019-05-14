@@ -20,6 +20,7 @@ class FormatStore {
   boost::shared_mutex _mutex;
 
   boost::filesystem::path _path;
+  bool _loaded;
 
  public:
   FormatStore();

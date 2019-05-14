@@ -30,6 +30,7 @@ BOOST_AUTO_TEST_CASE(context_tests2_seq) {
   pubs.resize(privs.size());
   {
     blockmirror::chain::Context context;
+    context.load();
     for (size_t i = 0; i < privs.size(); i++) {
       blockmirror::crypto::ECC.newKey(privs[i]);
       blockmirror::crypto::ECC.computePub(privs[i], pubs[i]);

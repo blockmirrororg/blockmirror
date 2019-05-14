@@ -99,10 +99,11 @@ class TransactionStore {
   TransactionContainer _container;
   boost::shared_mutex _mutex;
   boost::filesystem::path _path;
+  bool _loaded;
 
  public:
-  TransactionStore() {}
-  ~TransactionStore() { close(); }
+  TransactionStore() : _loaded(false) {}
+  ~TransactionStore() { if (_loaded) close(); }
   /**
    * @brief 从文件中加载store
    */

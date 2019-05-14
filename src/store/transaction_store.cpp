@@ -5,6 +5,8 @@ namespace blockmirror {
 namespace store {
 
 void TransactionStore::load(const boost::filesystem::path &path) {
+  ASSERT(!_loaded);
+  _loaded = true;
   _path = path;
 
   if (boost::filesystem::exists(_path / "transaction")) {
@@ -15,6 +17,8 @@ void TransactionStore::load(const boost::filesystem::path &path) {
 }
 
 void TransactionStore::close() {
+  ASSERT(_loaded);
+  _loaded = false;
   BinaryWritter writter;
   writter.open(_path / "transaction");
   writter << *this;

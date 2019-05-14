@@ -130,11 +130,17 @@ class StoreVisitor : public boost::static_visitor<bool> {
   }
 };
 
-Context::Context() {}
+Context::Context() : _loaded(false) {}
 
-Context::~Context() {}
+Context::~Context() {
+  if (_loaded) {
+    close();
+  }
+}
 
 void Context::load() {
+  ASSERT(!_loaded);
+  _loaded = true;
   boost::filesystem::path path = ".";
   _account.load(path);
   _block.load(path);
@@ -151,6 +157,8 @@ void Context::load() {
   }
 }
 void Context::close() {
+  ASSERT(_loaded);
+  _loaded = false;
   boost::filesystem::path path = ".";
   if (_head) {
     store::BinaryWritter writter;

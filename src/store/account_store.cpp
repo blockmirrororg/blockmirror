@@ -4,12 +4,16 @@
 namespace blockmirror {
 namespace store {
 
-AccountStore::AccountStore() {
+AccountStore::AccountStore() : _loaded(false) {
   _path = boost::filesystem::initial_path<boost::filesystem::path>();
 }
-AccountStore::~AccountStore() { close(); }
+AccountStore::~AccountStore() {
+  if (_loaded) close();
+}
 
 void AccountStore::load(const boost::filesystem::path &path) {
+  ASSERT(!_loaded);
+  _loaded = true;
   _path = path;
   if (boost::filesystem::exists(_path / "account")) {
     BinaryReader reader;
@@ -19,6 +23,8 @@ void AccountStore::load(const boost::filesystem::path &path) {
 }
 
 void AccountStore::close() {
+  ASSERT(_loaded);
+  _loaded = false;
   BinaryWritter writter;
   writter.open(_path / "account");
   writter << _accounts;

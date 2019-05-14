@@ -9,11 +9,15 @@ struct EmptyDeleter {
 namespace blockmirror {
 namespace store {
 
-BlockStore::BlockStore() : _currentFileIndex(0) {}
+BlockStore::BlockStore() : _currentFileIndex(0), _loaded(false) {}
 
-BlockStore::~BlockStore() { close(); }
+BlockStore::~BlockStore() {
+  if (_loaded) close();
+}
 
 void BlockStore::load(const boost::filesystem::path &path) {
+  ASSERT(!_loaded);
+  _loaded = true;
   _path = path;
 
   if (boost::filesystem::exists(_path / "index")) {
@@ -24,6 +28,8 @@ void BlockStore::load(const boost::filesystem::path &path) {
 }
 
 void BlockStore::close() {
+  ASSERT(_loaded);
+  _loaded = false;
   flushBlock(0);
   _ordered.clear();
   _cached.clear();

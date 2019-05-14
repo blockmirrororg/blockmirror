@@ -4,12 +4,16 @@
 namespace blockmirror {
 namespace store {
 
-BpsStore::BpsStore() {
+BpsStore::BpsStore() : _loaded(false) {
   _path = boost::filesystem::initial_path<boost::filesystem::path>();
 }
-BpsStore::~BpsStore() { close(); }
+BpsStore::~BpsStore() {
+  if (_loaded) close();
+}
 
 void BpsStore::load(const boost::filesystem::path& path) {
+  ASSERT(!_loaded);
+  _loaded = true;
   _path = path;
   if (boost::filesystem::exists((_path / "bps"))) {
     BinaryReader reader;
@@ -19,6 +23,8 @@ void BpsStore::load(const boost::filesystem::path& path) {
 }
 
 void BpsStore::close() {
+  ASSERT(_loaded);
+  _loaded = false;
   BinaryWritter writter;
   writter.open(_path / "bps");
   writter << _bps;

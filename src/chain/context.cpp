@@ -13,12 +13,14 @@ class CheckVisitor : public boost::static_visitor<bool> {
     auto& sigs = _transaction->getSignatures();
     for (auto& i : sigs) {
       if (!_context._bps.contains(i.signer)) {
+        B_TRACE("unknown producer {}", spdlog::to_hex(i.signer));
         return false;
       }
     }
     uint32_t amount = _context._bps.getBPAmount();
     if (amount == 0) return true;
     if ((float)(sigs.size() / amount) < blockmirror::BP_PERCENT_SIGNER) {
+      B_TRACE("signatures low percent {}", (float)(sigs.size() / amount));
       return false;
     }
     return true;
@@ -28,29 +30,49 @@ class CheckVisitor : public boost::static_visitor<bool> {
   CheckVisitor(Context& context, const TransactionSignedPtr& trx)
       : _context(context), _transaction(trx){};
   bool operator()(const scri::Transfer& t) const {
-    if (_transaction->getSignatures().size() != 1) return false;
+    if (_transaction->getSignatures().size() != 1) {
+      B_TRACE("signatures count 1 != {}", _transaction->getSignatures().size());
+      return false;
+    }
     auto& signer = *_transaction->getSignatures().begin();
-    if (_context._account.query(signer.signer) < t.getAmount()) return false;
+    auto amount = _context._account.query(signer.signer);
+    if (amount < t.getAmount()) {
+      B_TRACE("{} amount {} < {}", spdlog::to_hex(signer.signer), amount,
+              t.getAmount());
+      return false;
+    }
     return true;
   }
   bool operator()(const scri::BPJoin& b) const {
     if (!_checkBPSigner()) return false;
-    if (_context._bps.contains(b.getBP())) return false;
+    if (_context._bps.contains(b.getBP())) {
+      B_TRACE("{} none exists", spdlog::to_hex(b.getBP()));
+      return false;
+    }
     return true;
   }
   bool operator()(const scri::BPExit& b) const {
     if (!_checkBPSigner()) return false;
-    if (!_context._bps.contains(b.getBP())) return false;
+    if (!_context._bps.contains(b.getBP())) {
+      B_TRACE("{} already exists", spdlog::to_hex(b.getBP()));
+      return false;
+    }
     return true;
   }
   bool operator()(const scri::NewFormat& n) const {
     if (!_checkBPSigner()) return false;
-    if (_context._format.query(n.getName())) return false;
+    if (_context._format.query(n.getName())) {
+      B_TRACE("{} none exists", n.getName());
+      return false;
+    }
     return true;
   }
   bool operator()(const scri::NewData& n) const {
     if (!_checkBPSigner()) return false;
-    if (_context._data.query(n.getName())) return false;
+    if (_context._data.query(n.getName())) {
+      B_TRACE("{} already exists", n.getName());
+      return false;
+    }
     return true;
   }
 };
@@ -126,16 +148,14 @@ void Context::load() {
     reader.open(path / "head");
     reader >> _head;
   } else {
-    
   }
 }
 void Context::close() {
-    boost::filesystem::path path = ".";
+  boost::filesystem::path path = ".";
   if (_head) {
     store::BinaryWritter writter;
     writter.open(path / "head");
     writter << _head;
-    printf("writing head\n");
   } else {
     boost::filesystem::remove(path / "head");
   }
@@ -145,29 +165,12 @@ void Context::close() {
   _data.close();
   _format.close();
   _transaction.close();
-
-  closeHead();
-}
-
-void Context::loadHead(const boost::filesystem::path& path) {
-  _path = path;
-  if (boost::filesystem::exists((_path / "head"))) {
-    _head = std::make_shared<chain::Block>();
-    blockmirror::store::BinaryReader reader;
-    reader.open(_path / "head");
-    reader >> _head;
-  }
-}
-
-void Context::closeHead() {
-  blockmirror::store::BinaryWritter writter;
-  writter.open(_path / "head");
-  writter << _head;
 }
 
 bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
   const std::vector<SignaturePair>& v = trx->getSignatures();
   if (v.empty()) {
+    B_WARN("empty signatures {}", spdlog::to_hex(trx->getHash()));
     return false;
   }
 
@@ -176,13 +179,8 @@ bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
     return false;
   }
 
+  // 添加或者修改交易的打包高度 回撤应该修改为0未打包状态
   _transaction.add(trx, rollback ? 0 : _head->getHeight());
-  /*   bool ret = _transaction.add(trx, rollback ? 0 : _head->getHeight());
-    if (!rollback && !ret) {
-      return false;
-    } else if (rollback && ret) {
-      return false;
-    } */
 
   return true;
 }
@@ -196,6 +194,7 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward) {
   }
   // 执行coinbase
   if (!_account.add(reward, MINER_AMOUNT)) {
+    B_WARN("coinbase execute failed");
     return nullptr;
   }
   newBlock->setCoinbase(reward);
@@ -205,13 +204,12 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward) {
   for (auto& trx : trxs) {
     if (_apply(trx)) {
       newBlock->addTransaction(trx);
+    } else {
+      B_WARN("bad trx: {}", spdlog::to_hex(trx->getHash()));
     }
   }
-  // FIXME: 添加接口add(vector<trx>)
-  for (auto& trx : newBlock->getTransactions()) {
-    _transaction.add(trx, newBlock->getHeight());
-  }
-  // FIXME: 从临时数据池中设置所有数据
+  // FIXME: 将临时数据池的所有数据添加到区块中
+
   newBlock->finalize(key);
   _head = newBlock;
   _block.addBlock(newBlock);
@@ -221,30 +219,37 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward) {
 bool Context::apply(const chain::BlockPtr& block) {
   if (_head) {
     if (block->getHeight() != _head->getHeight() + 1) {
+      B_WARN("bad height head({}) block({})", _head->getHeight(),
+             block->getHeight());
       return false;
     }
   } else {
     if (block->getHeight() != 1) {
+      B_WARN("height must be 1");
       return false;
     }
   }
-
-  auto backup = _head;
-  _head = block;
 
   // coinbase
   const auto& coinbase = boost::get<blockmirror::chain::scri::Transfer>(
       block->getCoinbase()->getScript());
   if (coinbase.getAmount() != MINER_AMOUNT) {
+    B_WARN("coinbase amount bad: {}", coinbase.getAmount());
     return false;
   }
   if (!_account.add(coinbase.getTarget(), coinbase.getAmount())) {
+    B_WARN("coinbase execute failed");
     return false;
   }
+
+  auto backup = _head;
+  _head = block;
+
   const std::vector<TransactionSignedPtr> v = block->getTransactions();
   auto it = v.begin();
   for (; it != v.end(); ++it) {
     if (!_apply(*it)) {
+      B_WARN("exec failed: {} try revert", spdlog::to_hex((*it)->getHash()));
       break;
     }
   }
@@ -276,12 +281,15 @@ bool Context::rollback() {
   auto it = v.rbegin();
   for (; it != v.rend(); ++it) {
     if (!_apply(*it, true)) {
+      B_WARN("rollback failed: {} try revert",
+             spdlog::to_hex((*it)->getHash()));
       break;
     }
   }
   bool shouldRevert = (it != v.rend());
   if (!shouldRevert) {
     if (!_account.add(coinbase.getTarget(), -(int64_t)coinbase.getAmount())) {
+      B_WARN("rollback coinbase failed try revert");
       shouldRevert = true;
     }
   }
@@ -322,7 +330,6 @@ bool Context::check(const chain::TransactionSignedPtr& trx) {
   }
 
   if (!boost::apply_visitor(CheckVisitor(*this, trx), trx->getScript())) {
-    B_LOG("execute failure");
     return false;
   }
 

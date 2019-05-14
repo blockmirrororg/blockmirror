@@ -24,17 +24,6 @@ class Context {
   store::TransactionStore _transaction;
 
   chain::BlockPtr _head;
-  boost::filesystem::path _path;
-  /**
-   * @brief 加载head
-   *
-   */
-  void loadHead(const boost::filesystem::path& path);
-  /**
-   * @brief 保存head
-   *
-   */
-  void closeHead();
 
   /**
    * @brief 执行一笔交易

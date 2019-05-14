@@ -56,8 +56,16 @@ class Session : public std::enable_shared_from_this<Session> {
 
  private:
   template <class Body, class Allocator, class Send>
-  void handle_request(http::request<Body, http::basic_fields<Allocator>>&& req,
+  void handle_request(http::request<Body, http::basic_fields<Allocator> >&& req,
                       Send&& send);
+  template<class Body, class Allocator, class Send>
+  void deal_post(http::request<Body, http::basic_fields<Allocator> >&&req, Send&& send);
+  
+  template<class Body, class Allocator, class Send>
+  void deal_get (http::request<Body, http::basic_fields<Allocator> >&&req, Send&& send);
+
+  //char* strstr(const char* string, const char* find);
+  int getUrlencodedValue(const char* data, char* item, int maxSize, char* val);
 };
 
 }  // namespace rpc

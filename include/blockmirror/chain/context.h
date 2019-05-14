@@ -8,6 +8,7 @@
 #include <blockmirror/store/data_store.h>
 #include <blockmirror/store/format_store.h>
 #include <blockmirror/store/transaction_store.h>
+#include <blockmirror/store/data_signature_store.h>
 
 namespace blockmirror {
 namespace chain {
@@ -22,7 +23,7 @@ class Context {
   store::DataStore _data;
   store::FormatStore _format;
   store::TransactionStore _transaction;
-
+  store::DataSignatureStore _dataSignature;
   chain::BlockPtr _head;
 
   /**
@@ -84,8 +85,9 @@ class Context {
     return context;
   }
 
-  store::TransactionStore& get_transaction_store() { return _transaction; }
-  store::DataStore& get_data_store() { return _data; }
+  store::TransactionStore& getTransactionStore() { return _transaction; }
+  store::DataStore& getDataStore() { return _data; }
+  store::DataSignatureStore& getDataSignatureStore() { return _dataSignature; }
 };
 
 }  // namespace chain

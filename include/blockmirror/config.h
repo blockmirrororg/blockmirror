@@ -14,4 +14,6 @@ const size_t BLOCKSTORE_MAX_FILE = 1024 * 1024 * 1024;
 
 const size_t BLOCK_MAX_ROLLBACK = 120;  // 最多回退120个区块
 
+const uint64_t BLOCK_PER_MS = 1000;
+
 }  // namespace blockmirror

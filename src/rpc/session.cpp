@@ -221,8 +221,8 @@ void Session::deal_get(http::request<Body, http::basic_fields<Allocator> >&&req,
     {
       char host[50];
       char port[50];
-      getUrlencodedValue(ret + 1, "host", sizeof(host) - 1, host);
       getUrlencodedValue(ret + 1, "port", sizeof(port) - 1, port);
+      getUrlencodedValue(ret + 1, "host", sizeof(host) - 1, host);
       return send(ok("{}"));
     } else {
       return send(bad_request("Illegal request-target"));

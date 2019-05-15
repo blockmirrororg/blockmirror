@@ -19,10 +19,10 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     set(Secp256k1_ROOT_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static")
     set(OPENSSL_ROOT_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static")
     set(BOOST_ROOT "C:/Users/Administrator/vcpkg/installed/x64-windows-static")
-	
+
 	set(spdlog_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static/share/spdlog")
 	set(fmt_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static/share/fmt")
-    #set(ADDITION_LIBRARIES spdlog)
+    set(ADDITION_LIBRARIES spdlog)
 else()
     set(ADDITION_LIBRARIES pthread spdlog)
 endif()
@@ -42,7 +42,7 @@ find_package(Boost 1.67 REQUIRED COMPONENTS
 find_package(OpenSSL REQUIRED)
 
 find_package(secp256k1 REQUIRED)
-find_package(spdlog REQUIRED)
+#find_package(spdlog REQUIRED)
 
 add_subdirectory( 3dparty )
 add_subdirectory( src )

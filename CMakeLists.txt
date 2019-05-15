@@ -16,12 +16,18 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MT")
     
-    set(Secp256k1_ROOT_DIR "D:/Sources/vcpkg/installed/x64-windows-static")
-    set(OPENSSL_ROOT_DIR "D:/Sources/vcpkg/installed/x64-windows-static")
-    set(BOOST_ROOT "D:/Sources/vcpkg/installed/x64-windows-static")
+    set(Secp256k1_ROOT_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static")
+    set(OPENSSL_ROOT_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static")
+    set(BOOST_ROOT "C:/Users/Administrator/vcpkg/installed/x64-windows-static")
+	
+	set(spdlog_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static/share/spdlog")
+	set(fmt_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static/share/fmt")
+    #set(ADDITION_LIBRARIES spdlog)
 else()
-    set(ADDITION_LIBRARIES pthread)
+    set(ADDITION_LIBRARIES pthread spdlog)
 endif()
+
+set(CMAKE_BUILD_TYPE "Debug")
 
 set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost 1.67 REQUIRED COMPONENTS
@@ -29,7 +35,6 @@ find_package(Boost 1.67 REQUIRED COMPONENTS
     date_time
     filesystem
     system
-    signals
     serialization
     chrono
     unit_test_framework)
@@ -37,7 +42,9 @@ find_package(Boost 1.67 REQUIRED COMPONENTS
 find_package(OpenSSL REQUIRED)
 
 find_package(secp256k1 REQUIRED)
+find_package(spdlog REQUIRED)
 
+add_subdirectory( 3dparty )
 add_subdirectory( src )
 add_subdirectory( unittests )
 add_subdirectory( test )

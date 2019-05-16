@@ -81,13 +81,14 @@ int BpsStore::getBPDelay(const Pubkey& key, uint64_t now) {
   return ((off - nowSlots) * BLOCK_PER_MS) - now % BLOCK_PER_MS;
 }
 
-void BpsStore::pushBpChange(uint64_t timestamp) {
+void BpsStore::pushBpChange(uint64_t idx, uint64_t timestamp) {
   ASSERT(isAlignedTime(timestamp));
-  uint64_t idx = 0;
+  /*
   if (!_changes.empty()) {
     idx = (timestamp - _changes.back().timestamp) / BLOCK_PER_MS +
           _changes.back().index;
   }
+  */
   _changes.emplace_back(idx, timestamp);
   B_LOG("push bp change: {} {}", idx, timestamp);
 }

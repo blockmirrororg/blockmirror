@@ -95,6 +95,7 @@ class StoreVisitor : public boost::static_visitor<bool> {
     return false;
   }
   bool operator()(const scri::BPJoin& b) const {
+    _context._bpChanged = true;
     if (0 == _type) {
       return _context._bps.add(b.getBP());
     } else if (1 == _type) {
@@ -103,6 +104,7 @@ class StoreVisitor : public boost::static_visitor<bool> {
     return false;
   }
   bool operator()(const scri::BPExit& b) const {
+    _context._bpChanged = true;
     if (0 == _type) {
       return _context._bps.remove(b.getBP());
     } else if (1 == _type) {
@@ -193,17 +195,39 @@ bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
   return true;
 }
 
-chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward) {
+chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward, uint64_t testTime) {
   chain::BlockPtr newBlock = std::make_shared<chain::Block>();
   if (!_head) {
     newBlock->setGenesis();
   } else {
     newBlock->setPrevious(*_head);
   }
+  if (testTime != 0) {
+    newBlock->setTimestamp(testTime);
+  }
 
   _bpChanged = false;  // 清除状态
   Pubkey pub;
   crypto::ECC.computePub(key, pub);
+  
+  // 检查BP是否存在
+  auto slot = _bps.find(pub);
+  if (slot < 0) {
+    B_WARN("producer none exists: {}", spdlog::to_hex(pub));
+    return nullptr;
+  }
+  // 检查时间戳和槽位是否正确
+  auto slotByTime = 0;
+  if (_head) {
+    slotByTime = _bps.getSlotByTime(newBlock->getTimestamp());
+    B_LOG("get slot by time {} {}", slotByTime, newBlock->getTimestamp());
+  } else {
+    B_LOG("get slot by genesis");
+  }
+  if (slotByTime != slot) {
+    B_WARN("not producer turn: byTime({}) byPubkey({})", slotByTime, slot);
+    return nullptr;
+  }
 
   // 执行coinbase
   if (!_account.add(reward, MINER_AMOUNT)) {
@@ -212,8 +236,10 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward) {
   }
 
   newBlock->setCoinbase(reward);
+  _head = newBlock;
 
   auto trxs = _transaction.popUnpacked();
+  B_LOG("packing unconfirm transaction count {}", trxs.size());
   // 执行所有交易
   for (auto& trx : trxs) {
     if (_apply(trx)) {
@@ -225,11 +251,10 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward) {
   // FIXME: 将临时数据池的所有数据添加到区块中
 
   newBlock->finalize(key);
-  _head = newBlock;
   _block.addBlock(newBlock);
 
   if (_bpChanged || _head->getHeight() == 1) {
-    //_bps.pushBpChange(_head->getProducer(), _head->getTimestamp());
+    _bps.pushBpChange(slot, _head->getTimestamp());
   }
 
   return newBlock;
@@ -320,7 +345,7 @@ bool Context::apply(const chain::BlockPtr& block) {
 
   // 第一个区块 或者 BP发生变动 添加BP更改记录
   if (_bpChanged || _head->getHeight() == 1) {
-    _bps.pushBpChange(_head->getTimestamp());
+    _bps.pushBpChange(slot, _head->getTimestamp());
   }
 
   return true;

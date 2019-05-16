@@ -90,14 +90,16 @@ class BpsStore {
     ASSERT(!_bps.empty());
     auto& top = _changes.back();
     ASSERT(isAlignedTime(top.timestamp));
+    B_LOG("{} {} {}", (((now - top.timestamp) / BLOCK_PER_MS) + top.index), _bps.size(), top.index);
     return (((now - top.timestamp) / BLOCK_PER_MS) + top.index) % _bps.size();
   }
   /**
    * @brief BP变动时应该将改变压入链中
    *
+   * @param idx 区块所在位置
    * @param timestamp 区块时间戳
    */
-  void pushBpChange(uint64_t timestamp);
+  void pushBpChange(uint64_t idx, uint64_t timestamp);
   void popBpChange();
 };
 

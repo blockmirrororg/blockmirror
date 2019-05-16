@@ -43,7 +43,7 @@ class Context {
   void load();
   void close();
 
-  chain::BlockPtr genBlock(const Privkey &key, const Pubkey &reward);
+  chain::BlockPtr genBlock(const Privkey &key, const Pubkey &reward, uint64_t testTime = 0);
   /**
    * @brief 执行一个区块
    *
@@ -85,6 +85,7 @@ class Context {
   store::TransactionStore& getTransactionStore() { return _transaction; }
   store::DataStore& getDataStore() { return _data; }
   store::DataSignatureStore& getDataSignatureStore() { return _dataSignature; }
+  store::BpsStore &getBpsStore() { return _bps; }
 };
 
 }  // namespace chain

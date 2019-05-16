@@ -1,6 +1,7 @@
 #include <blockmirror/common.h>
 #include <openssl/sha.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#define BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED
 #include <boost/stacktrace.hpp>
 
 static boost::posix_time::ptime epoch(

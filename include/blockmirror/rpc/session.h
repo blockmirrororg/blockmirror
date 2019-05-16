@@ -1,6 +1,7 @@
 #ifndef SESSION_H
 #define SESSION_H
 
+#include <blockmirror/chain/context.h>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
@@ -8,7 +9,6 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/config.hpp>
-#include <blockmirror/chain/context.h>
 
 namespace blockmirror {
 namespace rpc {
@@ -44,10 +44,29 @@ class Session : public std::enable_shared_from_this<Session> {
   http::request<http::string_body> req_;
   std::shared_ptr<void> res_;
   send_lambda lambda_;
-  blockmirror::chain::Context &_context;
+  blockmirror::chain::Context& _context;
+
+ private:
+  friend class Listener;
+  typedef void (Session::*TargetDealFunc)();
+  static std::map<std::string, TargetDealFunc> _getMethodDeals;
+  static std::map<std::string, TargetDealFunc>
+      _postMethodDeals;  // get、post有同名的target，所以分开来
+  static TargetDealFunc getMethodFuncPtr(const char* target) {
+    auto pos = _getMethodDeals.find(target);
+    if (pos != _getMethodDeals.end()) {
+      return pos->second;
+    }
+  }
+  static TargetDealFunc postMethodFuncPtr(const char* target) {
+    auto pos = _postMethodDeals.find(target);
+    if (pos != _postMethodDeals.end()) {
+      return pos->second;
+    }
+  }
 
  public:
-  explicit Session(tcp::socket socket, blockmirror::chain::Context &context);
+  explicit Session(tcp::socket socket, blockmirror::chain::Context& context);
 
   void run();
   void do_read();
@@ -56,17 +75,24 @@ class Session : public std::enable_shared_from_this<Session> {
                 bool close);
   void do_close();
 
- private:
-  template <class Body, class Allocator, class Send>
-  void handle_request(http::request<Body, http::basic_fields<Allocator> >&& req,
-                      Send&& send);
-  template<class Body, class Allocator, class Send>
-  void deal_post(http::request<Body, http::basic_fields<Allocator> >&&req, Send&& send);
-  
-  template<class Body, class Allocator, class Send>
-  void deal_get (http::request<Body, http::basic_fields<Allocator> >&&req, Send&& send);
+  // post
+  void postPutTransaction();
+  void postPutData();
+  void postChainTransaction();
+  // get
+  void getNodeStop();
+  void getNodeVersion();
+  void getNodePeers();
+  void getChainStatus();
+  void getChainLast();
+  void getChainBlock();
+  void getChainTransaction();
 
-  //char* strstr(const char* string, const char* find);
+ private:
+  void handle_request(http::request<http::string_body>&& req);
+  void deal_post();
+  void deal_get();
+
   int getUrlencodedValue(const char* data, char* item, int maxSize, char* val);
 };
 

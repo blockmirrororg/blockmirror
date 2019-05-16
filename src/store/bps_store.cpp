@@ -94,7 +94,7 @@ void BpsStore::pushBpChange(uint64_t idx, uint64_t timestamp) {
 }
 void BpsStore::popBpChange() {
   ASSERT(!_changes.empty());
-  B_LOG("push bp change: {} {}", _changes.back().index,
+  B_LOG("pop bp change: {} {}", _changes.back().index,
         _changes.back().timestamp);
   _changes.pop_back();
 }

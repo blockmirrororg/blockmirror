@@ -90,7 +90,6 @@ class BpsStore {
     ASSERT(!_bps.empty());
     auto& top = _changes.back();
     ASSERT(isAlignedTime(top.timestamp));
-    B_LOG("{} {} {}", (((now - top.timestamp) / BLOCK_PER_MS) + top.index), _bps.size(), top.index);
     return (((now - top.timestamp) / BLOCK_PER_MS) + top.index) % _bps.size();
   }
   /**

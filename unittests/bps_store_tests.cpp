@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(bps_tests_producerTime) {
     store.load(".");
     store.add(pk1);
     store.add(pk2);
-    store.pushBpChange(0, now);
+    store.pushBpChange(now);
   }
   {
     store::BpsStore store;

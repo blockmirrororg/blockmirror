@@ -38,6 +38,7 @@ class BlockHeader {
   BlockHeader() = default;
 
   uint64_t getTimestamp() const { return timestamp; }
+  void setTimestamp(uint64_t t) { timestamp = t; }
   uint64_t getHeight() const { return height; }
   const Hash256 &getPrevious() const { return previous; }
   const Hash256 &getMerkle() const { return merkle; }

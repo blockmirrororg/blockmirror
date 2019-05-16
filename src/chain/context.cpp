@@ -266,7 +266,13 @@ bool Context::apply(const chain::BlockPtr& block) {
     return false;
   }
   // 检查时间戳和槽位是否正确
-  auto slotByTime = _bps.getSlotByTime(block->getTimestamp());
+  auto slotByTime = 0;
+  if (_head) {
+    slotByTime = _bps.getSlotByTime(block->getTimestamp());
+    B_LOG("get slot by time {} {}", slotByTime, block->getTimestamp());
+  } else {
+    B_LOG("get slot by genesis");
+  }
   if (slotByTime != slot) {
     B_WARN("producer bad slot: byTime({}) byPubkey({})", slotByTime, slot);
     return false;
@@ -314,7 +320,7 @@ bool Context::apply(const chain::BlockPtr& block) {
 
   // 第一个区块 或者 BP发生变动 添加BP更改记录
   if (_bpChanged || _head->getHeight() == 1) {
-    _bps.pushBpChange(slot, _head->getTimestamp());
+    _bps.pushBpChange(_head->getTimestamp());
   }
 
   return true;

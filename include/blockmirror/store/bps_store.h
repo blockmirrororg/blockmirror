@@ -95,11 +95,9 @@ class BpsStore {
   /**
    * @brief BP变动时应该将改变压入链中
    *
-   * @param idx 造成改变所在的位置
-   * @param timestamp 时间戳
+   * @param timestamp 区块时间戳
    */
-  void pushBpChange(uint64_t idx, uint64_t timestamp);
-  void pushBpChange(const Pubkey& producer, uint64_t timestamp);
+  void pushBpChange(uint64_t timestamp);
   void popBpChange();
 };
 

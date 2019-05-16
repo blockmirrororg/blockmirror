@@ -57,13 +57,13 @@ blockmirror::chain::TransactionSignedPtr tPtr[10]{
         blockmirror::chain::scri::Transfer(P(BPub), 100)),  // 0
 
     std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::BPJoin(P(APub))),  // 1
+        blockmirror::chain::scri::BPJoin({1,2,3})),  // 1
 
     std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::BPJoin(P(BPub))),  // 2
+        blockmirror::chain::scri::BPJoin({4,5,6})),  // 2
 
     std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::BPExit(P(BPub))),  // 3
+        blockmirror::chain::scri::BPExit({4,5,6})),  // 3
 
     std::make_shared<blockmirror::chain::TransactionSigned>(
         blockmirror::chain::scri::NewData("aaa", "111", "rrt")),  // 4
@@ -73,7 +73,7 @@ blockmirror::chain::TransactionSignedPtr tPtr[10]{
                                             {2, 4, 6, 8}, {6, 6, 6})),  // 5
 
     std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::BPJoin(P(BPub))),  // 6
+        blockmirror::chain::scri::BPJoin({4,5,6})),  // 6
 
     std::make_shared<blockmirror::chain::TransactionSigned>(
         blockmirror::chain::scri::NewFormat("bbb", "ccc", {15, 3, 55, 75, 9},
@@ -121,6 +121,9 @@ BOOST_AUTO_TEST_CASE(context_tests_ok1) {
   //设置区块2
   block[2]->setPrevious(*block[1]);
   block[2]->setCoinbase(P(APub));
+  // 两个BP 下一个时间时轮到 B 出
+  // 所以要区块2必须 是下下一个时间 才轮到A
+  block[2]->setTimestamp(block[1]->getTimestamp() + 2 * blockmirror::BLOCK_PER_MS);
   block[2]->finalize(K(APriv));
 
   //设置区块2的交易
@@ -132,11 +135,14 @@ BOOST_AUTO_TEST_CASE(context_tests_ok1) {
     }
 
     block[2]->addTransaction(tPtr[i]);
+
+    B_LOG("{}", spdlog::to_hex(tPtr[i]->getHash()));
   }
 
   // 设置区块3
   block[3]->setPrevious(*block[2]);
   block[3]->setCoinbase(P(BPub));
+  block[3]->setTimestamp(block[2]->getTimestamp() + 2 * blockmirror::BLOCK_PER_MS);
   block[3]->finalize(K(BPriv));
 
   //设置区块3的交易
@@ -203,8 +209,8 @@ BOOST_AUTO_TEST_CASE(context_tests_ok1) {
 
     blockmirror::store::BpsStore bpsStore;
     bpsStore.load(".");
-    BOOST_CHECK_EQUAL(bpsStore.contains(P(APub)), 0);
-    BOOST_CHECK_EQUAL(bpsStore.contains(P(BPub)), 0);
+    BOOST_CHECK_EQUAL(bpsStore.contains({1,2,3}), 0);
+    BOOST_CHECK_EQUAL(bpsStore.contains({4,5,6}), 0);
 
     blockmirror::store::DataStore dataStore;
     dataStore.load(".");
@@ -420,8 +426,6 @@ BOOST_AUTO_TEST_CASE(context_tests_ok7) {
   removeFile();
   createKey();
   createBlock();
-
- 
 }
 
 BOOST_AUTO_TEST_SUITE_END()

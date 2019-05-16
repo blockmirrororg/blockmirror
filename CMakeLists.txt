@@ -24,9 +24,11 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	set(fmt_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static/share/fmt")
     set(ADDITION_LIBRARIES spdlog)
 else()
-    set(ADDITION_LIBRARIES pthread spdlog)
+    set(ADDITION_LIBRARIES pthread spdlog dl)
 endif()
 
+
+add_definitions(-DBOOST_ENABLE_ASSERT_HANDLER)
 set(CMAKE_BUILD_TYPE "Debug")
 
 set(Boost_NO_BOOST_CMAKE ON)

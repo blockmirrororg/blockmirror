@@ -27,6 +27,7 @@ class Context {
   chain::BlockPtr _head;
 
   bool _loaded;
+  bool _bpChanged;
   /**
    * @brief 执行一笔交易
    *

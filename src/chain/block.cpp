@@ -21,12 +21,12 @@ void BlockHeader::setPrevious(const BlockHeader &parent) {
   _hash.reset();
   previous = parent.getHash();
   height = parent.getHeight() + 1;
-  timestamp = now_ms_since_1970();
+  timestamp = alignTimestamp(now_ms_since_1970());
 }
 
 void BlockHeader::setGenesis() {
   _hash.reset();
-  timestamp = now_ms_since_1970();
+  timestamp = alignTimestamp(now_ms_since_1970());
   height = 1;
   previous.fill(0);
 }

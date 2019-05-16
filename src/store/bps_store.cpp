@@ -57,36 +57,39 @@ bool BpsStore::remove(const Pubkey& key) {
   return false;
 }
 
-int BpsStore::calcBPOffset(const Pubkey& key, uint64_t now) {
+int BpsStore::getBPDelay(const Pubkey& key, uint64_t now) {
   int off = find(key);
-  if (off < 0) return -1;
+  if (off < 0) return -1;  // 不是BP
   if (_changes.empty()) {
+    // 第一个块
     // 执行第一个块应该 pushBpChange(0, block.timestamp)
     // 撤回第一个块应该 popBpChange()
     return 0;
   }
-  // 一圈需要多久
-  const auto loopMillSeconds = _bps.size() * BLOCK_PER_MS;
+  // 当前出块序号
+  auto nowSlots = getSlotByTime(now);
 
-  auto& records = _changes.back();
-  // 现在到最后一个记录的总槽数
-  auto slots = (now / BLOCK_PER_MS) - (records.timestamp / BLOCK_PER_MS);
-  // 现在到第一个块的总槽数
-  slots += records.index;
-  // 现在应该选择的BP
-  auto curLoop = (slots / _bps.size()) * _bps.size();
-  auto result =
-      ((off + curLoop) - records.index) * BLOCK_PER_MS + records.timestamp;
-  while (result < now) {
-    result += loopMillSeconds;
+  // 确保在当前序号以后
+  if (off < nowSlots) {
+    off += _bps.size();
+  } else if (off == nowSlots) {
+    if (now % BLOCK_PER_MS > 0) {
+      off += _bps.size();
+    }
   }
-  return result - now;
+
+  return ((off - nowSlots) * BLOCK_PER_MS) - now % BLOCK_PER_MS;
 }
 
 void BpsStore::pushBpChange(uint64_t idx, uint64_t timestamp) {
+  ASSERT(isAlignedTime(timestamp));
+  ASSERT(idx < _bps.size());
   _changes.emplace_back(idx, timestamp);
 }
-void BpsStore::popBpChange() { _changes.pop_back(); }
+void BpsStore::popBpChange() {
+  ASSERT(!_changes.empty());
+  _changes.pop_back();
+}
 
 }  // namespace store
 }  // namespace blockmirror

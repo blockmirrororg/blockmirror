@@ -200,11 +200,17 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward) {
   } else {
     newBlock->setPrevious(*_head);
   }
+
+  _bpChanged = false;  // 清除状态
+  Pubkey pub;
+  crypto::ECC.computePub(key, pub);
+
   // 执行coinbase
   if (!_account.add(reward, MINER_AMOUNT)) {
     B_WARN("coinbase execute failed");
     return nullptr;
   }
+
   newBlock->setCoinbase(reward);
 
   auto trxs = _transaction.popUnpacked();
@@ -221,14 +227,26 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward) {
   newBlock->finalize(key);
   _head = newBlock;
   _block.addBlock(newBlock);
+
+  if (_bpChanged || _head->getHeight() == 1) {
+    //_bps.pushBpChange(_head->getProducer(), _head->getTimestamp());
+  }
+
   return newBlock;
 }
 
 bool Context::apply(const chain::BlockPtr& block) {
+  _bpChanged = false;
+
+  // 检查区块是否和当前HEAD呈现链式连接
   if (_head) {
     if (block->getHeight() != _head->getHeight() + 1) {
       B_WARN("bad height head({}) block({})", _head->getHeight(),
              block->getHeight());
+      return false;
+    }
+    if (block->getPrevious() != _head->getHash()) {
+      B_WARN("must switch branch");
       return false;
     }
   } else {
@@ -236,15 +254,32 @@ bool Context::apply(const chain::BlockPtr& block) {
       B_WARN("height must be 1");
       return false;
     }
+    if (block->getPrevious() != Hash256{0}) {
+      B_WARN("bad genesis previous");
+      return false;
+    }
   }
-
-  // coinbase
+  // 检查BP是否存在
+  auto slot = _bps.find(block->getProducer());
+  if (slot < 0) {
+    B_WARN("producer none exists: {}", spdlog::to_hex(block->getProducer()));
+    return false;
+  }
+  // 检查时间戳和槽位是否正确
+  auto slotByTime = _bps.getSlotByTime(block->getTimestamp());
+  if (slotByTime != slot) {
+    B_WARN("producer bad slot: byTime({}) byPubkey({})", slotByTime, slot);
+    return false;
+  }
+  // 检查coinbases是否正确
   const auto& coinbase = boost::get<blockmirror::chain::scri::Transfer>(
       block->getCoinbase()->getScript());
   if (coinbase.getAmount() != MINER_AMOUNT) {
     B_WARN("coinbase amount bad: {}", coinbase.getAmount());
     return false;
   }
+
+  // 执行coinbase
   if (!_account.add(coinbase.getTarget(), coinbase.getAmount())) {
     B_WARN("coinbase execute failed");
     return false;
@@ -253,6 +288,7 @@ bool Context::apply(const chain::BlockPtr& block) {
   auto backup = _head;
   _head = block;
 
+  // 执行所有交易
   const std::vector<TransactionSignedPtr> v = block->getTransactions();
   auto it = v.begin();
   for (; it != v.end(); ++it) {
@@ -261,6 +297,8 @@ bool Context::apply(const chain::BlockPtr& block) {
       break;
     }
   }
+
+  // 如果没有执行完全则拒绝该区块必须回滚
   if (it != v.end()) {
     _head = backup;
     for (auto i = v.begin(); i != it; ++i) {
@@ -274,17 +312,24 @@ bool Context::apply(const chain::BlockPtr& block) {
     return false;
   }
 
+  // 第一个区块 或者 BP发生变动 添加BP更改记录
+  if (_bpChanged || _head->getHeight() == 1) {
+    _bps.pushBpChange(slot, _head->getTimestamp());
+  }
+
   return true;
 }
 
 bool Context::rollback() {
+  _bpChanged = false;
+
   if (!_head) {
     B_WARN("no head");
     return false;
   }
-  // coinbase
   const auto& coinbase = boost::get<blockmirror::chain::scri::Transfer>(
       _head->getCoinbase()->getScript());
+  // 回滚所有交易
   const std::vector<TransactionSignedPtr> v = _head->getTransactions();
   auto it = v.rbegin();
   for (; it != v.rend(); ++it) {
@@ -311,6 +356,12 @@ bool Context::rollback() {
   }
 
   _head = _block.getBlock(_head->getPrevious());
+
+  // 如果回滚时区块发生更改 或者 回滚创世块
+  if (_bpChanged || !_head) {
+    _bps.popBpChange();
+  }
+
   return true;
 }
 
@@ -346,7 +397,11 @@ bool Context::check(const chain::TransactionSignedPtr& trx) {
 
 bool Context::check(const chain::BlockHeaderSignedPtr& block) {
   if (!block) {
-    B_LOG("bad block");
+    B_LOG("nullptr block");
+    return false;
+  }
+  if (!isAlignedTime(block->getTimestamp())) {
+    B_WARN("bad align timestamp");
     return false;
   }
 
@@ -358,7 +413,9 @@ bool Context::check(const chain::BlockHeaderSignedPtr& block) {
     }
   }
 
-  // FIXME: 这里有隐含的问题，具体情况以后考虑
+  // FIXME: 这里有隐含的问题
+  // 1. 当此区块的前面区块包含BP变动信息且前面区块尚未apply时
+  // 2. 当发生分叉时
   if (!_bps.contains(block->getProducer())) {
     B_LOG("bad producer");
     return false;

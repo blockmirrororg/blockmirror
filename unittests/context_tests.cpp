@@ -144,7 +144,13 @@ BOOST_AUTO_TEST_CASE(context_tests_ok1) {
     tPtr[i]->addSign(pris[i]);
     block[3]->addTransaction(tPtr[i]);
   }
-
+  // 增加的BP列表
+  {
+    blockmirror::store::BpsStore store;
+    store.load(".");
+    BOOST_CHECK(store.add(block[1]->getProducer()));
+    BOOST_CHECK(store.add(block[3]->getProducer()));
+  }
   {  //执行区块1，2，3
     blockmirror::chain::Context c;
     c.load();

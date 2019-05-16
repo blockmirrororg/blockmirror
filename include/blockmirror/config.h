@@ -16,4 +16,11 @@ const size_t BLOCK_MAX_ROLLBACK = 120;  // 最多回退120个区块
 
 const uint64_t BLOCK_PER_MS = 1000;
 
+static inline uint64_t alignTimestamp(uint64_t timestamp) {
+  return (timestamp / BLOCK_PER_MS) * BLOCK_PER_MS;
+}
+static inline bool isAlignedTime(uint64_t timestamp) {
+  return (timestamp % BLOCK_PER_MS) == 0;
+}
+
 }  // namespace blockmirror

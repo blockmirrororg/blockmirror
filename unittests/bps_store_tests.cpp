@@ -88,66 +88,66 @@ BOOST_AUTO_TEST_CASE(bps_tests_producerTime) {
   {
     store::BpsStore store;
     store.load(".");
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now), 1000);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now), 0);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now), 1000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now), 0);
     // 1毫秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 1), 999);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 1), 1999);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 1), 999);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 1), 1999);
     // 半秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 500), 500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 500), 1500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 500), 500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 500), 1500);
     // 一秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 1000), 0);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 1000), 1000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 1000), 0);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 1000), 1000);
     // 1.5秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 1500), 1500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 1500), 500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 1500), 1500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 1500), 500);
     // 2秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 2000), 1000);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 2000), 0);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 2000), 1000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 2000), 0);
     // 2.5秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 2500), 500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 2500), 1500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 2500), 500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 2500), 1500);
   }
   {
     store::BpsStore store;
     store.load(".");
     store.add(pk3);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk3, now), 2000);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now), 1000);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now), 0);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk3, now), 2000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now), 1000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now), 0);
     // 1毫秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk3, now + 1), 1999);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 1), 999);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 1), 2999);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk3, now + 1), 1999);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 1), 999);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 1), 2999);
     // 500毫秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk3, now + 500), 1500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 500), 500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 500), 2500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk3, now + 500), 1500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 500), 500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 500), 2500);
     // 1秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk3, now + 1000), 1000);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 1000), 0);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 1000), 2000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk3, now + 1000), 1000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 1000), 0);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 1000), 2000);
     // 1.5秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk3, now + 1500), 500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 1500), 2500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 1500), 1500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk3, now + 1500), 500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 1500), 2500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 1500), 1500);
     // 2秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk3, now + 2000), 0);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 2000), 2000);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 2000), 1000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk3, now + 2000), 0);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 2000), 2000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 2000), 1000);
     // 2.5秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk3, now + 2500), 2500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 2500), 1500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 2500), 500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk3, now + 2500), 2500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 2500), 1500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 2500), 500);
     // 3秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk3, now + 3000), 2000);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 3000), 1000);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 3000), 0);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk3, now + 3000), 2000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 3000), 1000);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 3000), 0);
     // 3.5秒后
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk3, now + 3500), 1500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk2, now + 3500), 500);
-    BOOST_CHECK_EQUAL(store.calcBPOffset(pk1, now + 3500), 2500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk3, now + 3500), 1500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk2, now + 3500), 500);
+    BOOST_CHECK_EQUAL(store.getBPDelay(pk1, now + 3500), 2500);
   }
 }
 

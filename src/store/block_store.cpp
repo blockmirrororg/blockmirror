@@ -58,6 +58,9 @@ uint64_t BlockStore::_saveBlock(chain::BlockPtr block) {
   writter.open(
       _path / (boost::lexical_cast<std::string>(_currentFileIndex) + ".block"),
       std::ios_base::binary | std::ios_base::out | std::ios_base::app);
+#ifdef WIN32 || _WIN32
+  writter.seekEnd();
+#endif
   uint32_t file = _currentFileIndex;
   uint32_t offset = (uint32_t)writter.tellp();
   writter << block;

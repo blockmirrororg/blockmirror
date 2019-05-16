@@ -6,6 +6,16 @@
  * 4. 添加和删除BP
  * 5. 压入和弹出BP变更记录
  * 6. 计算某个BP出块的时间偏移
+
+出块机制
+  1) BP列表中的BP循环出块 例如4个BP出块序号为(0, 1, 2, 3, 0, 1, 2, 3)
+  2) 出块间隔为 BLOCK_PER_MS 块的时间戳必须和出块间隔对齐
+  3) 出块时间 第一个块则立即出 并变更记录顶部设置为 (出块序号(0),
+块时间戳(出块间隔对齐))
+  4) 否则根据公式
+    当前出块序号 = ((当前时间戳 - 顶部记录时间戳) / 出块间隔 + 顶部出块序号) % s
+    某BP的出块延迟 = (某BP出块序号 - 当前出块序号) * 出块间隔 - 当前时间对齐尾数
+
  */
 
 #pragma once
@@ -24,7 +34,7 @@ class BpsStore {
     void serialize(Archive& ar) {
       ar& timestamp& index;
     }
-    ChangeRecords() {};
+    ChangeRecords(){};
     ChangeRecords(uint64_t idx, uint64_t t) : index(idx), timestamp(t) {}
     uint64_t timestamp;  // 变更时间戳 可对应到具体区块
     uint64_t index;      // 变更时该区块的BP位置
@@ -52,7 +62,7 @@ class BpsStore {
    * @brief 读取数据
    */
   bool contains(const Pubkey& key);
-  int find(const Pubkey &key);
+  int find(const Pubkey& key);
   /**
    * @brief 添加数据
    */
@@ -72,12 +82,21 @@ class BpsStore {
    * @param now 当前时间戳
    * @return int 小于0不存在 大于0需要的偏移
    */
-  int calcBPOffset(const Pubkey& key, uint64_t now = now_ms_since_1970());
+  int getBPDelay(const Pubkey& key, uint64_t now = now_ms_since_1970());
+
+  // 根据时间计算该时间所对应的出块者序号
+  inline uint64_t getSlotByTime(uint64_t now) {
+    ASSERT(!_changes.empty());
+    ASSERT(!_bps.empty());
+    auto& top = _changes.back();
+    ASSERT(isAlignedTime(top.timestamp));
+    return (((now - top.timestamp) / BLOCK_PER_MS) + top.index) % _bps.size();
+  }
   /**
    * @brief BP变动时应该将改变压入链中
    *
-   * @param idx 造成改变所在的位置
-   * @param timestamp 时间戳
+   * @param idx 区块所在位置
+   * @param timestamp 区块时间戳
    */
   void pushBpChange(uint64_t idx, uint64_t timestamp);
   void popBpChange();

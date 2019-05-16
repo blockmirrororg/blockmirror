@@ -24,9 +24,9 @@ class BinaryWritter {
 
   std::ofstream::pos_type tellp() { return _stream.tellp(); }
 
-  void close() {
-    _stream.close();
-  }
+  void seekEnd() { _stream.seekp(0, std::ios::end); }
+
+  void close() { _stream.close(); }
 
   template <typename T>
   BinaryWritter &operator<<(const T &t) {

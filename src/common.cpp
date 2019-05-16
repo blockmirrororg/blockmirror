@@ -1,9 +1,26 @@
-#include <openssl/sha.h>
 #include <blockmirror/common.h>
+#include <openssl/sha.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#define BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED
+#include <boost/stacktrace.hpp>
 
 static boost::posix_time::ptime epoch(
     boost::gregorian::date(1970, boost::gregorian::Jan, 1));
+
+namespace boost {
+void assertion_failed(char const *expr, char const *function, char const *file,
+                      long line) {
+  std::cerr << boost::stacktrace::stacktrace() << std::endl;
+  B_CRITICAL("{} at {}({})", expr, file, line);
+  throw std::runtime_error("assertion_failed");
+}
+void assertion_failed_msg(char const *expr, char const *msg,
+                          char const *function, char const *file, long line) {
+  std::cerr << boost::stacktrace::stacktrace() << std::endl;
+  B_CRITICAL("{} {} at {}({})", msg, expr, file, line);
+  throw std::runtime_error("assertion_failed_msg");
+}
+}  // namespace boost
 
 namespace blockmirror {
 

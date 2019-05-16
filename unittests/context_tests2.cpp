@@ -28,21 +28,41 @@ BOOST_AUTO_TEST_CASE(context_tests2_seq) {
   // 1. 产生并执行10个区块
   privs.resize(10);
   pubs.resize(privs.size());
+  for (size_t i = 0; i < privs.size(); i++) {
+    blockmirror::crypto::ECC.newKey(privs[i]);
+    blockmirror::crypto::ECC.computePub(privs[i], pubs[i]);
+  }
   {
     blockmirror::chain::Context context;
     context.load();
-    for (size_t i = 0; i < privs.size(); i++) {
-      blockmirror::crypto::ECC.newKey(privs[i]);
-      blockmirror::crypto::ECC.computePub(privs[i], pubs[i]);
+    // 增加创世BP
+    context.getBpsStore().add(pubs[0]);
 
-      auto blk = context.genBlock(privs[i], pubs[i]);
+    auto now = blockmirror::now_ms_since_1970();
+    for (size_t i = 0; i < privs.size(); i++) {
+      if (i != privs.size() - 1) {
+        // 前面的BP联合将后面的BP加进去
+        auto trx = std::make_shared<blockmirror::chain::TransactionSigned>(
+            blockmirror::chain::scri::BPJoin(pubs[i + 1]));
+        trx->setExpire(10);
+        trx->setNonce();
+        for (size_t j = 0; j <= i; j++) {
+          trx->addSign(privs[j]);
+        }
+        context.getTransactionStore().add(trx);
+      }
+
+      auto blk = context.genBlock(privs[i], pubs[i], now);
+      now += blockmirror::BLOCK_PER_MS;
       BOOST_CHECK_NE(blk, nullptr);
       BOOST_CHECK_EQUAL(blk->getHeight(), i + 1);
+      /*
       std::cout << blk->getHeight() << " hash:";
-      boost::algorithm::hex(blk->getHash(), std::ostream_iterator<char>(std::cout));
-      std::cout << " prev:";
-      boost::algorithm::hex(blk->getPrevious(), std::ostream_iterator<char>(std::cout));
-      std::cout << std::endl;
+      boost::algorithm::hex(blk->getHash(),
+      std::ostream_iterator<char>(std::cout)); std::cout << " prev:";
+      boost::algorithm::hex(blk->getPrevious(),
+      std::ostream_iterator<char>(std::cout)); std::cout << std::endl;
+      */
       blocks.push_back(blk);
     }
     context.close();

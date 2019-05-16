@@ -84,6 +84,8 @@ class Context {
   store::TransactionStore& getTransactionStore() { return _transaction; }
   store::DataStore& getDataStore() { return _data; }
   store::DataSignatureStore& getDataSignatureStore() { return _dataSignature; }
+  chain::BlockPtr& getHead() { return _head; }
+  store::BlockStore& getBlockStore() { return _block; }
 };
 
 }  // namespace chain

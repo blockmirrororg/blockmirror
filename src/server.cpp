@@ -17,7 +17,7 @@ Server::Server()
           _context) {}
 
 void Server::handleSignals(int signo) {
-  std::cout << "got signal: " << signo << std::endl;
+  B_LOG("got signo {}", signo);
   _mainContext.stop();
   _workContext.stop();
 }

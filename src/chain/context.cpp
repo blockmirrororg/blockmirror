@@ -29,6 +29,7 @@ class CheckVisitor : public boost::static_visitor<bool> {
  public:
   CheckVisitor(Context& context, const TransactionSignedPtr& trx)
       : _context(context), _transaction(trx){};
+
   bool operator()(const scri::Transfer& t) const {
     if (_transaction->getSignatures().size() != 1) {
       B_TRACE("signatures count 1 != {}", _transaction->getSignatures().size());
@@ -132,7 +133,7 @@ class StoreVisitor : public boost::static_visitor<bool> {
   }
 };
 
-Context::Context() : _loaded(false) {}
+Context::Context(blockmirror::Server& s) : _server(s), _loaded(false) {}
 
 Context::~Context() {
   if (_loaded) {

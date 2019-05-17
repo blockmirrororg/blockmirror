@@ -1,6 +1,6 @@
 
-#include <blockmirror/server.h>
 #include <boost/asio.hpp>
+#include <blockmirror/server.h>
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
 
@@ -11,6 +11,7 @@ Server::Server()
       _workContext(),
       _p2pAcceptor(_workContext, 80),
       _signals(_mainContext),
+      _context(*this),
       _rpcListener(
           _workContext,
           boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v4(), 8080},
@@ -20,6 +21,13 @@ void Server::handleSignals(int signo) {
   std::cout << "got signal: " << signo << std::endl;
   _mainContext.stop();
   _workContext.stop();
+}
+
+void Server::stop()
+{
+	std::cout << "received rpc target: /node/stop" << std::endl;
+	_mainContext.stop();
+	_workContext.stop();
 }
 
 void Server::run() {

@@ -8,12 +8,13 @@
 #include <boost/algorithm/hex.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <blockmirror/serialization/json_oarchive.h>
+#include <blockmirror/server.h>
 
 namespace blockmirror {
 namespace rpc {
 
-std::map<std::string, Session::GetMethodFuncPtr> Session::_getMethodDeals;
-std::map<std::string, Session::PostMethodFuncPtr> Session::_postMethodDeals;
+std::map<std::string, Session::GetMethodFuncPtr> Session::_getMethodPtrs;
+std::map<std::string, Session::PostMethodFuncPtr> Session::_postMethodPtrs;
 
 Session::Session(tcp::socket socket, blockmirror::chain::Context& context)
     : socket_(std::move(socket)),
@@ -45,10 +46,13 @@ void Session::on_read(boost::system::error_code ec,
 }
 
 void Session::on_write(boost::system::error_code ec,
-                       std::size_t bytes_transferred, bool close) {
+                       std::size_t bytes_transferred, bool close,
+                       bool stopService) {
   boost::ignore_unused(bytes_transferred);
 
   if (ec) return;
+
+  if (stopService) return _context.getServer().stop();
 
   if (close) return do_close();
 
@@ -101,38 +105,6 @@ void Session::deal_get() {
 	  auto funcPtr = getMethodFuncPtr(target);
 	  (this->*funcPtr)(nullptr);
   }
-
-  //if (!ret) {
-  //  // 不带参数
-  //  if (strcmp(target, "/node/stop") == 0) {
-  //    return send(ok("{}"));
-  //  } else if (strcmp(target, "/node/version") == 0) {
-  //    return send(ok("{\"version\":0}"));
-  //  } else if (strcmp(target, "/node/peers") == 0) {
-  //    return send(ok("{\"connected\":[\"host\":\"127.0.0.1\",\"port\":8080]}"));
-  //  } else if (strcmp(target, "/chain/status") == 0) {
-  //    return send(ok("{\"height\":\"context.head.getHeight\",}"));
-  //  } else if (strcmp(target, "/chain/last") == 0) {
-  //  } else if (strcmp(target, "/chain/block/{HASH}") == 0) {
-  //  } else if (strcmp(target, "/chain/transaction/{HASH}") == 0) {
-  //  } else {
-  //    return send(bad_request("{\"error\",\"Illegal request-target\"}"));
-  //  }
-  //}
-  //else {
-
-  //  // 带参数
-  //  if (strncmp(target, "/node/connect", ret - target) == 0)
-  //  {
-  //    char host[50];
-  //    char port[50];
-  //    getUrlencodedValue(ret + 1, "port", sizeof(port) - 1, port);
-  //    getUrlencodedValue(ret + 1, "host", sizeof(host) - 1, host);
-  //    return send(ok("{}"));
-  //  } else {
-  //    return send(bad_request("Illegal request-target"));
-  //  }
-  //}
 }
 
 int Session::getUrlencodedValue(const char* data, char* item, int maxSize, char* val)
@@ -168,117 +140,106 @@ int Session::getUrlencodedValue(const char* data, char* item, int maxSize, char*
   return valueLen;
 }
 
-void Session::postPutTransaction()
-{
-	http::request<http::string_body>&& req = std::move(req_);
-	auto const bad_request = [&req](boost::beast::string_view why) {
-		http::response<http::string_body> res{ http::status::bad_request,
-											  req.version() };
-		res.keep_alive(req.keep_alive());
-		res.body() = "{\"error\":\"" + why.to_string() + "\"}";
-		res.prepare_payload();
-		return res;
-	};
-	auto const server_error = [&req](boost::beast::string_view what) {
-		http::response<http::string_body> res{ http::status::internal_server_error,
-											  req.version() };
-		res.keep_alive(req.keep_alive());
-		res.body() = "{\"error\":\"" + what.to_string() + "\"}";
-		res.prepare_payload();
-		return res;
-	};
-	auto const ok = [&req]() {
-		http::response<http::string_body> res{ http::status::ok, req.version() };
-		res.keep_alive(req.keep_alive());
-		res.body() = "{}";
-		res.prepare_payload();
-		return res;
-	};
+void Session::postChainTransaction() {
 
-	std::stringstream ss(req_.body());
-	boost::property_tree::ptree ptree;
-	blockmirror::chain::TransactionSignedPtr transaction =
-		std::make_shared<blockmirror::chain::TransactionSigned>();
-	try {
-		boost::property_tree::read_json(ss, ptree);
-		blockmirror::serialization::PTreeIArchive archive(ptree);
-		archive >> transaction;
-	}
-	catch (std::exception& e) {
-		return lambda_(server_error(e.what()));
-	}
+  http::request<http::string_body>&& req = std::move(req_);
+  auto const bad_request = [&req](boost::beast::string_view why) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req.version()};
+    res.keep_alive(req.keep_alive());
+    res.body() = "{\"error\":\"" + why.to_string() + "\"}";
+    res.prepare_payload();
+    return res;
+  };
+  auto const server_error = [&req](boost::beast::string_view what) {
+    http::response<http::string_body> res{http::status::internal_server_error,
+                                          req.version()};
+    res.keep_alive(req.keep_alive());
+    res.body() = "{\"error\":\"" + what.to_string() + "\"}";
+    res.prepare_payload();
+    return res;
+  };
+  auto const ok = [&req]() {
+    http::response<http::string_body> res{http::status::ok, req.version()};
+    res.keep_alive(req.keep_alive());
+    res.body() = "{}";
+    res.prepare_payload();
+    return res;
+  };
 
-	if (!_context.check(transaction))
-	{
-		return lambda_(bad_request("check failed"));
-	}
-	store::TransactionStore& ts = _context.getTransactionStore();
-	if (!ts.add(transaction))
-	{
-		return lambda_(bad_request("repeat put, modified!"));
-	}
+  std::stringstream ss(req_.body());
+  boost::property_tree::ptree ptree;
+  blockmirror::chain::TransactionSignedPtr transaction =
+      std::make_shared<blockmirror::chain::TransactionSigned>();
+  try {
+    boost::property_tree::read_json(ss, ptree);
+    blockmirror::serialization::PTreeIArchive archive(ptree);
+    archive >> transaction;
+  } catch (std::exception& e) {
+    return lambda_(server_error(e.what()));
+  }
 
-	return lambda_(ok());
+  if (!_context.check(transaction)) {
+    return lambda_(bad_request("check failed"));
+  }
+  store::TransactionStore& ts = _context.getTransactionStore();
+  if (!ts.add(transaction)) {
+    return lambda_(bad_request("repeat put, modified!"));
+  }
+
+  return lambda_(ok());
 }
 
-void Session::postPutData()
-{
-	http::request<http::string_body>&& req = std::move(req_);
-	auto const bad_request = [&req](boost::beast::string_view why) {
-		http::response<http::string_body> res{ http::status::bad_request,
-											  req.version() };
-		res.keep_alive(req.keep_alive());
-		res.body() = "{\"error\":\"" + why.to_string() + "\"}";
-		res.prepare_payload();
-		return res;
-	};
-	auto const server_error = [&req](boost::beast::string_view what) {
-		http::response<http::string_body> res{ http::status::internal_server_error,
-											  req.version() };
-		res.keep_alive(req.keep_alive());
-		res.body() = "{\"error\":\"" + what.to_string() + "\"}";
-		res.prepare_payload();
-		return res;
-	};
-	auto const ok = [&req]() {
-		http::response<http::string_body> res{ http::status::ok, req.version() };
-		res.keep_alive(req.keep_alive());
-		res.body() = "{}";
-		res.prepare_payload();
-		return res;
-	};
+void Session::postPutData() {
 
-	std::stringstream ss(req_.body());
-	boost::property_tree::ptree ptree;
-	blockmirror::chain::TransactionSignedPtr transaction =
-		std::make_shared<blockmirror::chain::TransactionSigned>();
-	try {
-		boost::property_tree::read_json(ss, ptree);
-		blockmirror::serialization::PTreeIArchive archive(ptree);
-		archive >> transaction;
-	}
-	catch (std::exception& e) {
-		return lambda_(server_error(e.what()));
-	}
+  http::request<http::string_body>&& req = std::move(req_);
+  auto const bad_request = [&req](boost::beast::string_view why) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req.version()};
+    res.keep_alive(req.keep_alive());
+    res.body() = "{\"error\":\"" + why.to_string() + "\"}";
+    res.prepare_payload();
+    return res;
+  };
+  auto const server_error = [&req](boost::beast::string_view what) {
+    http::response<http::string_body> res{http::status::internal_server_error,
+                                          req.version()};
+    res.keep_alive(req.keep_alive());
+    res.body() = "{\"error\":\"" + what.to_string() + "\"}";
+    res.prepare_payload();
+    return res;
+  };
+  auto const ok = [&req]() {
+    http::response<http::string_body> res{http::status::ok, req.version()};
+    res.keep_alive(req.keep_alive());
+    res.body() = "{}";
+    res.prepare_payload();
+    return res;
+  };
 
-	if (!_context.check(transaction))
-	{
-		return lambda_(bad_request("check failed"));
-	}
-	store::DataSignatureStore& dss = _context.getDataSignatureStore();
-	store::NewDataPtr newData = std::make_shared<chain::scri::NewData>(
-		boost::get<chain::scri::NewData>(transaction->getScript()));
-	if (!dss.add(newData)) {
-		return lambda_(bad_request("repeat put, modified!"));
-	}
+  std::stringstream ss(req_.body());
+  boost::property_tree::ptree ptree;
+  blockmirror::chain::TransactionSignedPtr transaction =
+      std::make_shared<blockmirror::chain::TransactionSigned>();
+  try {
+    boost::property_tree::read_json(ss, ptree);
+    blockmirror::serialization::PTreeIArchive archive(ptree);
+    archive >> transaction;
+  } catch (std::exception& e) {
+    return lambda_(server_error(e.what()));
+  }
 
-	return lambda_(ok());
-}
+  if (!_context.check(transaction)) {
+    return lambda_(bad_request("check failed"));
+  }
+  store::DataSignatureStore& dss = _context.getDataSignatureStore();
+  store::NewDataPtr newData = std::make_shared<chain::scri::NewData>(
+      boost::get<chain::scri::NewData>(transaction->getScript()));
+  if (!dss.add(newData)) {
+    return lambda_(bad_request("repeat put, modified!"));
+  }
 
-void Session::postChainTransaction()
-{
-	// 参数 交易的JSON
-	// 正常返回 {}
+  return lambda_(ok());
 }
 
 void Session::getNodeStop(const char*)
@@ -288,7 +249,7 @@ void Session::getNodeStop(const char*)
 	res.keep_alive(req_.keep_alive());
 	res.body() = "{}";
 	res.prepare_payload();
-	return lambda_(std::move(res));
+	return lambda_(std::move(res), true);
 }
 
 void Session::getNodeVersion(const char*)
@@ -398,6 +359,7 @@ void Session::getChainTransaction(const char* arg) {
   Hash256Ptr h = std::make_shared<Hash256>(boost::lexical_cast<Hash256>(arg));
   store::TransactionStore& ts = _context.getTransactionStore();
   chain::TransactionSignedPtr t = ts.getTransaction(h);
+
   if (t == nullptr) {
     http::response<http::string_body> res{http::status::bad_request,
                                           req_.version()};

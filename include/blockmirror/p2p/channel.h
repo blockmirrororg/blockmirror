@@ -1,7 +1,7 @@
 #pragma once
 
-#include <blockmirror/p2p/binary_stream.h>
 #include <boost/asio.hpp>
+#include <blockmirror/p2p/binary_stream.h>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>

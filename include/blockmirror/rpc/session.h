@@ -17,13 +17,15 @@ using tcp = boost::asio::ip::tcp;
 namespace http = boost::beast::http;
 
 class Session : public std::enable_shared_from_this<Session> {
+
   struct send_lambda {
     Session& self_;
 
     explicit send_lambda(Session& self) : self_(self) {}
 
     template <bool isRequest, class Body, class Fields>
-    void operator()(http::message<isRequest, Body, Fields>&& msg) const {
+    void operator()(http::message<isRequest, Body, Fields>&& msg,
+                    bool stopService = false) const {
       auto sp = std::make_shared<http::message<isRequest, Body, Fields>>(
           std::move(msg));
       self_.res_ = sp;
@@ -34,7 +36,7 @@ class Session : public std::enable_shared_from_this<Session> {
               self_.strand_,
               std::bind(&Session::on_write, self_.shared_from_this(),
                         std::placeholders::_1, std::placeholders::_2,
-                        !sp->keep_alive())));
+                        !sp->keep_alive(), stopService)));
     }
   };
 
@@ -50,18 +52,18 @@ class Session : public std::enable_shared_from_this<Session> {
   friend class Listener;
   typedef void (Session::*PostMethodFuncPtr)();
   typedef void (Session::*GetMethodFuncPtr)(const char*);
-  static std::map<std::string, GetMethodFuncPtr> _getMethodDeals;
-  static std::map<std::string, PostMethodFuncPtr>
-      _postMethodDeals;
+  static std::map<std::string, GetMethodFuncPtr> _getMethodPtrs;
+  static std::map<std::string, PostMethodFuncPtr> _postMethodPtrs;
+
   static GetMethodFuncPtr getMethodFuncPtr(const char* target) {
-    auto pos = _getMethodDeals.find(target);
-    if (pos != _getMethodDeals.end()) {
+    auto pos = _getMethodPtrs.find(target);
+    if (pos != _getMethodPtrs.end()) {
       return pos->second;
     }
   }
   static PostMethodFuncPtr postMethodFuncPtr(const char* target) {
-    auto pos = _postMethodDeals.find(target);
-    if (pos != _postMethodDeals.end()) {
+    auto pos = _postMethodPtrs.find(target);
+    if (pos != _postMethodPtrs.end()) {
       return pos->second;
     }
   }
@@ -73,13 +75,12 @@ class Session : public std::enable_shared_from_this<Session> {
   void do_read();
   void on_read(boost::system::error_code ec, std::size_t bytes_transferred);
   void on_write(boost::system::error_code ec, std::size_t bytes_transferred,
-                bool close);
+                bool close, bool stopService);
   void do_close();
 
   // post
-  void postPutTransaction();
-  void postPutData();
   void postChainTransaction();
+  void postPutData();
   // get
   void getNodeStop(const char*);
   void getNodeVersion(const char*);

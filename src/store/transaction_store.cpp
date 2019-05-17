@@ -78,7 +78,7 @@ chain::TransactionSignedPtr TransactionStore::getTransaction(
   boost::shared_lock<boost::shared_mutex> lock(_mutex);
   auto pos = _container.get<tagHash>().find(h);
   if (pos == _container.end()) {
-    return std::make_shared<chain::TransactionSigned>();
+    return std::shared_ptr<chain::TransactionSigned>();
   } else {
     return pos->transaction;
   }

@@ -523,58 +523,67 @@ BOOST_AUTO_TEST_CASE(context_tests_ok8) {
   block[2]->setTimestamp(block[1]->getTimestamp() + blockmirror::BLOCK_PER_MS);
   block[2]->finalize(K(BPriv));
 
-  //设置区块6
-  block[6]->setPrevious(*block[2]);
-  block[6]->setCoinbase(P(BPub));
-  block[6]->setTimestamp(block[2]->getTimestamp() + blockmirror::BLOCK_PER_MS);
-  block[6]->finalize(K(BPriv));
+  //设置区块3
+  block[3]->setPrevious(*block[2]);
+  block[3]->setCoinbase(P(BPub));
+  block[3]->setTimestamp(block[2]->getTimestamp() + blockmirror::BLOCK_PER_MS);
+  block[3]->finalize(K(BPriv));
 
-  //设置区块7
-  block[7]->setPrevious(*block[2]);
-  block[7]->setCoinbase(P(BPub));
-  block[7]->setTimestamp(block[2]->getTimestamp() +
+  //设置区块4
+  block[4]->setPrevious(*block[2]);
+  block[4]->setCoinbase(P(BPub));
+  block[4]->setTimestamp(block[2]->getTimestamp() +
                          2 * blockmirror::BLOCK_PER_MS);
-  block[7]->finalize(K(BPriv));
+  block[4]->finalize(K(BPriv));
 
-  //设置区块7的交易
+  //设置区块4的交易
   tPtr[11]->addSign(K(APriv));  //把 pubs[8] 加入BP
   tPtr[11]->addSign(K(BPriv));
-  block[7]->addTransaction(tPtr[11]);
+  block[4]->addTransaction(tPtr[11]);
 
   {  //执行区块
     blockmirror::chain::Context c;
     c.load();
     BOOST_CHECK(c.apply(block[1]));
     BOOST_CHECK(c.apply(block[2]));
-    BOOST_CHECK(!c.apply(block[6]));
-    BOOST_CHECK(c.apply(block[7]));
+    BOOST_CHECK(!c.apply(block[3]));
+    BOOST_CHECK(c.apply(block[4]));
     c.close();
   }
 
-  //设置区块8
-  block[8]->setPrevious(*block[7]);
-  block[8]->setCoinbase(P(APub));
-  block[8]->setTimestamp(
-      block[7]->getTimestamp() +
+  //设置区块5
+  block[5]->setPrevious(*block[4]);
+  block[5]->setCoinbase(P(APub));
+  block[5]->setTimestamp(
+      block[4]->getTimestamp() +
       2 * blockmirror::BLOCK_PER_MS);  //因为pubs[8] 加入了BP，需要跳过pubs[8]
-  block[8]->finalize(K(APriv));
+  block[5]->finalize(K(APriv));
 
-  //设置区块8的交易
+  //设置区块5的交易
   tPtr[10]->addSign(K(APriv));  //删除BP A
   tPtr[10]->addSign(K(BPriv));
-  block[8]->addTransaction(tPtr[10]);
+  block[5]->addTransaction(tPtr[10]);
 
-  //设置区块9
-  /*   block[9]->setPrevious(*block[8]);
-    block[9]->setCoinbase(P(BPub));
-    block[9]->setTimestamp(block[8]->getTimestamp() +
-    blockmirror::BLOCK_PER_MS); block[9]->finalize(K(BPriv)); */
+  //设置区块6
+  block[6]->setPrevious(*block[5]);
+  block[6]->setCoinbase(P(BPub));
+  block[6]->setTimestamp(block[5]->getTimestamp() + blockmirror::BLOCK_PER_MS);
+  block[6]->finalize(K(BPriv));
+
+  //设置区块7
+  block[7]->setPrevious(*block[5]);
+  block[7]->setCoinbase(pubs[8]);
+  block[7]->setTimestamp(block[5]->getTimestamp() + blockmirror::BLOCK_PER_MS);
+  block[7]->finalize(pris[8]);
 
   {  //执行区块
     blockmirror::chain::Context c;
     c.load();
-    BOOST_CHECK(c.apply(block[8]));
-    // BOOST_CHECK(c.apply(block[9]));
+    BOOST_CHECK(c.apply(block[5]));
+    /*这里是按位置来，所以区块6没过，区块7过，也就是：本来A位置是0，删除了之后，B位置变为0，
+    pubs[8]位置变为1，执行A（0位置）之后的区块，就到1位置的pubs[8]*/
+    BOOST_CHECK(!c.apply(block[6]));
+    BOOST_CHECK(c.apply(block[7]));
     c.close();
   }
 }

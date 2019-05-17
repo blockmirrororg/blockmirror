@@ -52,37 +52,53 @@ void createBlock() {
 }
 
 //生成各种交易
-blockmirror::chain::TransactionSignedPtr tPtr[10]{
-    std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::Transfer(P(BPub), 100)),  // 0
+std::vector<blockmirror::chain::TransactionSignedPtr> tPtr;
+void inittPtr() {
+  tPtr = {
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::Transfer(P(BPub), 100)),  // 0
 
-    std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::BPJoin({1, 2, 3})),  // 1
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::BPJoin({1, 2, 3})),  // 1
 
-    std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::BPJoin({4, 5, 6})),  // 2
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::BPJoin({4, 5, 6})),  // 2
 
-    std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::BPExit({4, 5, 6})),  // 3
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::BPExit({4, 5, 6})),  // 3
 
-    std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::NewData("aaa", "111", "rrt")),  // 4
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::NewData("aaa", "111", "rrt")),  // 4
 
-    std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::NewFormat("aaa", "ggg", {1, 3, 5, 7, 9},
-                                            {2, 4, 6, 8}, {6, 6, 6})),  // 5
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::NewFormat("aaa", "ggg", {1, 3, 5, 7, 9},
+                                              {2, 4, 6, 8}, {6, 6, 6})),  // 5
 
-    std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::BPJoin({4, 5, 6})),  // 6
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::BPJoin({4, 5, 6})),  // 6
 
-    std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::NewFormat("bbb", "ccc", {15, 3, 55, 75, 9},
-                                            {28, 4, 65, 8}, {60, 76, 6})),  // 7
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::NewFormat("bbb", "ccc", {15, 3, 55, 75, 9},
+                                              {28, 4, 65, 8},
+                                              {60, 76, 6})),  // 7
 
-    std::make_shared<blockmirror::chain::TransactionSigned>(
-        blockmirror::chain::scri::NewFormat("aaa2", "fff", {12, 13, 15, 27, 9},
-                                            {2, 45, 65, 85},
-                                            {96, 61, 126}))};  // 8
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::NewFormat(
+              "aaa2", "fff", {12, 13, 15, 27, 9}, {2, 45, 65, 85},
+              {96, 61, 126})),  // 8
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::BPJoin(P(APub))),  // 9
+
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::BPExit(P(APub))),  // 10
+
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::BPJoin(pubs[8])),  // 11
+
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::BPExit(pubs[8]))  // 12
+  };
+}
 
 void removeFile() {
   boost::filesystem::remove("./0.block");
@@ -93,6 +109,13 @@ void removeFile() {
   boost::filesystem::remove("./format");
   boost::filesystem::remove("./transaction");
   boost::filesystem::remove("./head");
+}
+
+void addBP() {
+  blockmirror::store::BpsStore store;
+  store.load(".");
+  BOOST_CHECK(store.add(P(APub)));
+  BOOST_CHECK(store.add(P(BPub)));
 }
 
 void saveBlock(int b, int e) {
@@ -112,6 +135,8 @@ BOOST_AUTO_TEST_CASE(context_tests_ok1) {
   removeFile();
   createKey();
   createBlock();
+  inittPtr();
+  addBP();
 
   //设置区块1
   block[1]->setGenesis();
@@ -151,13 +176,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok1) {
     tPtr[i]->addSign(pris[i]);
     block[3]->addTransaction(tPtr[i]);
   }
-  // 增加的BP列表
-  {
-    blockmirror::store::BpsStore store;
-    store.load(".");
-    BOOST_CHECK(store.add(block[1]->getProducer()));
-    BOOST_CHECK(store.add(block[3]->getProducer()));
-  }
+
   {  //执行区块1，2，3
     blockmirror::chain::Context c;
     c.load();
@@ -234,11 +253,13 @@ BOOST_AUTO_TEST_CASE(context_tests_ok2) {
   removeFile();
   createKey();
   createBlock();
+  inittPtr();
+  addBP();
 
   //设置区块4
   block[4]->setGenesis();
-  block[4]->setCoinbase(P(BPub));
-  block[4]->finalize(K(BPriv));
+  block[4]->setCoinbase(P(APub));
+  block[4]->finalize(K(APriv));
 
   //设置区块4的交易
   tPtr[7]->addSign(K(BPriv));
@@ -247,6 +268,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok2) {
   //设置区块5
   block[5]->setPrevious(*block[4]);
   block[5]->setCoinbase(P(BPub));
+  block[5]->setTimestamp(block[4]->getTimestamp() + blockmirror::BLOCK_PER_MS);
   block[5]->finalize(K(BPriv));
 
   //设置区块5的交易
@@ -260,19 +282,14 @@ BOOST_AUTO_TEST_CASE(context_tests_ok2) {
   //设置区块6
   block[6]->setPrevious(*block[5]);
   block[6]->setCoinbase(P(BPub));
+  block[6]->setTimestamp(block[5]->getTimestamp() +
+                         2 * blockmirror::BLOCK_PER_MS);
   block[6]->finalize(K(BPriv));
 
   //设置区块6的交易
   tPtr[5]->addSign(pris[1]);
   block[6]->addTransaction(
       tPtr[5]);  //由于区块5执行失败，由于height的关系，区块6也失败
-
-  // 增加创世BP列表
-  {
-    blockmirror::store::BpsStore store;
-    store.load(".");
-    BOOST_CHECK(store.add(block[4]->getProducer()));
-  }
 
   {  //执行区块4 5 6
     blockmirror::chain::Context c;
@@ -288,17 +305,19 @@ BOOST_AUTO_TEST_CASE(context_tests_ok3) {
   removeFile();
   createKey();
   createBlock();
+  inittPtr();
+  addBP();
 
   //设置区块4
   block[4]->setGenesis();
-  block[4]->setCoinbase(P(BPub));
-  block[4]->finalize(K(BPriv));
+  block[4]->setCoinbase(P(APub));
+  block[4]->finalize(K(APriv));
 
   //设置区块4的交易
   tPtr[7]->addSign(pris[1]);
   block[4]->addTransaction(tPtr[7]);
 
-  tPtr[0]->addSign(K(APriv));  // A给B转账，但是A余额不足
+  tPtr[0]->addSign(pris[8]);  // pris[8]给B转账100，但是pris[8]余额不足
   block[4]->addTransaction(tPtr[0]);
 
   {  //执行区块4
@@ -310,12 +329,13 @@ BOOST_AUTO_TEST_CASE(context_tests_ok3) {
 
   blockmirror::store::AccountStore store;
   store.load(".");
-  // A虽然给B转账100，但是失败，coinbase也进行了回滚，所以B余额是0
+  // pris[8]给B转账100，但是失败，B余额是0。coinbase也进行了回滚，所以A余额是0
+  BOOST_CHECK_EQUAL(store.query(P(APub)), 0);
   BOOST_CHECK_EQUAL(store.query(P(BPub)), 0);
 
   blockmirror::store::TransactionStore transactionStore;
   transactionStore.load(".");
-  //BOOST_CHECK_EQUAL(transactionStore.contains(tPtr[7]->getHashPtr()), 1);
+  BOOST_CHECK_EQUAL(transactionStore.contains(tPtr[7]->getHashPtr()), 1);
   // tPtr[7]的NewFormat因为tPtr[0]失败，tPtr[7]进行了回滚，并没有保存
   blockmirror::store::FormatStore formatStore;
   formatStore.load(".");
@@ -326,6 +346,8 @@ BOOST_AUTO_TEST_CASE(context_tests_ok4) {
   removeFile();
   createKey();
   createBlock();
+  inittPtr();
+  addBP();
 
   {  //还没执行过区块，回滚失败
     blockmirror::chain::Context c;
@@ -336,8 +358,8 @@ BOOST_AUTO_TEST_CASE(context_tests_ok4) {
 
   //设置区块4
   block[4]->setGenesis();
-  block[4]->setCoinbase(P(BPub));
-  block[4]->finalize(K(BPriv));
+  block[4]->setCoinbase(P(APub));
+  block[4]->finalize(K(APriv));
 
   //设置区块4的交易
   tPtr[7]->addSign(pris[1]);
@@ -346,12 +368,6 @@ BOOST_AUTO_TEST_CASE(context_tests_ok4) {
   tPtr[2]->addSign(pris[3]);
   block[4]->addTransaction(tPtr[2]);
 
-  // 增加创世BP列表
-  {
-    blockmirror::store::BpsStore store;
-    store.load(".");
-    BOOST_CHECK(store.add(block[4]->getProducer()));
-  }
   {  //执行区块4
     blockmirror::chain::Context c;
     c.load();
@@ -374,8 +390,8 @@ BOOST_AUTO_TEST_CASE(context_tests_ok4) {
 
   blockmirror::store::AccountStore store;
   store.load(".");
-  // 回滚失败，所以B余额是coinbase
-  BOOST_CHECK_EQUAL(store.query(P(BPub)), 100000000);
+  // 回滚失败，所以A余额是coinbase
+  BOOST_CHECK_EQUAL(store.query(P(APub)), 100000000);
 
   blockmirror::store::BpsStore bpsStore;
   bpsStore.load(".");
@@ -390,11 +406,13 @@ BOOST_AUTO_TEST_CASE(context_tests_ok5) {
   removeFile();
   createKey();
   createBlock();
+  inittPtr();
+  addBP();
 
   //设置区块5
   block[5]->setGenesis();
-  block[5]->setCoinbase(P(BPub));
-  block[5]->finalize(K(BPriv));
+  block[5]->setCoinbase(P(APub));
+  block[5]->finalize(K(APriv));
 
   //设置区块5的交易,但是不签名
   block[5]->addTransaction(tPtr[3]);
@@ -411,21 +429,19 @@ BOOST_AUTO_TEST_CASE(context_tests_ok6) {
   removeFile();
   createKey();
   createBlock();
+  inittPtr();
+  addBP();
 
   //设置区块5
   block[5]->setGenesis();
-  block[5]->setCoinbase(P(BPub), 100);  //不等于MINER_AMOUNT
-  block[5]->finalize(K(BPriv));
-
-  //设置区块4
-  block[4]->setGenesis();
-  block[4]->setCoinbase(P(BPub));
-  block[4]->finalize(K(BPriv));
+  block[5]->setCoinbase(P(APub), 100);  //不等于MINER_AMOUNT
+  block[5]->finalize(K(APriv));
 
   //设置区块6
   block[6]->setPrevious(*block[5]);
-  block[6]->setCoinbase(P(APub));
-  block[6]->finalize(K(APriv));
+  block[6]->setCoinbase(P(BPub));
+  block[3]->setTimestamp(block[5]->getTimestamp() + blockmirror::BLOCK_PER_MS);
+  block[6]->finalize(K(BPriv));
 
   {  //先执行区块6,再执行区块5
     blockmirror::chain::Context c;
@@ -440,6 +456,127 @@ BOOST_AUTO_TEST_CASE(context_tests_ok7) {
   removeFile();
   createKey();
   createBlock();
+  inittPtr();
+  addBP();
+
+  //设置区块5
+  block[5]->setGenesis();
+  block[5]->setCoinbase(P(APub));
+  block[5]->finalize(K(APriv));
+
+  //设置区块5的交易
+  tPtr[5]->addSign(pris[1]);
+  block[5]->addTransaction(tPtr[5]);
+
+  {  //先执行一遍这个交易，让下面的交易检查是否存在相同的交易
+    blockmirror::chain::Context c;
+    c.load();
+    BOOST_CHECK(c.apply(block[5]));
+    c.close();
+  }
+
+  {
+    blockmirror::chain::Context c;
+    c.load();
+
+    BOOST_CHECK(!c.check(tPtr[5]));
+
+    tPtr[6]->setExpire(0);
+    tPtr[6]->addSign(K(APriv));
+    BOOST_CHECK(!c.check(tPtr[6]));
+
+    tPtr[7]->setExpire(2);
+    tPtr[7]->addSign(K(APriv));
+    tPtr[7]->addSign(K(BPriv));
+    BOOST_CHECK(c.check(tPtr[7]));
+
+    tPtr[8]->setExpire(2);
+    tPtr[8]->addSign(K(APriv));
+    BOOST_CHECK(!c.check(tPtr[8]));
+
+    blockmirror::chain::TransactionSignedPtr t;
+    BOOST_CHECK(!c.check(t));
+
+    //交易检查 没签名
+    BOOST_CHECK(!c.check(tPtr[0]));
+    BOOST_CHECK(!c.check(tPtr[5]));
+
+    c.close();
+  }
+}
+
+BOOST_AUTO_TEST_CASE(context_tests_ok8) {
+  removeFile();
+  createKey();
+  createBlock();
+  inittPtr();
+  addBP();
+
+  //设置区块1
+  block[1]->setGenesis();
+  block[1]->setCoinbase(P(APub));
+  block[1]->finalize(K(APriv));
+
+  //设置区块2
+  block[2]->setPrevious(*block[1]);
+  block[2]->setCoinbase(P(BPub));
+  block[2]->setTimestamp(block[1]->getTimestamp() + blockmirror::BLOCK_PER_MS);
+  block[2]->finalize(K(BPriv));
+
+  //设置区块6
+  block[6]->setPrevious(*block[2]);
+  block[6]->setCoinbase(P(BPub));
+  block[6]->setTimestamp(block[2]->getTimestamp() + blockmirror::BLOCK_PER_MS);
+  block[6]->finalize(K(BPriv));
+
+  //设置区块7
+  block[7]->setPrevious(*block[2]);
+  block[7]->setCoinbase(P(BPub));
+  block[7]->setTimestamp(block[2]->getTimestamp() +
+                         2 * blockmirror::BLOCK_PER_MS);
+  block[7]->finalize(K(BPriv));
+
+  //设置区块7的交易
+  tPtr[11]->addSign(K(APriv));  //把 pubs[8] 加入BP
+  tPtr[11]->addSign(K(BPriv));
+  block[7]->addTransaction(tPtr[11]);
+
+  {  //执行区块
+    blockmirror::chain::Context c;
+    c.load();
+    BOOST_CHECK(c.apply(block[1]));
+    BOOST_CHECK(c.apply(block[2]));
+    BOOST_CHECK(!c.apply(block[6]));
+    BOOST_CHECK(c.apply(block[7]));
+    c.close();
+  }
+
+  //设置区块8
+  block[8]->setPrevious(*block[7]);
+  block[8]->setCoinbase(P(APub));
+  block[8]->setTimestamp(
+      block[7]->getTimestamp() +
+      2 * blockmirror::BLOCK_PER_MS);  //因为pubs[8] 加入了BP，需要跳过pubs[8]
+  block[8]->finalize(K(APriv));
+
+  //设置区块8的交易
+  tPtr[10]->addSign(K(APriv));  //删除BP A
+  tPtr[10]->addSign(K(BPriv));
+  block[8]->addTransaction(tPtr[10]);
+
+  //设置区块9
+  /*   block[9]->setPrevious(*block[8]);
+    block[9]->setCoinbase(P(BPub));
+    block[9]->setTimestamp(block[8]->getTimestamp() +
+    blockmirror::BLOCK_PER_MS); block[9]->finalize(K(BPriv)); */
+
+  {  //执行区块
+    blockmirror::chain::Context c;
+    c.load();
+    BOOST_CHECK(c.apply(block[8]));
+    // BOOST_CHECK(c.apply(block[9]));
+    c.close();
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

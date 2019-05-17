@@ -7,6 +7,13 @@
 int main(int argc, char* argv[]) {
   try {
     B_LOG("blockmirror server starting...");
+    if (argc != 2) {
+      B_ERR("usage: {} CONFIG_FILE", argv[0]);
+      return -1;
+    }
+
+    blockmirror::globalConfig.init(argv[1]);
+
     blockmirror::Server server;
     server.add_connector("127.0.0.1", 7700);  // for p2p
     server.add_connector("127.0.0.1", 7701);

@@ -19,8 +19,8 @@ class CheckVisitor : public boost::static_visitor<bool> {
     }
     uint32_t amount = _context._bps.getBPAmount();
     if (amount == 0) return true;
-    if ((float)(sigs.size() / amount) < blockmirror::BP_PERCENT_SIGNER) {
-      B_TRACE("signatures low percent {}", (float)(sigs.size() / amount));
+    if (((float)sigs.size() / amount * 100) < blockmirror::BP_PERCENT_SIGNER) {
+      B_TRACE("signatures low percent {}", (float)sigs.size() / amount * 100);
       return false;
     }
     return true;
@@ -196,7 +196,8 @@ bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
   return true;
 }
 
-chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward, uint64_t testTime) {
+chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward,
+                                  uint64_t testTime) {
   chain::BlockPtr newBlock = std::make_shared<chain::Block>();
   if (!_head) {
     newBlock->setGenesis();
@@ -210,7 +211,7 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward, uint
   _bpChanged = false;  // 清除状态
   Pubkey pub;
   crypto::ECC.computePub(key, pub);
-  
+
   // 检查BP是否存在
   auto slot = _bps.find(pub);
   if (slot < 0) {

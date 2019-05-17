@@ -1,0 +1,298 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "This is blockmirror api doc",
+    "version": "1.0.0",
+    "title": "blockmirror"
+  },
+  "host": "192.168.251.236:8080",
+  "basePath": "/api/v1",
+  "tags": [
+    { "name": "test", "description": "测试" },
+    {
+      "name": "node",
+      "description": "节点"
+    },
+    { "name": "chain", "description": "区块" }
+  ],
+  "schemes": ["http"],
+  "paths": {
+    "/block/list/start/{start}/end/{end}":{
+      "get": {
+        "tags": ["test"],
+        "summary": "",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "start",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "name": "end",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": { "type": "object" }
+          }
+        }
+      }
+    },
+    "/node/stop": {
+      "get": {
+        "tags": ["node"],
+        "summary": "",
+        "description": "",
+        "operationId": "nodeStop",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "succeed": {
+            "description": "successful operation",
+            "schema": { "type": "object" }
+          },
+          "failed": {
+            "schema": { "$ref": "#/definitions/Error" }
+          }
+        }
+      }
+    },
+    "/node/version": {
+      "get": {
+        "tags": ["node"],
+        "summary": "",
+        "description": "",
+        "operationId": "nodeVersion",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "succeed": {
+            "description": "successful operation",
+            "schema": { "$ref": "#/definitions/Version" }
+          },
+          "failed": {
+            "schema": { "$ref": "#/definitions/Error" }
+          }
+        }
+      }
+    },
+    "/node/peers": {
+      "get": {
+        "tags": ["node"],
+        "summary": "",
+        "description": "",
+        "operationId": "nodePeers",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "succeed": {
+            "description": "successful operation",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "connected": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/Endpoint" }
+                },
+                "connecting": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/Endpoint" }
+                }
+              }
+            }
+          },
+          "failed": {
+            "schema": { "$ref": "#/definitions/Error" }
+          }
+        }
+      }
+    },
+    "/node/connect": {
+      "get": {
+        "tags": ["node"],
+        "summary": "",
+        "description": "",
+        "operationId": "nodeConnect",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "host",
+            "in": "query",
+            "description": "host ip",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "port",
+            "in": "query",
+            "description": "host port",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "succeed": {
+            "description": "successful operation",
+            "schema": { "type": "object" }
+          },
+          "failed": {
+            "schema": { "$ref": "#/definitions/Error" }
+          }
+        }
+      }
+    },
+    "/chain/status": {
+      "get": {
+        "tags": ["chain"],
+        "summary": "",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "succeed": {
+            "description": "successful operation",
+            "schema": { "$ref": "#/definitions/ChainStatus" }
+          },
+          "failed": {
+            "schema": { "$ref": "#/definitions/Error" }
+          }
+        }
+      }
+    },
+    "/chain/last": {
+      "get": {
+        "tags": ["chain"],
+        "summary": "",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "succeed": {
+            "description": "successful operation",
+            "schema": { "type": "string" }
+          },
+          "failed": {
+            "schema": { "$ref": "#/definitions/Error" }
+          }
+        }
+      }
+    },
+    "/chain/block/{hash}": {
+      "get": {
+        "tags": ["chain"],
+        "summary": "",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "description": "chain hash",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "succeed": {
+            "description": "successful operation",
+            "schema": { "type": "string" }
+          },
+          "failed": {
+            "schema": { "$ref": "#/definitions/Error" }
+          }
+        }
+      }
+    },
+    "/chain/transaction/{hash}": {
+      "get": {
+        "tags": ["chain"],
+        "summary": "",
+        "description": "",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "description": "chain hash",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "succeed": {
+            "description": "successful operation",
+            "schema": { "type": "string" }
+          },
+          "failed": {
+            "schema": { "$ref": "#/definitions/Error" }
+          }
+        }
+      }
+    },
+    "/chain/transaction": {
+      "post": {
+        "tags": ["chain"],
+        "summary": "",
+        "description": "",
+        "operationId": "nodeConnect",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "description": "transaction",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "succeed": {
+            "description": "successful operation",
+            "schema": { "type": "object" }
+          },
+          "failed": {
+            "schema": { "$ref": "#/definitions/Error" }
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "api_key": { "type": "apiKey", "name": "api_key", "in": "header" }
+  },
+  "definitions": {
+    "Version": {
+      "type": "object",
+      "properties": {
+        "version": { "type": "string" }
+      }
+    },
+    "Endpoint": {
+      "type": "object",
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "integer", "format": "int32" }
+      }
+    },
+    "ChainStatus": {
+      "type": "object",
+      "properties": {
+        "height": { "type": "string" }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "error": { "type": "string" }
+      }
+    }
+  }
+}

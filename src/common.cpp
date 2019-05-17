@@ -62,6 +62,7 @@ void ConfigFile::reset() {
   rpc_bind = 0;
 }
 void ConfigFile::init(const boost::filesystem::path &path) {
+  reset();
   std::ifstream stream;
   stream.open(path.string(), std::ios_base::in);
   stream.exceptions(std::fstream::failbit | std::fstream::badbit |

@@ -48,17 +48,18 @@ class Session : public std::enable_shared_from_this<Session> {
 
  private:
   friend class Listener;
-  typedef void (Session::*TargetDealFunc)();
-  static std::map<std::string, TargetDealFunc> _getMethodDeals;
-  static std::map<std::string, TargetDealFunc>
-      _postMethodDeals;  // get、post有同名的target，所以分开来
-  static TargetDealFunc getMethodFuncPtr(const char* target) {
+  typedef void (Session::*PostMethodFuncPtr)();
+  typedef void (Session::*GetMethodFuncPtr)(const char*);
+  static std::map<std::string, GetMethodFuncPtr> _getMethodDeals;
+  static std::map<std::string, PostMethodFuncPtr>
+      _postMethodDeals;
+  static GetMethodFuncPtr getMethodFuncPtr(const char* target) {
     auto pos = _getMethodDeals.find(target);
     if (pos != _getMethodDeals.end()) {
       return pos->second;
     }
   }
-  static TargetDealFunc postMethodFuncPtr(const char* target) {
+  static PostMethodFuncPtr postMethodFuncPtr(const char* target) {
     auto pos = _postMethodDeals.find(target);
     if (pos != _postMethodDeals.end()) {
       return pos->second;
@@ -80,13 +81,14 @@ class Session : public std::enable_shared_from_this<Session> {
   void postPutData();
   void postChainTransaction();
   // get
-  void getNodeStop();
-  void getNodeVersion();
-  void getNodePeers();
-  void getChainStatus();
-  void getChainLast();
-  void getChainBlock();
-  void getChainTransaction();
+  void getNodeStop(const char*);
+  void getNodeVersion(const char*);
+  void getNodePeers(const char*);
+  void getNodeConnect(const char*);
+  void getChainStatus(const char*);
+  void getChainLast(const char*);
+  void getChainBlock(const char*);
+  void getChainTransaction(const char*);
 
  private:
   void handle_request(http::request<http::string_body>&& req);

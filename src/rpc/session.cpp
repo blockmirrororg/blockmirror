@@ -7,12 +7,13 @@
 #include <blockmirror/store/transaction_store.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <blockmirror/serialization/json_oarchive.h>
 
 namespace blockmirror {
 namespace rpc {
 
-std::map<std::string, Session::TargetDealFunc> Session::_getMethodDeals;
-std::map<std::string, Session::TargetDealFunc> Session::_postMethodDeals;
+std::map<std::string, Session::GetMethodFuncPtr> Session::_getMethodDeals;
+std::map<std::string, Session::PostMethodFuncPtr> Session::_postMethodDeals;
 
 Session::Session(tcp::socket socket, blockmirror::chain::Context& context)
     : socket_(std::move(socket)),
@@ -92,10 +93,14 @@ void Session::deal_get() {
   if (ret)
   {
 	  *ret = 0; // 更改目标、参数分隔符'?'为字符串结尾符'\0'
+	  auto funcPtr = getMethodFuncPtr(target);
+	  (this->*funcPtr)(ret + 1);
   }
-  //HttpHandler::get().dispatch_target(target, this);
-  auto funcPtr = getMethodFuncPtr(target);
-  (this->*funcPtr)();
+  else
+  {
+	  auto funcPtr = getMethodFuncPtr(target);
+	  (this->*funcPtr)(nullptr);
+  }
 
   //if (!ret) {
   //  // 不带参数
@@ -182,7 +187,7 @@ void Session::postPutTransaction()
 		res.prepare_payload();
 		return res;
 	};
-	auto const ok = [&req](boost::beast::string_view what) {
+	auto const ok = [&req]() {
 		http::response<http::string_body> res{ http::status::ok, req.version() };
 		res.keep_alive(req.keep_alive());
 		res.body() = "{}";
@@ -213,15 +218,36 @@ void Session::postPutTransaction()
 		return lambda_(bad_request("repeat put, modified!"));
 	}
 
-	return lambda_(ok(""));
-
-	http::response<http::string_body> res{ http::status::ok, req_.version() };
-	res.keep_alive(req_.keep_alive());
-	return lambda_(std::move(res));
+	return lambda_(ok());
 }
 
 void Session::postPutData()
 {
+	http::request<http::string_body>&& req = std::move(req_);
+	auto const bad_request = [&req](boost::beast::string_view why) {
+		http::response<http::string_body> res{ http::status::bad_request,
+											  req.version() };
+		res.keep_alive(req.keep_alive());
+		res.body() = "{\"error\":\"" + why.to_string() + "\"}";
+		res.prepare_payload();
+		return res;
+	};
+	auto const server_error = [&req](boost::beast::string_view what) {
+		http::response<http::string_body> res{ http::status::internal_server_error,
+											  req.version() };
+		res.keep_alive(req.keep_alive());
+		res.body() = "{\"error\":\"" + what.to_string() + "\"}";
+		res.prepare_payload();
+		return res;
+	};
+	auto const ok = [&req]() {
+		http::response<http::string_body> res{ http::status::ok, req.version() };
+		res.keep_alive(req.keep_alive());
+		res.body() = "{}";
+		res.prepare_payload();
+		return res;
+	};
+
 	std::stringstream ss(req_.body());
 	boost::property_tree::ptree ptree;
 	blockmirror::chain::TransactionSignedPtr transaction =
@@ -232,56 +258,165 @@ void Session::postPutData()
 		archive >> transaction;
 	}
 	catch (std::exception& e) {
-		// to be add
+		return lambda_(server_error(e.what()));
 	}
 
 	if (!_context.check(transaction))
 	{
+		return lambda_(bad_request("check failed"));
 	}
-
 	store::DataSignatureStore& dss = _context.getDataSignatureStore();
 	store::NewDataPtr newData = std::make_shared<chain::scri::NewData>(
 		boost::get<chain::scri::NewData>(transaction->getScript()));
 	if (!dss.add(newData)) {
+		return lambda_(bad_request("repeat put, modified!"));
 	}
 
-	http::response<http::empty_body> res{ http::status::ok, req_.version() };
-	res.keep_alive(req_.keep_alive());
-	//res.body() = "{}";
-	res.prepare_payload();
-	return lambda_(std::move(res));
+	return lambda_(ok());
 }
 
 void Session::postChainTransaction()
 {
+	// 参数 交易的JSON
+	// 正常返回 {}
 }
 
-void Session::getNodeStop()
+void Session::getNodeStop(const char*)
 {
+	// 需要鉴权
+	http::response<http::string_body> res{ http::status::ok, req_.version() };
+	res.keep_alive(req_.keep_alive());
+	res.body() = "{}";
+	res.prepare_payload();
+	return lambda_(std::move(res));
 }
 
-void Session::getNodeVersion()
+void Session::getNodeVersion(const char*)
 {
+	http::response<http::string_body> res{ http::status::ok, req_.version() };
+	res.keep_alive(req_.keep_alive());
+	res.body() = "{\"version\":0}";
+	res.prepare_payload();
+	return lambda_(std::move(res));
 }
 
-void Session::getNodePeers()
+void Session::getNodePeers(const char*)
 {
+	http::response<http::string_body> res{ http::status::ok, req_.version() };
+	res.keep_alive(req_.keep_alive());
+	res.body() = "";
+	res.prepare_payload();
+	return lambda_(std::move(res));
 }
 
-void Session::getChainStatus()
-{
+void Session::getNodeConnect(const char* arg) {
+
+	// 需要鉴权
+	char host[50];
+	char port[50];
+	getUrlencodedValue(arg, "port", sizeof(port)-1, port);
+	getUrlencodedValue(arg, "host", sizeof(host)-1, host);
+
+	http::response<http::string_body> res{ http::status::ok, req_.version() };
+	res.keep_alive(req_.keep_alive());
+	res.body() = "{}";
+	res.prepare_payload();
+	return lambda_(std::move(res));
 }
 
-void Session::getChainLast()
-{
+void Session::getChainStatus(const char*) {
+
+  chain::BlockPtr& head = _context.getHead();
+  if (head == nullptr) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"not_found\"}";
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  http::response<http::string_body> res{http::status::ok, req_.version()};
+  res.keep_alive(req_.keep_alive());
+  res.body() = "{\"height\":\"" +
+               boost::lexical_cast<std::string>(head->getHeight()) + "\"}";
+  res.prepare_payload();
+  return lambda_(std::move(res));
 }
 
-void Session::getChainBlock()
-{
+void Session::getChainLast(const char*) {
+
+  chain::BlockPtr& head = _context.getHead();
+  if (head == nullptr) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"not_found\"}";
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  std::ostringstream oss;
+  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss, false);
+  archive << head;
+
+  http::response<http::string_body> res{ http::status::ok, req_.version() };
+  res.keep_alive(req_.keep_alive());
+  res.body() = oss.str();
+  res.prepare_payload();
+  return lambda_(std::move(res));
 }
 
-void Session::getChainTransaction()
-{
+void Session::getChainBlock(const char* arg) {
+
+  Hash256 key = boost::lexical_cast<Hash256>(arg);
+  store::BlockStore& bs = _context.getBlockStore();
+  chain::BlockPtr block = bs.getBlock(key);
+  if (block == nullptr) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"not_found\"}";
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  std::ostringstream oss;
+  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
+                                                                       false);
+  archive << block;
+
+  http::response<http::string_body> res{http::status::ok, req_.version()};
+  res.keep_alive(req_.keep_alive());
+  res.body() = oss.str();
+  res.prepare_payload();
+  return lambda_(std::move(res));
+}
+
+void Session::getChainTransaction(const char* arg) {
+
+  Hash256Ptr h = std::make_shared<Hash256>(boost::lexical_cast<Hash256>(arg));
+  store::TransactionStore& ts = _context.getTransactionStore();
+  chain::TransactionSignedPtr t = ts.getTransaction(h);
+  if (t == nullptr) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"not_found\"}";
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  std::ostringstream oss;
+  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
+                                                                       false);
+  archive << t;
+
+  http::response<http::string_body> res{http::status::ok, req_.version()};
+  res.keep_alive(req_.keep_alive());
+  res.body() = oss.str();
+  res.prepare_payload();
+  return lambda_(std::move(res));
 }
 
 }  // namespace rpc

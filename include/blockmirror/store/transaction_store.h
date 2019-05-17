@@ -143,6 +143,8 @@ class TransactionStore {
    * @param trx 交易
    */
   bool remove(const chain::TransactionSignedPtr &trx);
+
+  chain::TransactionSignedPtr getTransaction(const Hash256Ptr& h);
 };
 
 }  // namespace store

@@ -72,5 +72,17 @@ bool TransactionStore::remove(const chain::TransactionSignedPtr &trx) {
   return idx.erase(trx->getHashPtr()) > 0;
 }
 
+chain::TransactionSignedPtr TransactionStore::getTransaction(
+    const Hash256Ptr &h) {
+
+  boost::shared_lock<boost::shared_mutex> lock(_mutex);
+  auto pos = _container.get<tagHash>().find(h);
+  if (pos == _container.end()) {
+    return std::make_shared<chain::TransactionSigned>();
+  } else {
+    return pos->transaction;
+  }
+}
+
 }  // namespace store
 }  // namespace blockmirror

@@ -86,6 +86,8 @@ class Context {
   store::DataStore& getDataStore() { return _data; }
   store::DataSignatureStore& getDataSignatureStore() { return _dataSignature; }
   store::BpsStore &getBpsStore() { return _bps; }
+  chain::BlockPtr& getHead() { return _head; }
+  store::BlockStore& getBlockStore() { return _block; }
 };
 
 }  // namespace chain

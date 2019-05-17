@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok1) {
 
     block[2]->addTransaction(tPtr[i]);
 
-    B_LOG("{}", spdlog::to_hex(tPtr[i]->getHash()));
+    // B_LOG("{}", spdlog::to_hex(tPtr[i]->getHash()));
   }
 
   // 设置区块3

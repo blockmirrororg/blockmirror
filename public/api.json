@@ -5,10 +5,9 @@
     "version": "1.0.0",
     "title": "blockmirror"
   },
-  "host": "192.168.251.236:8080",
-  "basePath": "/api/v1",
+  "host": "localhost:8080",
+  "basePath": "/",
   "tags": [
-    { "name": "test", "description": "测试" },
     {
       "name": "node",
       "description": "节点"
@@ -17,34 +16,6 @@
   ],
   "schemes": ["http"],
   "paths": {
-    "/block/list/start/{start}/end/{end}":{
-      "get": {
-        "tags": ["test"],
-        "summary": "",
-        "description": "",
-        "produces": ["application/json"],
-        "parameters": [
-          {
-            "name": "start",
-            "in": "path",
-            "required": true,
-            "type": "integer"
-          },
-          {
-            "name": "end",
-            "in": "path",
-            "required": true,
-            "type": "integer"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "schema": { "type": "object" }
-          }
-        }
-      }
-    },
     "/node/stop": {
       "get": {
         "tags": ["node"],

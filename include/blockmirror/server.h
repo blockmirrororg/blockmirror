@@ -16,6 +16,12 @@ class Server : private boost::noncopyable {
 
  public:
   void run();
+  void stop();
+  static Server& get()
+  {
+	  static Server s;
+	  return s;
+  }
 
  private:
   void handleSignals(int signo);

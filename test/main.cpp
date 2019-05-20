@@ -11,9 +11,8 @@ int main(int argc, char* argv[]) {
     }
 
     blockmirror::globalConfig.init(argv[1]);
+	blockmirror::Server::get().run();
 
-    blockmirror::Server server;
-    server.run();
   } catch (std::exception& e) {
     B_ERR("exception: {}", e.what());
   } catch (...) {

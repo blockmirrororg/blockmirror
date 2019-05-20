@@ -24,6 +24,11 @@ void Server::handleSignals(int signo) {
   _workContext.stop();
 }
 
+void Server::stop() {
+  _mainContext.stop();
+  _workContext.stop();
+}
+
 void Server::run() {
 
   for (auto pos = blockmirror::globalConfig.seeds.begin();

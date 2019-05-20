@@ -11,7 +11,6 @@
 #include <blockmirror/store/data_signature_store.h>
 
 namespace blockmirror {
-class Server;
 namespace chain {
 
 class Context {
@@ -27,9 +26,6 @@ class Context {
   store::DataSignatureStore _dataSignature;
   chain::BlockPtr _head;
 
-  //boost::asio::io_context& _mainContext;
-  //boost::asio::io_context& _workContext;
-
   bool _loaded;
   bool _bpChanged;
   /**
@@ -42,7 +38,6 @@ class Context {
 
  public:
   Context();
-  //Context(boost::asio::io_context& mainContext, boost::asio::io_context& workContext);
   ~Context();
 
   void load();
@@ -88,7 +83,6 @@ class Context {
     return _block.contains(hash);
   }
 
-  //blockmirror::Server& getServer() { return _server; }
   store::TransactionStore& getTransactionStore() { return _transaction; }
   store::DataStore& getDataStore() { return _data; }
   store::DataSignatureStore& getDataSignatureStore() { return _dataSignature; }

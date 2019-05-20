@@ -8,6 +8,7 @@
 #include <boost/algorithm/hex.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <blockmirror/serialization/json_oarchive.h>
+#include <blockmirror/server.h>
 
 namespace blockmirror {
 namespace rpc {
@@ -53,8 +54,7 @@ void Session::on_write(boost::system::error_code ec,
 
   if (stopService)
   {
-	  //_context.getMainContext().stop();
-	  //_context.getWorkContext().stop();
+	  blockmirror::Server::get().stop();
 	  return;
   }
 
@@ -69,6 +69,7 @@ void Session::do_close() {
 }
 
 void Session::handle_request(http::request<http::string_body>&& req) {
+
   auto const bad_request = [&req](boost::beast::string_view why) {
     http::response<http::string_body> res{http::status::bad_request,
                                           req.version()};
@@ -79,43 +80,31 @@ void Session::handle_request(http::request<http::string_body>&& req) {
   };
 
   if (req.method() == http::verb::post) {
-	  auto funcPtr = postMethodFuncPtr(req_.target().to_string().c_str());
-	  if (!funcPtr)
-	  {
-		  return lambda_(bad_request("Illegal request-method"));
-	  }
+    auto funcPtr = postMethodFuncPtr(req_.target().to_string().c_str());
+    if (!funcPtr) {
+      return lambda_(bad_request("Illegal request-target"));
+    }
+    (this->*funcPtr)();
+
   } else if (req.method() == http::verb::get) {
-    deal_get();
+    std::string strTarget = req_.target().to_string();
+    const char* target = strTarget.c_str();
+    char* ret = (char*)strchr(target, '?');
+    if (ret) {
+      *ret = 0;  // 更改目标、参数分隔符'?'为字符串结尾符'\0'
+    }
+    auto funcPtr = getMethodFuncPtr(target);
+    if (!funcPtr) {
+      return lambda_(bad_request("Illegal request-target"));
+    }
+
+    if (ret) {
+      (this->*funcPtr)(ret + 1);
+    } else {
+      (this->*funcPtr)(nullptr);
+    }
   } else {
     return lambda_(bad_request("Illegal request-method"));
-  }
-}
-
-void Session::deal_post()
-{
-  //auto funcPtr = postMethodFuncPtr(req_.target().to_string().c_str());
-  //if (!funcPtr)
-  //{
-	 // return lambda_(bad_request("Illegal request-method"));
-  //}
-  //(this->*funcPtr)();
-}
-
-void Session::deal_get() {
-
-  std::string strTarget = req_.target().to_string();
-  const char* target = strTarget.c_str();
-  char* ret = (char*)strchr(target, '?');
-  if (ret)
-  {
-	  *ret = 0; // 更改目标、参数分隔符'?'为字符串结尾符'\0'
-	  auto funcPtr = getMethodFuncPtr(target);
-	  (this->*funcPtr)(ret + 1);
-  }
-  else
-  {
-	  auto funcPtr = getMethodFuncPtr(target);
-	  (this->*funcPtr)(nullptr);
   }
 }
 

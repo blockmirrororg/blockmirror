@@ -14,10 +14,10 @@ namespace blockmirror {
 namespace rpc {
 
 using tcp = boost::asio::ip::tcp;
+namespace beast = boost::beast;
 namespace http = boost::beast::http;
 
 class Session : public std::enable_shared_from_this<Session> {
-
   struct send_lambda {
     Session& self_;
 
@@ -47,6 +47,7 @@ class Session : public std::enable_shared_from_this<Session> {
   std::shared_ptr<void> res_;
   send_lambda lambda_;
   blockmirror::chain::Context& _context;
+  beast::string_view doc_root = blockmirror::globalConfig.rpc_resource;
 
  private:
   friend class Listener;
@@ -99,6 +100,12 @@ class Session : public std::enable_shared_from_this<Session> {
   void handle_request(http::request<http::string_body>&& req);
 
   int getUrlencodedValue(const char* data, char* item, int maxSize, char* val);
+
+  void handle_file(http::request<http::string_body>&& req);
+
+  beast::string_view mime_type(beast::string_view path);
+
+  std::string path_cat(beast::string_view base, beast::string_view path);
 };
 
 }  // namespace rpc

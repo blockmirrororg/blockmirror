@@ -237,7 +237,7 @@
     }
   },
   "securityDefinitions": {
-    "api_key": { "type": "apiKey", "name": "api_key", "in": "header" }
+    "Authorization": { "type": "apiKey", "name": "Authorization", "in": "header" }
   },
   "definitions": {
     "Version": {

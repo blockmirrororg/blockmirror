@@ -75,15 +75,15 @@ void ConfigFile::init(const boost::filesystem::path &path) {
   if (genesis_pubkey == Pubkey({0})) {
     throw std::runtime_error("config genesis_pubkey not found");
   }
-  B_LOG("genesis {}", spdlog::to_hex(genesis_pubkey));
+  B_LOG("genesis {:spn}", spdlog::to_hex(genesis_pubkey));
   if (miner_privkey != Privkey({0})) {
     crypto::ECC.computePub(miner_privkey, miner_pubkey);
   }
-  B_LOG("miner {}", spdlog::to_hex(miner_pubkey));
+  B_LOG("miner {:spn}", spdlog::to_hex(miner_pubkey));
   if (reward_pubkey == Pubkey{0}) {
     reward_pubkey = miner_pubkey;
   }
-  B_LOG("reward {}", spdlog::to_hex(reward_pubkey));
+  B_LOG("reward {:spn}", spdlog::to_hex(reward_pubkey));
   if (p2p_bind == 0) {
     throw std::runtime_error("config p2p_bind not found");
   }

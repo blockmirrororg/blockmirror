@@ -1,3 +1,6 @@
 [submodule "3dparty/spdlog"]
 	path = 3dparty/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "script"]
+	path = script
+	url = https://gitee.com/dingkaihulian/blockmirror-js.git

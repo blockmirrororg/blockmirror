@@ -13,7 +13,7 @@ class CheckVisitor : public boost::static_visitor<bool> {
     auto& sigs = _transaction->getSignatures();
     for (auto& i : sigs) {
       if (!_context._bps.contains(i.signer)) {
-        B_TRACE("unknown producer {}", spdlog::to_hex(i.signer));
+        B_TRACE("unknown producer {:spn}", spdlog::to_hex(i.signer));
         return false;
       }
     }
@@ -38,7 +38,7 @@ class CheckVisitor : public boost::static_visitor<bool> {
     auto& signer = *_transaction->getSignatures().begin();
     auto amount = _context._account.query(signer.signer);
     if (amount < t.getAmount()) {
-      B_TRACE("{} amount {} < {}", spdlog::to_hex(signer.signer), amount,
+      B_TRACE("{:spn} amount {} < {}", spdlog::to_hex(signer.signer), amount,
               t.getAmount());
       return false;
     }
@@ -47,7 +47,7 @@ class CheckVisitor : public boost::static_visitor<bool> {
   bool operator()(const scri::BPJoin& b) const {
     if (!_checkBPSigner()) return false;
     if (_context._bps.contains(b.getBP())) {
-      B_TRACE("{} none exists", spdlog::to_hex(b.getBP()));
+      B_TRACE("{:spn} none exists", spdlog::to_hex(b.getBP()));
       return false;
     }
     return true;
@@ -55,7 +55,7 @@ class CheckVisitor : public boost::static_visitor<bool> {
   bool operator()(const scri::BPExit& b) const {
     if (!_checkBPSigner()) return false;
     if (!_context._bps.contains(b.getBP())) {
-      B_TRACE("{} already exists", spdlog::to_hex(b.getBP()));
+      B_TRACE("{:spn} already exists", spdlog::to_hex(b.getBP()));
       return false;
     }
     return true;
@@ -181,7 +181,7 @@ void Context::close() {
 bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
   const std::vector<SignaturePair>& v = trx->getSignatures();
   if (v.empty()) {
-    B_WARN("empty signatures {}", spdlog::to_hex(trx->getHash()));
+    B_WARN("empty signatures {:spn}", spdlog::to_hex(trx->getHash()));
     return false;
   }
 
@@ -215,7 +215,7 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward,
   // 检查BP是否存在
   auto slot = _bps.find(pub);
   if (slot < 0) {
-    B_WARN("producer none exists: {}", spdlog::to_hex(pub));
+    B_WARN("producer none exists: {:spn}", spdlog::to_hex(pub));
     return nullptr;
   }
   // 检查时间戳和槽位是否正确
@@ -247,7 +247,7 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward,
     if (_apply(trx)) {
       newBlock->addTransaction(trx);
     } else {
-      B_WARN("bad trx: {}", spdlog::to_hex(trx->getHash()));
+      B_WARN("bad trx: {:spn}", spdlog::to_hex(trx->getHash()));
     }
   }
   // FIXME: 将临时数据池的所有数据添加到区块中
@@ -289,7 +289,7 @@ bool Context::apply(const chain::BlockPtr& block) {
   // 检查BP是否存在
   auto slot = _bps.find(block->getProducer());
   if (slot < 0) {
-    B_WARN("producer none exists: {}", spdlog::to_hex(block->getProducer()));
+    B_WARN("producer none exists: {:spn}", spdlog::to_hex(block->getProducer()));
     return false;
   }
   // 检查时间戳和槽位是否正确
@@ -326,7 +326,7 @@ bool Context::apply(const chain::BlockPtr& block) {
   auto it = v.begin();
   for (; it != v.end(); ++it) {
     if (!_apply(*it)) {
-      B_WARN("exec failed: {} try revert", spdlog::to_hex((*it)->getHash()));
+      B_WARN("exec failed: {:spn} try revert", spdlog::to_hex((*it)->getHash()));
       break;
     }
   }
@@ -367,7 +367,7 @@ bool Context::rollback() {
   auto it = v.rbegin();
   for (; it != v.rend(); ++it) {
     if (!_apply(*it, true)) {
-      B_WARN("rollback failed: {} try revert",
+      B_WARN("rollback failed: {:spn} try revert",
              spdlog::to_hex((*it)->getHash()));
       break;
     }

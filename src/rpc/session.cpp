@@ -251,7 +251,7 @@ void Session::getNodeStop(const char*)
 	http::response<http::string_body> res{ http::status::ok, req_.version() };
 	res.keep_alive(req_.keep_alive());
 	//res.body() = "{}";
-	res.body() = "i received your auth: " + str;
+	res.body() = "i received your authorization: " + str;
 	res.prepare_payload();
 	return lambda_(std::move(res), true);
 }
@@ -276,17 +276,26 @@ void Session::getNodePeers(const char*)
 
 void Session::getNodeConnect(const char* arg) {
 
-	// 需要鉴权
-	char host[50];
-	char port[50];
-	getUrlencodedValue(arg, "port", sizeof(port)-1, port);
-	getUrlencodedValue(arg, "host", sizeof(host)-1, host);
+  if (!arg) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"omit argument\"}";
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
 
-	http::response<http::string_body> res{ http::status::ok, req_.version() };
-	res.keep_alive(req_.keep_alive());
-	res.body() = "{}";
-	res.prepare_payload();
-	return lambda_(std::move(res));
+  // 需要鉴权
+  char host[50] = { 0 };
+  char port[50] = { 0 };
+  getUrlencodedValue(arg, "port", sizeof(port) - 1, port);
+  getUrlencodedValue(arg, "host", sizeof(host) - 1, host);
+
+  http::response<http::string_body> res{http::status::ok, req_.version()};
+  res.keep_alive(req_.keep_alive());
+  res.body() = "{}";
+  res.prepare_payload();
+  return lambda_(std::move(res));
 }
 
 void Session::getChainStatus(const char*) {
@@ -334,6 +343,15 @@ void Session::getChainLast(const char*) {
 
 void Session::getChainBlock(const char* arg) {
 
+  if (!arg) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"omit argument\"}";
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
   Hash256 key = boost::lexical_cast<Hash256>(arg);
   store::BlockStore& bs = _context.getBlockStore();
   chain::BlockPtr block = bs.getBlock(key);
@@ -359,6 +377,15 @@ void Session::getChainBlock(const char* arg) {
 }
 
 void Session::getChainTransaction(const char* arg) {
+
+  if (!arg) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"omit argument\"}";
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
 
   Hash256Ptr h = std::make_shared<Hash256>(boost::lexical_cast<Hash256>(arg));
   store::TransactionStore& ts = _context.getTransactionStore();

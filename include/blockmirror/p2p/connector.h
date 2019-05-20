@@ -18,14 +18,10 @@ class Connector : public boost::enable_shared_from_this<Connector> {
   void handle_connect(const boost::system::error_code& ec);
   void handle_write(const boost::system::error_code& ec);
   void handle_timer();
-  // void handle_resolve(
-  //    const boost::system::error_code& err,
-  //    boost::asio::ip::tcp::resolver::iterator endpoint_iterator);
 
  private:
   boost::asio::ip::tcp::socket socket_;
   boost::asio::ip::tcp::endpoint endpoint_;
-  // boost::asio::ip::tcp::resolver resolver_;
 
   boost::asio::deadline_timer timer_;
   boost::asio::io_context& io_context_;

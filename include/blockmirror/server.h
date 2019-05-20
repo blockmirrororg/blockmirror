@@ -16,7 +16,6 @@ class Server : private boost::noncopyable {
 
  public:
   void run();
-  void add_connector(const char *ip, unsigned short port);
   void stop();
 
  private:

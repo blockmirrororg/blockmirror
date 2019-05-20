@@ -244,10 +244,13 @@ void Session::postPutData() {
 
 void Session::getNodeStop(const char*)
 {
-	// 需要鉴权
+	// 鉴权
+	std::string str = boost::lexical_cast<std::string>(req_[http::field::api_key]);
+	
 	http::response<http::string_body> res{ http::status::ok, req_.version() };
 	res.keep_alive(req_.keep_alive());
-	res.body() = "{}";
+	//res.body() = "{}";
+	res.body() = "i received your auth: " + str;
 	res.prepare_payload();
 	return lambda_(std::move(res), true);
 }

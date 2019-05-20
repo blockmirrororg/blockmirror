@@ -3,18 +3,19 @@
 #include <blockmirror/server.h>
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
+//#include <blockmirror/common.h>
 
 namespace blockmirror {
 
 Server::Server()
     : _mainContext(),
       _workContext(),
-      _p2pAcceptor(_workContext, 80),
+      _p2pAcceptor(_workContext, blockmirror::globalConfig.p2p_bind),
       _signals(_mainContext),
       _context(*this),
       _rpcListener(
           _workContext,
-          boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v4(), 8080},
+          boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v4(), blockmirror::globalConfig.rpc_bind},
           _context) {}
 
 void Server::handleSignals(int signo) {
@@ -31,6 +32,23 @@ void Server::stop()
 }
 
 void Server::run() {
+
+  for (auto pos = blockmirror::globalConfig.seeds.begin();
+       pos != blockmirror::globalConfig.seeds.end(); ++pos) {
+    char ip[50] = {0};
+    std::size_t index = pos->find(':');
+    if (index == std::string::npos) {
+      throw std::runtime_error("error seeds");
+    }
+    strncpy(ip, pos->c_str(), index);
+    unsigned short port =
+        boost::lexical_cast<unsigned short>(pos->c_str() + index + 1);
+    boost::shared_ptr<blockmirror::p2p::Connector> connector =
+        boost::make_shared<blockmirror::p2p::Connector>(_workContext, ip, port);
+    connector->start();
+    _p2pConnecting.push_back(connector);
+  }
+
   _signals.add(SIGINT);
   _signals.add(SIGTERM);
 #if defined(SIGQUIT)
@@ -66,11 +84,6 @@ void Server::run() {
   }
 
   _context.close();
-}
-
-void Server::add_connector(const char *ip, unsigned short port) {
-  _p2pConnecting.push_back(
-      boost::make_shared<blockmirror::p2p::Connector>(_workContext, ip, port));
 }
 
 }  // namespace blockmirror

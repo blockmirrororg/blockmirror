@@ -27,7 +27,8 @@ class Context {
   store::DataSignatureStore _dataSignature;
   chain::BlockPtr _head;
 
-  blockmirror::Server& _server;
+  //boost::asio::io_context& _mainContext;
+  //boost::asio::io_context& _workContext;
 
   bool _loaded;
   bool _bpChanged;
@@ -40,11 +41,14 @@ class Context {
   bool _apply(const chain::TransactionSignedPtr& trx, bool rollback = false);
 
  public:
-  Context(blockmirror::Server& s);
+  Context();
+  //Context(boost::asio::io_context& mainContext, boost::asio::io_context& workContext);
   ~Context();
 
   void load();
   void close();
+  //boost::asio::io_context& getMainContext() { return _mainContext; }
+  //boost::asio::io_context& getWorkContext() { return _workContext; }
 
   chain::BlockPtr genBlock(const Privkey &key, const Pubkey &reward, uint64_t testTime = 0);
   /**
@@ -84,7 +88,7 @@ class Context {
     return _block.contains(hash);
   }
 
-  blockmirror::Server& getServer() { return _server; }
+  //blockmirror::Server& getServer() { return _server; }
   store::TransactionStore& getTransactionStore() { return _transaction; }
   store::DataStore& getDataStore() { return _data; }
   store::DataSignatureStore& getDataSignatureStore() { return _dataSignature; }

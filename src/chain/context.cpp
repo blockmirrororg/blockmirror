@@ -133,7 +133,7 @@ class StoreVisitor : public boost::static_visitor<bool> {
   }
 };
 
-Context::Context(blockmirror::Server& s) : _server(s), _loaded(false) {}
+Context::Context() : _loaded(false) {}
 
 Context::~Context() {
   if (_loaded) {

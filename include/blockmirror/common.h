@@ -25,6 +25,7 @@
 #include <boost/thread/thread.hpp>
 #include <boost/variant.hpp>
 #include <boost/variant/get.hpp>
+#include <boost/asio.hpp>
 
 #include <spdlog/spdlog.h>
 

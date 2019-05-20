@@ -59,12 +59,16 @@ class Session : public std::enable_shared_from_this<Session> {
     auto pos = _getMethodPtrs.find(target);
     if (pos != _getMethodPtrs.end()) {
       return pos->second;
+    } else {
+      return nullptr;
     }
   }
   static PostMethodFuncPtr postMethodFuncPtr(const char* target) {
     auto pos = _postMethodPtrs.find(target);
     if (pos != _postMethodPtrs.end()) {
       return pos->second;
+    } else {
+      return nullptr;
     }
   }
 

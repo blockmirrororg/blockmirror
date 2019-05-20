@@ -8,7 +8,6 @@
 #include <boost/algorithm/hex.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <blockmirror/serialization/json_oarchive.h>
-#include <blockmirror/server.h>
 
 namespace blockmirror {
 namespace rpc {
@@ -52,7 +51,12 @@ void Session::on_write(boost::system::error_code ec,
 
   if (ec) return;
 
-  if (stopService) return _context.getServer().stop();
+  if (stopService)
+  {
+	  //_context.getMainContext().stop();
+	  //_context.getWorkContext().stop();
+	  return;
+  }
 
   if (close) return do_close();
 
@@ -75,7 +79,11 @@ void Session::handle_request(http::request<http::string_body>&& req) {
   };
 
   if (req.method() == http::verb::post) {
-    deal_post();
+	  auto funcPtr = postMethodFuncPtr(req_.target().to_string().c_str());
+	  if (!funcPtr)
+	  {
+		  return lambda_(bad_request("Illegal request-method"));
+	  }
   } else if (req.method() == http::verb::get) {
     deal_get();
   } else {
@@ -85,8 +93,12 @@ void Session::handle_request(http::request<http::string_body>&& req) {
 
 void Session::deal_post()
 {
-  auto funcPtr = postMethodFuncPtr(req_.target().to_string().c_str());
-  (this->*funcPtr)();
+  //auto funcPtr = postMethodFuncPtr(req_.target().to_string().c_str());
+  //if (!funcPtr)
+  //{
+	 // return lambda_(bad_request("Illegal request-method"));
+  //}
+  //(this->*funcPtr)();
 }
 
 void Session::deal_get() {
@@ -96,7 +108,7 @@ void Session::deal_get() {
   char* ret = (char*)strchr(target, '?');
   if (ret)
   {
-	  *ret = 0; // ∏¸∏ƒƒø±Í°¢≤Œ ˝∑÷∏Ù∑˚'?'Œ™◊÷∑˚¥ÆΩ·Œ≤∑˚'\0'
+	  *ret = 0; // Êõ¥ÊîπÁõÆÊ†á„ÄÅÂèÇÊï∞ÂàÜÈöîÁ¨¶'?'‰∏∫Â≠óÁ¨¶‰∏≤ÁªìÂ∞æÁ¨¶'\0'
 	  auto funcPtr = getMethodFuncPtr(target);
 	  (this->*funcPtr)(ret + 1);
   }
@@ -244,8 +256,8 @@ void Session::postPutData() {
 
 void Session::getNodeStop(const char*)
 {
-	// º¯»®
-	std::string str = boost::lexical_cast<std::string>(req_[http::field::api_key]);
+	// Èâ¥ÊùÉ
+	std::string str = boost::lexical_cast<std::string>(req_[http::field::authorization]);
 	
 	http::response<http::string_body> res{ http::status::ok, req_.version() };
 	res.keep_alive(req_.keep_alive());
@@ -275,7 +287,7 @@ void Session::getNodePeers(const char*)
 
 void Session::getNodeConnect(const char* arg) {
 
-	// –Ë“™º¯»®
+	// ÈúÄË¶ÅÈâ¥ÊùÉ
 	char host[50];
 	char port[50];
 	getUrlencodedValue(arg, "port", sizeof(port)-1, port);

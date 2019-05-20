@@ -12,7 +12,7 @@ Server::Server()
       _workContext(),
       _p2pAcceptor(_workContext, blockmirror::globalConfig.p2p_bind),
       _signals(_mainContext),
-      _context(*this),
+      _context(),
       _rpcListener(
           _workContext,
           boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v4(), blockmirror::globalConfig.rpc_bind},
@@ -22,13 +22,6 @@ void Server::handleSignals(int signo) {
   B_LOG("got signo {}", signo);
   _mainContext.stop();
   _workContext.stop();
-}
-
-void Server::stop()
-{
-	std::cout << "received rpc target: /node/stop" << std::endl;
-	_mainContext.stop();
-	_workContext.stop();
 }
 
 void Server::run() {

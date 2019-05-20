@@ -271,14 +271,7 @@ void Session::getNodePeers(const char*) {
 }
 
 void Session::getNodeConnect(const char* arg) {
-  // 需要鉴权
-  char host[50];
-  char port[50];
-  getUrlencodedValue(arg, "port", sizeof(port) - 1, port);
-  getUrlencodedValue(arg, "host", sizeof(host) - 1, host);
 
-<<<<<<< HEAD
-=======
   if (!arg) {
     http::response<http::string_body> res{http::status::bad_request,
                                           req_.version()};
@@ -294,7 +287,6 @@ void Session::getNodeConnect(const char* arg) {
   getUrlencodedValue(arg, "port", sizeof(port) - 1, port);
   getUrlencodedValue(arg, "host", sizeof(host) - 1, host);
 
->>>>>>> 9a9e0ef6710b389216b20d1876e3a0c0882338b9
   http::response<http::string_body> res{http::status::ok, req_.version()};
   res.keep_alive(req_.keep_alive());
   res.body() = "{}";
@@ -345,8 +337,6 @@ void Session::getChainLast(const char*) {
 }
 
 void Session::getChainBlock(const char* arg) {
-<<<<<<< HEAD
-=======
 
   if (!arg) {
     http::response<http::string_body> res{http::status::bad_request,
@@ -357,7 +347,6 @@ void Session::getChainBlock(const char* arg) {
     return lambda_(std::move(res));
   }
 
->>>>>>> 9a9e0ef6710b389216b20d1876e3a0c0882338b9
   Hash256 key = boost::lexical_cast<Hash256>(arg);
   store::BlockStore& bs = _context.getBlockStore();
   chain::BlockPtr block = bs.getBlock(key);
@@ -383,8 +372,6 @@ void Session::getChainBlock(const char* arg) {
 }
 
 void Session::getChainTransaction(const char* arg) {
-<<<<<<< HEAD
-=======
 
   if (!arg) {
     http::response<http::string_body> res{http::status::bad_request,
@@ -395,7 +382,6 @@ void Session::getChainTransaction(const char* arg) {
     return lambda_(std::move(res));
   }
 
->>>>>>> 9a9e0ef6710b389216b20d1876e3a0c0882338b9
   Hash256Ptr h = std::make_shared<Hash256>(boost::lexical_cast<Hash256>(arg));
   store::TransactionStore& ts = _context.getTransactionStore();
   chain::TransactionSignedPtr t = ts.getTransaction(h);

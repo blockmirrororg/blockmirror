@@ -25,8 +25,8 @@ class Server : private boost::noncopyable {
 
  private:
   void handleSignals(int signo);
-  void createBlock(const boost::system::error_code& e,
-                   boost::asio::deadline_timer* t);
+  void produceBlock(const boost::system::error_code& e);
+  void nextProduce();
 
  private:
   boost::asio::io_context _mainContext;  // for main thread
@@ -35,6 +35,7 @@ class Server : private boost::noncopyable {
   boost::asio::signal_set _signals;
 
   blockmirror::chain::Context _context;
+  boost::asio::deadline_timer _producerTimer;
 
   // p2p
   blockmirror::p2p::Acceptor _p2pAcceptor;

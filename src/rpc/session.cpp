@@ -228,7 +228,11 @@ void Session::postChainData() {
     return lambda_(server_error(e.what()));
   }
 
-  store::NewDataPtr newData = _context.getDataStore().query(data->getName());
+  if (!_context.check(data)) {
+    return lambda_(bad_request("check failed"));
+  }
+
+  /*store::NewDataPtr newData = _context.getDataStore().query(data->getName());
   if (!newData) {
     return lambda_(bad_request("data type not found"));
   }
@@ -236,7 +240,7 @@ void Session::postChainData() {
       _context.getFormatStore().query(newData->getFormat());
   if (!newFormat) {
     return lambda_(bad_request("data format not found"));
-  }
+  }*/
 
   blockmirror::Privkey priv;
   boost::algorithm::unhex(globalConfig.miner_privkey, priv.begin());

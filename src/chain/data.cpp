@@ -31,6 +31,7 @@ void DataSigned::sign(const Privkey &priv, uint64_t height,
   ecc.computePub(priv, pub);
   ecc.sign(priv, getHash(pub, height), signature);
 }
+
 bool DataSigned::verify(const Pubkey &pub, uint64_t height,
                         const crypto::ECCContext &ecc) const {
   return ecc.verify(pub, getHash(pub, height), signature);

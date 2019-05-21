@@ -4,7 +4,7 @@
 namespace blockmirror {
 namespace store {
 
-bool DataSignatureStore::add(const NewDataPtr& data) {
+bool DataSignatureStore::add(const chain::DataSignedPtr& data) {
   boost::unique_lock<boost::shared_mutex> lock(_mutex);
   auto ret = _datas.insert(std::make_pair(data->getName(), data));
   if (!ret.second) {
@@ -14,7 +14,7 @@ bool DataSignatureStore::add(const NewDataPtr& data) {
   return ret.second;
 }
 
-const store::NewDataPtr DataSignatureStore::query(const std::string& name) {
+const chain::DataSignedPtr& DataSignatureStore::query(std::string& name) {
   boost::unique_lock<boost::shared_mutex> lock(_mutex);
   auto it = _datas.find(name);
   if (it == _datas.end()) {
@@ -23,8 +23,7 @@ const store::NewDataPtr DataSignatureStore::query(const std::string& name) {
   return it->second;
 }
 
-bool DataSignatureStore::remove(const std::string& name)
-{
+bool DataSignatureStore::remove(std::string& name) {
   boost::unique_lock<boost::shared_mutex> lock(_mutex);
   return _datas.erase(name) > 0;
 }

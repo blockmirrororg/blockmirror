@@ -190,57 +190,6 @@ void Session::postChainTransaction() {
   return lambda_(ok());
 }
 
-//void Session::postPutData() {
-//  http::request<http::string_body>&& req = std::move(req_);
-//  auto const bad_request = [&req](boost::beast::string_view why) {
-//    http::response<http::string_body> res{http::status::bad_request,
-//                                          req.version()};
-//    res.keep_alive(req.keep_alive());
-//    res.body() = "{\"error\":\"" + why.to_string() + "\"}";
-//    res.prepare_payload();
-//    return res;
-//  };
-//  auto const server_error = [&req](boost::beast::string_view what) {
-//    http::response<http::string_body> res{http::status::internal_server_error,
-//                                          req.version()};
-//    res.keep_alive(req.keep_alive());
-//    res.body() = "{\"error\":\"" + what.to_string() + "\"}";
-//    res.prepare_payload();
-//    return res;
-//  };
-//  auto const ok = [&req]() {
-//    http::response<http::string_body> res{http::status::ok, req.version()};
-//    res.keep_alive(req.keep_alive());
-//    res.body() = "{}";
-//    res.prepare_payload();
-//    return res;
-//  };
-//
-//  std::stringstream ss(req_.body());
-//  boost::property_tree::ptree ptree;
-//  blockmirror::chain::TransactionSignedPtr transaction =
-//      std::make_shared<blockmirror::chain::TransactionSigned>();
-//  try {
-//    boost::property_tree::read_json(ss, ptree);
-//    blockmirror::serialization::PTreeIArchive archive(ptree);
-//    archive >> transaction;
-//  } catch (std::exception& e) {
-//    return lambda_(server_error(e.what()));
-//  }
-//
-//  if (!_context.check(transaction)) {
-//    return lambda_(bad_request("check failed"));
-//  }
-//  store::DataSignatureStore& dss = _context.getDataSignatureStore();
-//  store::NewDataPtr newData = std::make_shared<chain::scri::NewData>(
-//      boost::get<chain::scri::NewData>(transaction->getScript()));
-//  if (!dss.add(newData)) {
-//    return lambda_(bad_request("repeat put, modified!"));
-//  }
-//
-//  return lambda_(ok());
-//}
-
 void Session::postChainData() {
   http::request<http::string_body>&& req = std::move(req_);
   auto const bad_request = [&req](boost::beast::string_view why) {
@@ -269,7 +218,8 @@ void Session::postChainData() {
 
   std::stringstream ss(req_.body());
   boost::property_tree::ptree ptree;
-  chain::DataPtr data = std::make_shared<chain::Data>();
+  chain::DataSignedPtr dataSigned = std::make_shared<chain::DataSigned>();
+  chain::DataPtr data = std::dynamic_pointer_cast<chain::Data>(dataSigned);
   try {
     boost::property_tree::read_json(ss, ptree);
     blockmirror::serialization::PTreeIArchive archive(ptree);
@@ -286,6 +236,13 @@ void Session::postChainData() {
       _context.getFormatStore().query(newData->getFormat());
   if (!newFormat) {
     return lambda_(bad_request("data format not found"));
+  }
+
+  blockmirror::Privkey priv;
+  boost::algorithm::unhex(globalConfig.miner_privkey, priv.begin());
+  dataSigned->sign(priv, _context.getHead()->getHeight());
+  if (!_context.getDataSignatureStore().add(dataSigned)) {
+    return lambda_(bad_request("repeat put, modified!"));
   }
 
   return lambda_(ok());

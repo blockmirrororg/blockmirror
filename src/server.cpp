@@ -1,6 +1,6 @@
 
-#include <boost/asio.hpp>
 #include <blockmirror/server.h>
+#include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
 //#include <blockmirror/common.h>
@@ -15,22 +15,51 @@ Server::Server()
       _context(),
       _rpcListener(
           _workContext,
-          boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v4(), blockmirror::globalConfig.rpc_bind},
-          _context) {}
+          boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v4(),
+                                         blockmirror::globalConfig.rpc_bind},
+          _context),
+      _producerTimer(_mainContext) {}
 
 void Server::handleSignals(int signo) {
   B_LOG("got signo {}", signo);
-  _mainContext.stop();
-  _workContext.stop();
+  stop();
 }
 
 void Server::stop() {
+  _producerTimer.cancel();
   _mainContext.stop();
   _workContext.stop();
 }
 
-void Server::run() {
+void Server::nextProduce() {
+  int delay = _context.getBpsStore().getBPDelay(globalConfig.miner_pubkey);
+  if (delay == 0) {
+    produceBlock(boost::system::error_code());
+    return;
+  }
+  if (delay < 0) {
+    delay = BLOCK_PER_MS;
+  }
+  B_LOG("next produce delay: {}", delay);
+  _producerTimer.expires_from_now(boost::posix_time::millisec(delay));
+  _producerTimer.async_wait(boost::bind(&Server::produceBlock, this,
+                                        boost::asio::placeholders::error));
+}
 
+void Server::produceBlock(const boost::system::error_code& ec) {
+  if (ec) {
+    B_ERR("produce timer: {}", ec.message());
+  } else {
+    auto block = _context.genBlock(globalConfig.miner_privkey, globalConfig.reward_pubkey);
+	if (block) {
+		// to be add
+		// 在工作线程提交数据到MONGODB
+	}
+  }
+  nextProduce();
+}
+
+void Server::run() {
   for (auto pos = blockmirror::globalConfig.seeds.begin();
        pos != blockmirror::globalConfig.seeds.end(); ++pos) {
     char ip[50] = {0};
@@ -58,8 +87,9 @@ void Server::run() {
 
   _context.load();
 
-  // FIXME: Debug only
-  // _context.debugInit();
+  if (!_context.getBpsStore().contains(globalConfig.genesis_pubkey)) {
+    _context.getBpsStore().add(globalConfig.genesis_pubkey);
+  }
 
   _p2pAcceptor.run();
   // rpc
@@ -71,6 +101,8 @@ void Server::run() {
         boost::bind(&boost::asio::io_context::run, &_workContext)));
     threads.push_back(thread);
   }
+
+  nextProduce();
 
   try {
     _mainContext.run();

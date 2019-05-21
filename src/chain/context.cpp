@@ -259,6 +259,8 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward,
     _bps.pushBpChange(slot, _head->getTimestamp());
   }
 
+  B_LOG("block produced: {:spn}", spdlog::to_hex(newBlock->getHash()));
+
   return newBlock;
 }
 

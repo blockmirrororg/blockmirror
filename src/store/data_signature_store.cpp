@@ -1,8 +1,34 @@
-
 #include <blockmirror/store/data_signature_store.h>
+#include <blockmirror/store/store.h>
 
 namespace blockmirror {
 namespace store {
+
+DataSignatureStore::DataSignatureStore() : _loaded(false) {
+  _path = boost::filesystem::initial_path<boost::filesystem::path>();
+}
+DataSignatureStore::~DataSignatureStore() {
+  if (_loaded) close();
+}
+
+void DataSignatureStore::load(const boost::filesystem::path& path) {
+  ASSERT(!_loaded);
+  _loaded = true;
+  _path = path;
+  if (boost::filesystem::exists(_path / "datasigned")) {
+    BinaryReader reader;
+    reader.open(_path / "datasigned");
+    reader >> _datas;
+  }
+}
+
+void DataSignatureStore::close() {
+  ASSERT(_loaded);
+  _loaded = false;
+  BinaryWritter writter;
+  writter.open(_path / "datasigned");
+  writter << _datas;
+}
 
 bool DataSignatureStore::add(const chain::DataSignedPtr& data) {
   boost::unique_lock<boost::shared_mutex> lock(_mutex);
@@ -14,7 +40,7 @@ bool DataSignatureStore::add(const chain::DataSignedPtr& data) {
   return ret.second;
 }
 
-const chain::DataSignedPtr& DataSignatureStore::query(std::string& name) {
+const chain::DataSignedPtr DataSignatureStore::query(const std::string& name) {
   boost::unique_lock<boost::shared_mutex> lock(_mutex);
   auto it = _datas.find(name);
   if (it == _datas.end()) {
@@ -23,10 +49,10 @@ const chain::DataSignedPtr& DataSignatureStore::query(std::string& name) {
   return it->second;
 }
 
-bool DataSignatureStore::remove(std::string& name) {
+bool DataSignatureStore::remove(const std::string& name) {
   boost::unique_lock<boost::shared_mutex> lock(_mutex);
   return _datas.erase(name) > 0;
 }
 
 }  // namespace store
-}  // namespace blockmirro
+}  // namespace blockmirror

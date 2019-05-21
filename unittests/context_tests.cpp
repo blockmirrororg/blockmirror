@@ -2,6 +2,7 @@
 #include <blockmirror/common.h>
 #include <blockmirror/store/account_store.h>
 #include <blockmirror/store/bps_store.h>
+#include <blockmirror/store/data_signature_store.h>
 #include <blockmirror/store/data_store.h>
 #include <blockmirror/store/format_store.h>
 #include <blockmirror/store/transaction_store.h>
@@ -109,6 +110,7 @@ void removeFile() {
   boost::filesystem::remove("./format");
   boost::filesystem::remove("./transaction");
   boost::filesystem::remove("./head");
+  boost::filesystem::remove("./datasigned");
 }
 
 void addBP() {
@@ -585,6 +587,70 @@ BOOST_AUTO_TEST_CASE(context_tests_ok8) {
     BOOST_CHECK(!c.apply(block[6]));
     BOOST_CHECK(c.apply(block[7]));
     c.close();
+  }
+}
+
+BOOST_AUTO_TEST_CASE(context_tests_ok9) {
+  removeFile();
+  createKey();
+  createBlock();
+  inittPtr();
+  addBP();
+
+  {
+    blockmirror::store::NewDataPtr pdata =
+        std::make_shared<blockmirror::chain::scri::NewData>(
+            std::string{"abc"}, std::string{"111"}, std::string{"+++"});
+
+    blockmirror::store::DataStore dataStore;
+    dataStore.load(".");
+    dataStore.add(pdata);
+    BOOST_CHECK(dataStore.query("111"));
+
+    std::vector<uint8_t> v1{3, 3, 3};
+    blockmirror::store::NewFormatPtr pformat =
+        std::make_shared<blockmirror::chain::scri::NewFormat>(
+            std::string{"111"}, std::string{"222"}, v1, v1, v1);
+
+    blockmirror::store::FormatStore formatStore;
+    formatStore.load(".");
+    formatStore.add(pformat);
+    BOOST_CHECK(formatStore.query("111"));
+  }
+
+  blockmirror::chain::DataPtr ptr1 = std::make_shared<blockmirror::chain::Data>(
+      blockmirror::chain::Data{"111", {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}});
+
+  blockmirror::chain::DataPtr ptr2 = std::make_shared<blockmirror::chain::Data>(
+      blockmirror::chain::Data{"111", {1, 1, 1, 1}});
+
+  blockmirror::chain::DataPtr ptr3 = std::make_shared<blockmirror::chain::Data>(
+      blockmirror::chain::Data{"222", {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}});
+
+  blockmirror::chain::DataPtr ptr4;
+
+  {
+    blockmirror::globalConfig.init("../config.json");
+    //设置区块1
+    block[1]->setGenesis();
+    block[1]->setCoinbase(P(APub));
+    block[1]->finalize(K(APriv));
+
+    blockmirror::chain::Context c;
+    c.load();
+    //执行区块
+    BOOST_CHECK(c.apply(block[1]));
+    BOOST_CHECK(c.check(ptr1));
+    BOOST_CHECK(!c.check(ptr2));
+    BOOST_CHECK(!c.check(ptr3));
+    BOOST_CHECK(!c.check(ptr4));
+    c.close();
+  }
+
+  {
+    blockmirror::store::DataSignatureStore dataSignStore;
+    dataSignStore.load(".");
+    BOOST_CHECK(dataSignStore.query("111"));
   }
 }
 

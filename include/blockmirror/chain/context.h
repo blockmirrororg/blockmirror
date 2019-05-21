@@ -1,14 +1,14 @@
 #pragma once
 
-#include <blockmirror/common.h>
 #include <blockmirror/chain/transaction.h>
+#include <blockmirror/common.h>
 #include <blockmirror/store/account_store.h>
 #include <blockmirror/store/block_store.h>
 #include <blockmirror/store/bps_store.h>
+#include <blockmirror/store/data_signature_store.h>
 #include <blockmirror/store/data_store.h>
 #include <blockmirror/store/format_store.h>
 #include <blockmirror/store/transaction_store.h>
-#include <blockmirror/store/data_signature_store.h>
 
 namespace blockmirror {
 namespace chain {
@@ -42,10 +42,11 @@ class Context {
 
   void load();
   void close();
-  //boost::asio::io_context& getMainContext() { return _mainContext; }
-  //boost::asio::io_context& getWorkContext() { return _workContext; }
+  // boost::asio::io_context& getMainContext() { return _mainContext; }
+  // boost::asio::io_context& getWorkContext() { return _workContext; }
 
-  chain::BlockPtr genBlock(const Privkey &key, const Pubkey &reward, uint64_t testTime = 0);
+  chain::BlockPtr genBlock(const Privkey& key, const Pubkey& reward,
+                           uint64_t testTime = 0);
   /**
    * @brief 执行一个区块
    *
@@ -78,6 +79,14 @@ class Context {
    */
   bool check(const chain::BlockHeaderSignedPtr& block);
 
+  /**
+   * @brief 检测数据是否可能被接受
+   * @param data
+   * @return true
+   * @return false
+   */
+  bool check(const chain::DataPtr& data);
+
   template <typename T>
   bool hasBlock(const T& hash) {
     return _block.contains(hash);
@@ -86,7 +95,7 @@ class Context {
   store::TransactionStore& getTransactionStore() { return _transaction; }
   store::DataStore& getDataStore() { return _data; }
   store::DataSignatureStore& getDataSignatureStore() { return _dataSignature; }
-  store::BpsStore &getBpsStore() { return _bps; }
+  store::BpsStore& getBpsStore() { return _bps; }
   chain::BlockPtr& getHead() { return _head; }
   store::BlockStore& getBlockStore() { return _block; }
   store::FormatStore& getFormatStore() { return _format; }

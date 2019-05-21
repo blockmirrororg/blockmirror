@@ -34,6 +34,13 @@ class MsgBroadcastBlock {
 };
 
 struct MessageHeader {
+	/*friend class blockmirror::serialization::access;
+	template<typename Archive>
+	void serialize(Archive &ar)
+	{
+		ar & BOOST_SERIALIZATION_NVP(magic) & BOOST_SERIALIZATION_NVP(length);
+	}*/
+
   uint16_t magic;
   uint16_t length;
 };

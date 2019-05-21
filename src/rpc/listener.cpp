@@ -5,30 +5,43 @@
 namespace blockmirror {
 namespace rpc {
 
-Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint, blockmirror::chain::Context &context)
+Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint,
+                   blockmirror::chain::Context& context)
     : acceptor_(ioc), socket_(ioc), _context(context) {
 
-	/*HttpHandler& httpHandler = HttpHandler::get();
-	httpHandler.register_target("/node/stop", new GetNodeStop);
-	httpHandler.register_target("/node/version", new GetNodeVersion);
-	httpHandler.register_target("/node/Peers", new GetNodePeers);
-	httpHandler.register_target("/chain/status", new GetChainStatus);
-	httpHandler.register_target("/chain/last", new GetChainLast);
-	httpHandler.register_target("/chain/block", new GetChainBlock);
-	httpHandler.register_target("/chain/transaction", new GetChainTransaction);
-	httpHandler.register_target("/node/connect", new GetNodeConnect);
-	httpHandler.register_target("/put_transaction", new PostPutData);
-	httpHandler.register_target("/put_data", new PutTransaction);*/
-	Session::_getMethodPtrs.insert(std::make_pair("/node/stop", &Session::getNodeStop));
-	Session::_getMethodPtrs.insert(std::make_pair("/node/version", &Session::getNodeVersion));
-	Session::_getMethodPtrs.insert(std::make_pair("/node/peers", &Session::getNodePeers));
-	Session::_getMethodPtrs.insert(std::make_pair("/chain/status", &Session::getChainStatus));
-	Session::_getMethodPtrs.insert(std::make_pair("/chain/last", &Session::getChainLast));
-	Session::_getMethodPtrs.insert(std::make_pair("/chain/block", &Session::getChainBlock));
-	Session::_getMethodPtrs.insert(std::make_pair("/chain/transaction", &Session::getChainTransaction));
-	Session::_getMethodPtrs.insert(std::make_pair("/node/connect", &Session::getNodeConnect));
+  /*HttpHandler& httpHandler = HttpHandler::get();
+  httpHandler.register_target("/node/stop", new GetNodeStop);
+  httpHandler.register_target("/node/version", new GetNodeVersion);
+  httpHandler.register_target("/node/Peers", new GetNodePeers);
+  httpHandler.register_target("/chain/status", new GetChainStatus);
+  httpHandler.register_target("/chain/last", new GetChainLast);
+  httpHandler.register_target("/chain/block", new GetChainBlock);
+  httpHandler.register_target("/chain/transaction", new GetChainTransaction);
+  httpHandler.register_target("/node/connect", new GetNodeConnect);
+  httpHandler.register_target("/put_transaction", new PostPutData);
+  httpHandler.register_target("/put_data", new PutTransaction);*/
 
-	Session::_postMethodPtrs.insert(std::make_pair("/chain/transaction", &Session::postChainTransaction));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/node/stop", &Session::getNodeStop));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/node/version", &Session::getNodeVersion));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/node/peers", &Session::getNodePeers));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/chain/status", &Session::getChainStatus));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/chain/last", &Session::getChainLast));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/chain/block", &Session::getChainBlock));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/chain/transaction", &Session::getChainTransaction));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/node/connect", &Session::getNodeConnect));
+
+  Session::_postMethodPtrs.insert(
+      std::make_pair("/chain/transaction", &Session::postChainTransaction));
+  Session::_postMethodPtrs.insert(
+      std::make_pair("/chain/data", &Session::postChainData));
 
   boost::system::error_code ec;
   acceptor_.open(endpoint.protocol(), ec);
@@ -58,9 +71,8 @@ void Listener::run() {
 }
 
 void Listener::do_accept() {
-  acceptor_.async_accept(socket_,
-                         std::bind(&Listener::on_accept, this,
-                                   std::placeholders::_1));
+  acceptor_.async_accept(
+      socket_, std::bind(&Listener::on_accept, this, std::placeholders::_1));
 }
 
 void Listener::on_accept(boost::system::error_code ec) {

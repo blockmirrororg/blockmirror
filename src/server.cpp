@@ -61,6 +61,7 @@ void Server::run() {
   // FIXME: Debug only
   // _context.debugInit();
 
+  _p2pAcceptor.run();
   // rpc
   _rpcListener.run();
 

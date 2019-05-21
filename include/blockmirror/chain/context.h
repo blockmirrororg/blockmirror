@@ -89,6 +89,7 @@ class Context {
   store::BpsStore &getBpsStore() { return _bps; }
   chain::BlockPtr& getHead() { return _head; }
   store::BlockStore& getBlockStore() { return _block; }
+  store::FormatStore& getFormatStore() { return _format; }
 };
 
 }  // namespace chain

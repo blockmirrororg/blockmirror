@@ -85,7 +85,7 @@ class Session : public std::enable_shared_from_this<Session> {
 
   // post
   void postChainTransaction();
-  void postPutData();
+  void postChainData();
   // get
   void getNodeStop(const char*);
   void getNodeVersion(const char*);

@@ -10,19 +10,24 @@ Acceptor::Acceptor(boost::asio::io_context& ioc, unsigned short port)
       acceptor_(io_context_, boost::asio::ip::tcp::endpoint(
                                  boost::asio::ip::tcp::v4(), port)) {}
 
-void Acceptor::start_accept() {
+void Acceptor::startAccept() {
   new_channel_.reset(new Channel(io_context_));
   acceptor_.async_accept(new_channel_->socket(),
-                         boost::bind(&Acceptor::handle_accept, this,
+                         boost::bind(&Acceptor::handleAccept, this,
                                      boost::asio::placeholders::error));
 }
 
-void Acceptor::handle_accept(const boost::system::error_code& e) {
+void Acceptor::handleAccept(const boost::system::error_code& e) {
   if (!e) {
-    // new_connection_->start();
+    new_channel_->start();
   }
 
-  start_accept();
+  startAccept();
+}
+
+void Acceptor::run() {
+  if (!acceptor_.is_open()) return;
+  startAccept();
 }
 
 }  // namespace p2p

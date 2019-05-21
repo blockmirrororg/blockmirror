@@ -28,8 +28,9 @@ void assertion_failed_msg(char const *expr, char const *msg,
 namespace blockmirror {
 
 uint64_t now_ms_since_1970() {
-  return (boost::posix_time::second_clock::universal_time() - epoch)
-      .total_microseconds();
+  return (boost::posix_time::microsec_clock::universal_time() - epoch)
+             .total_microseconds() /
+         1000;
 }
 
 void computeMerkleRoot(std::vector<Hash256> hashes, Hash256 &out) {

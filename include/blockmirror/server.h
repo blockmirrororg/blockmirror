@@ -25,6 +25,8 @@ class Server : private boost::noncopyable {
 
  private:
   void handleSignals(int signo);
+  void createBlock(const boost::system::error_code& e,
+                   boost::asio::deadline_timer* t);
 
  private:
   boost::asio::io_context _mainContext;  // for main thread

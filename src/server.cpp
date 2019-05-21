@@ -29,6 +29,29 @@ void Server::stop() {
   _workContext.stop();
 }
 
+void Server::createBlock(const boost::system::error_code& e,
+                         boost::asio::deadline_timer* t) {
+  blockmirror::chain::BlockPtr head = _context.getHead();
+  int mySlot = -1;
+  uint64_t nowSlot = 0;
+  if (head) {
+    mySlot = _context.getBpsStore().find(globalConfig.miner_pubkey);
+    nowSlot = _context.getBpsStore().getSlotByTime(now_ms_since_1970());
+  } else {
+    mySlot = nowSlot;
+  }
+
+  if (mySlot == nowSlot) {
+    blockmirror::chain::BlockPtr block = _context.genBlock(
+        globalConfig.miner_privkey, globalConfig.reward_pubkey);
+  }
+
+  int delay = _context.getBpsStore().getBPDelay(globalConfig.miner_pubkey);
+  t->expires_at(t->expires_at() + boost::posix_time::millisec(delay));
+  t->async_wait(boost::bind(&Server::createBlock, this,
+                            boost::asio::placeholders::error, t));
+}
+
 void Server::run() {
 
   for (auto pos = blockmirror::globalConfig.seeds.begin();
@@ -70,6 +93,12 @@ void Server::run() {
         boost::bind(&boost::asio::io_context::run, &_workContext)));
     threads.push_back(thread);
   }
+
+  int delay = _context.getBpsStore().getBPDelay(globalConfig.miner_pubkey);
+  boost::asio::deadline_timer timer(_mainContext,
+                                    boost::posix_time::millisec(delay));
+  timer.async_wait(boost::bind(&Server::createBlock, this,
+                               boost::asio::placeholders::error, &timer));
 
   try {
     _mainContext.run();

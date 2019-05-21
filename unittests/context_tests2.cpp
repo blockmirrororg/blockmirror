@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(context_tests2_seq) {
     // 增加创世BP
     context.getBpsStore().add(pubs[0]);
 
-    auto now = blockmirror::now_ms_since_1970();
+    auto now = blockmirror::alignTimestamp(blockmirror::now_ms_since_1970());
     for (size_t i = 0; i < privs.size(); i++) {
       if (i != privs.size() - 1) {
         // 前面的BP联合将后面的BP加进去

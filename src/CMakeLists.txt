@@ -28,24 +28,49 @@ source_group(crypto				FILES ${crypto})
 source_group(secp256k1_contrib	FILES ${secp256k1_contrib})
 source_group(""					FILES ${common})
 
-target_link_libraries( blockmirror 
-   ${ADDITION_LIBRARIES}
-   ${Boost_LIBRARIES}
-   ${OPENSSL_LIBRARIES}
-   ${Secp256k1_LIBRARY}
-   ${LIBBSONXX_LIBRARIES}
-   ${LIBMONGOCXX_LIBRARIES}
+
+target_compile_definitions(blockmirror
+  PRIVATE ${LIBMONGOCXX_STATIC_DEFINITIONS} ${LIBBSONCXX_STATIC_DEFINITIONS}
 )
-
-include_directories("/usr/local/include/mongocxx/v_noabi")
-include_directories("/usr/local/include/bsoncxx/v_noabi")
-include_directories("/usr/local/include/libmongoc-1.0")
-include_directories("/usr/local/include/libbson-1.0")
-
 target_include_directories( blockmirror
   PUBLIC "${CMAKE_SOURCE_DIR}/include"
          "${CMAKE_SOURCE_DIR}/include/secp256k1_contrib"
          ${Boost_INCLUDE_DIR}
          ${OPENSSL_INCLUDE_DIR}
          ${Secp256k1_INCLUDE_DIR}
+         ${LIBMONGOCXX_STATIC_INCLUDE_DIRS}
+         ${LIBBSONCXX_STATIC_INCLUDE_DIRS}
+         ${BSON_INCLUDE_DIRS}
+)
+
+# We can't just use *_STATIC_LIBRARIES variables to link against because the static
+# variants of these may try to static link against libraries we don't want (like a system
+# libc/c++). But we need to know if mongo c driver was built with ICU, SASL2, or snappy support
+# so that we can continue to link to those. This certainly is a bit on the fragile side but
+# try to parse what is included in MONGOC_STATIC_LIBRARIES to see what we should link to
+foreach(MONGO_S_LIB ${MONGOC_STATIC_LIBRARIES})
+  string(REGEX MATCH "libsasl2\\${CMAKE_SHARED_LIBRARY_SUFFIX}$" REGOUT ${MONGO_S_LIB})
+  if(REGOUT)
+    set(LINK_SASL "sasl2")
+  endif()
+
+  string(REGEX MATCH "libicuuc\\${CMAKE_SHARED_LIBRARY_SUFFIX}$" REGOUT ${MONGO_S_LIB})
+  if(REGOUT)
+    set(LINK_ICU "icuuc")
+  endif()
+
+  string(REGEX MATCH "libsnappy\\${CMAKE_SHARED_LIBRARY_SUFFIX}$" REGOUT ${MONGO_S_LIB})
+  if(REGOUT)
+    set(LINK_SNAPPY "snappy")
+  endif()
+endforeach()
+
+target_link_libraries( blockmirror 
+  ${Boost_LIBRARIES}
+  ${Secp256k1_LIBRARY}
+  ${LIBMONGOCXX_STATIC_LIBRARY_PATH} ${LIBBSONCXX_STATIC_LIBRARY_PATH}
+  ${MONGOC_STATIC_LIBRARY} ${BSON_STATIC_LIBRARY}
+  resolv ${LINK_SASL} ${LINK_ICU} ${LINK_SNAPPY}
+  ${OPENSSL_LIBRARIES}
+  ${ADDITION_LIBRARIES}
 )

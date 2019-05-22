@@ -35,7 +35,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     endif()
     set(ADDITION_LIBRARIES spdlog)
 else()
-    set(ADDITION_LIBRARIES pthread spdlog dl)
+    set(ADDITION_LIBRARIES pthread spdlog dl rt z)
 endif()
 
 
@@ -55,9 +55,12 @@ find_package(OpenSSL REQUIRED)
 
 find_package(Secp256k1 REQUIRED)
 
-find_package(libmongocxx REQUIRED)
-
-find_package(libbsoncxx REQUIRED)
+find_package(libmongoc-1.0 1.8)
+find_package(libbson-1.0 REQUIRED)
+find_package(libbsoncxx-static REQUIRED)
+find_package(libmongocxx-static REQUIRED)
+find_package(libmongoc-static-1.0 REQUIRED)
+find_package(libbson-static-1.0 REQUIRED)
 
 add_subdirectory( 3dparty )
 add_subdirectory( src )

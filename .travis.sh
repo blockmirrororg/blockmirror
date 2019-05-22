@@ -43,3 +43,24 @@ cd secp256k1
 make -j2
 sudo make install
 cd ../
+
+wget https://github.com/mongodb/mongo-c-driver/releases/download/1.13.0/mongo-c-driver-1.13.0.tar.gz
+tar -xzf mongo-c-driver-1.13.0.tar.gz
+cd mongo-c-driver-1.13.0
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_BSON=ON -DENABLE_SSL=OPENSSL -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DENABLE_STATIC=ON -DENABLE_ICU=OFF -DENABLE_SNAPPY=OFF
+make -j2
+sudo make install
+cd ../
+cd ../
+
+wget https://github.com/mongodb/mongo-cxx-driver/archive/r3.4.0.tar.gz
+tar -xzf r3.4.0.tar.gz
+cd mongo-cxx-driver-r3.4.0
+sed -i '' 's/"maxAwaitTimeMS", count/"maxAwaitTimeMS", static_cast<int64_t>(count)/' src/mongocxx/options/change_stream.cpp
+cd build
+cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release ..
+make -j2
+sudo make install
+cd ../
+cd ../

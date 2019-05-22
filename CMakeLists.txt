@@ -54,6 +54,10 @@ find_package(OpenSSL REQUIRED)
 
 find_package(secp256k1 REQUIRED)
 
+find_package(libmongocxx REQUIRED)
+
+find_package(libbsoncxx REQUIRED)
+
 add_subdirectory( 3dparty )
 add_subdirectory( src )
 add_subdirectory( unittests )

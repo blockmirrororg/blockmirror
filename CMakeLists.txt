@@ -53,9 +53,10 @@ find_package(Boost 1.67 REQUIRED COMPONENTS
 
 find_package(OpenSSL REQUIRED)
 
-find_package(secp256k1 REQUIRED)
+find_package(Secp256k1 REQUIRED)
 
 add_subdirectory( 3dparty )
 add_subdirectory( src )
+include(CTest)
 add_subdirectory( unittests )
 add_subdirectory( test )

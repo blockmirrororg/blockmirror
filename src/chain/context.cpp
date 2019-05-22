@@ -151,6 +151,7 @@ void Context::load() {
   _data.load(path);
   _format.load(path);
   _transaction.load(path);
+  _dataSignature.load(path);
 
   if (boost::filesystem::exists(path / "head")) {
     store::BinaryReader reader;
@@ -176,6 +177,7 @@ void Context::close() {
   _data.close();
   _format.close();
   _transaction.close();
+  _dataSignature.close();
 }
 
 bool Context::_apply(const TransactionSignedPtr& trx, bool rollback) {
@@ -291,7 +293,8 @@ bool Context::apply(const chain::BlockPtr& block) {
   // 检查BP是否存在
   auto slot = _bps.find(block->getProducer());
   if (slot < 0) {
-    B_WARN("producer none exists: {:spn}", spdlog::to_hex(block->getProducer()));
+    B_WARN("producer none exists: {:spn}",
+           spdlog::to_hex(block->getProducer()));
     return false;
   }
   // 检查时间戳和槽位是否正确
@@ -328,7 +331,8 @@ bool Context::apply(const chain::BlockPtr& block) {
   auto it = v.begin();
   for (; it != v.end(); ++it) {
     if (!_apply(*it)) {
-      B_WARN("exec failed: {:spn} try revert", spdlog::to_hex((*it)->getHash()));
+      B_WARN("exec failed: {:spn} try revert",
+             spdlog::to_hex((*it)->getHash()));
       break;
     }
   }
@@ -460,6 +464,55 @@ bool Context::check(const chain::BlockHeaderSignedPtr& block) {
     B_LOG("bad block signatures");
     return false;
   }
+
+  return true;
+}
+
+bool Context::check(const chain::DataPtr& data) {
+  if (!data) {
+    B_LOG("nullptr data");
+    return false;
+  }
+
+  store::NewDataPtr newData = _data.query(data->getName());
+  if (!newData) {
+    return false;
+  }
+
+  store::NewFormatPtr newFormat = _format.query(newData->getName());
+  if (!newFormat) {
+    return false;
+  }
+
+  const std::vector<uint8_t> dataFormat = newFormat->getDataFormat();
+  size_t dataSize = 0;
+  for (const auto i : dataFormat) {
+    switch (i) {
+      case chain::scri::NewFormat::TYPE_FLOAT:
+        dataSize += sizeof(float);
+        break;
+      case chain::scri::NewFormat::TYPE_DOUBLE:
+        dataSize += sizeof(double);
+        break;
+      case chain::scri::NewFormat::TYPE_UINT:
+        dataSize += sizeof(uint32_t);
+        break;
+      case chain::scri::NewFormat::TYPE_INT:
+        dataSize += sizeof(int);
+        break;
+      default:
+        return false;
+    }
+  }
+  const std::vector<uint8_t> d = data->getData();
+  if (dataSize != d.size() * sizeof(uint8_t)) {
+    return false;
+  }
+
+  chain::DataSignedPtr dataSingned =
+      std::make_shared<chain::DataSigned>(data->getName(), data->getData());
+  dataSingned->sign(globalConfig.miner_privkey, _head->getHeight());
+  _dataSignature.add(dataSingned);
 
   return true;
 }

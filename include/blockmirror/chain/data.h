@@ -19,7 +19,7 @@ class Data {
  protected:
   mutable Hash256Ptr _hash;
 
-  std::string name;
+  std::string name; // 根据此可以找到对应的类型(NewData)以及数据格式(NewFormat)
   std::vector<uint8_t> data;
 
  public:
@@ -38,7 +38,7 @@ class Data {
 using DataPtr = std::shared_ptr<Data>;
 
 // broadcast
-class DataSigned : public Data {
+class DataSigned : public Data { // 由挖矿节点miner_privkey签名后的数据
  protected:
   friend class blockmirror::serialization::access;
   template <typename Archive>

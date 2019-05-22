@@ -17,7 +17,6 @@ using NewDataPtr = std::shared_ptr<chain::scri::NewData>;
 class DataStore {
  private:
   std::unordered_map<std::string, store::NewDataPtr> _datas;
-  // std::unordered_map<std::string, chain::DataPtr> datas_; // add by lvjl
 
   boost::shared_mutex _mutex;
 
@@ -48,7 +47,6 @@ class DataStore {
    * @brief 删除数据
    */
   bool remove(const std::string& name);
-  // bool add(const chain::DataPtr& dataPtr); // add by lvjl
 };
 
 }  // namespace store

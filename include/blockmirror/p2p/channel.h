@@ -1,11 +1,11 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <blockmirror/p2p/binary_stream.h>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <deque>
+#include <blockmirror/p2p/message.h>
 
 namespace blockmirror {
 namespace p2p {
@@ -18,15 +18,14 @@ class Channel : public boost::enable_shared_from_this<Channel>,
  public:
   void id(int channel_id);
   int id();
-  boost::asio::ip::tcp::socket& socket();
+  boost::asio::ip::tcp::socket& socket() { return _socket; }
   void start();
-  Message& get_message();
-  unsigned char remote_type() { return remote_type_; }
+  unsigned char remote_type() { return _remoteType; }
   void close();
   void send(const Message& message);
 
  private:
-  void handle_read_header(const boost::system::error_code& e,
+  void handleReadHeader(const boost::system::error_code& e,
                           std::size_t bytes_transferred);
   void handle_read_body(const boost::system::error_code& e,
                         std::size_t bytes_transferred);
@@ -34,13 +33,12 @@ class Channel : public boost::enable_shared_from_this<Channel>,
                     std::size_t bytes_transferred);
 
  private:
-  boost::asio::ip::tcp::socket socket_;
-  static const int HEADER_LEN = 8;
-  Message message_;
-  unsigned char remote_type_;
-  boost::asio::detail::mutex mutex_;
-  std::deque<Message> messages_;
-  int channel_id_;
+  std::array<uint8_t, 1024> _buf;
+  int _writePos;
+  boost::asio::ip::tcp::socket _socket;
+  unsigned char _remoteType;
+  boost::asio::detail::mutex _mutex;
+  int _channelId;
 };
 
 typedef boost::shared_ptr<Channel> channel_ptr;

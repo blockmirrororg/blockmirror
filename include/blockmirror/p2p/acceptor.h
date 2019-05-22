@@ -12,11 +12,11 @@ class Acceptor {
   Acceptor(boost::asio::io_context &ioc, unsigned short port);
 
  public:
-  void start_accept();
+  void startAccept();
+  void run();
 
  private:
-  void handle_accept(const boost::system::error_code &e);
-  void handle_stop(int signo);
+  void handleAccept(const boost::system::error_code &e);
 
  private:
   boost::asio::io_context &io_context_;

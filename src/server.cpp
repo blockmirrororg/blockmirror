@@ -50,7 +50,11 @@ void Server::produceBlock(const boost::system::error_code& ec) {
   if (ec) {
     B_ERR("produce timer: {}", ec.message());
   } else {
-    _context.genBlock(globalConfig.miner_privkey, globalConfig.reward_pubkey);
+    auto block = _context.genBlock(globalConfig.miner_privkey, globalConfig.reward_pubkey);
+	if (block) {
+		// to be add
+		// 在工作线程提交数据到MONGODB
+	}
   }
   nextProduce();
 }
@@ -86,6 +90,8 @@ void Server::run() {
   if (!_context.getBpsStore().contains(globalConfig.genesis_pubkey)) {
     _context.getBpsStore().add(globalConfig.genesis_pubkey);
   }
+
+  _p2pAcceptor.run();
   // rpc
   _rpcListener.run();
 

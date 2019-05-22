@@ -57,7 +57,8 @@ struct ConfigFile {
         BOOST_SERIALIZATION_NVP(miner_privkey) &
         BOOST_SERIALIZATION_NVP(reward_pubkey) &
         BOOST_SERIALIZATION_NVP(p2p_bind) & BOOST_SERIALIZATION_NVP(rpc_bind) &
-        BOOST_SERIALIZATION_NVP(rpc_resource) & BOOST_SERIALIZATION_NVP(seeds);
+        BOOST_SERIALIZATION_NVP(rpc_resource) & BOOST_SERIALIZATION_NVP(seeds)&
+        BOOST_SERIALIZATION_NVP(mongodbURI) & BOOST_SERIALIZATION_NVP(mongodbName)& BOOST_SERIALIZATION_NVP(mongodbCollection);
   }
   // 创世BP公钥
   Pubkey genesis_pubkey;
@@ -73,6 +74,12 @@ struct ConfigFile {
   std::string rpc_resource;
   // P2P初始连接的节点
   std::vector<std::string> seeds;
+  // Mongodb数据库地址
+  std::string mongodbURI;
+  // Mongodb数据库名
+  std::string mongodbName;
+  // Mongodb数据库集合名称
+  std::string mongodbCollection;
 
   void reset();
   void init(const boost::filesystem::path &path);

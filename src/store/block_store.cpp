@@ -1,6 +1,12 @@
+
 #include <blockmirror/store/block_store.h>
 #include <blockmirror/store/store.h>
 #include <boost/algorithm/hex.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/json.hpp>
+#include <mongocxx/client.hpp>
+#include <mongocxx/instance.hpp>
+#include <blockmirror/serialization/json_oarchive.h>
 
 struct EmptyDeleter {
   void operator()(blockmirror::Hash256 *) {}
@@ -172,6 +178,21 @@ bool BlockStore::shouldSwitch(const chain::BlockPtr &head,
     h = getBlock(h->getPrevious());
   }
   return true;
+}
+
+void BlockStore::saveToMongo(chain::BlockPtr &block) {
+  if (block == nullptr) {
+    return;
+  }
+
+  std::ostringstream oss;
+  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,false);
+  archive << block;
+  mongocxx::client conn{mongocxx::uri{blockmirror::globalConfig.mongodbURI}};
+  bsoncxx::document::value doc = bsoncxx::from_json(oss.str());
+  auto collection = conn[blockmirror::globalConfig.mongodbName]
+                        [blockmirror::globalConfig.mongodbCollection];
+  collection.insert_one(doc.view());
 }
 
 }  // namespace store

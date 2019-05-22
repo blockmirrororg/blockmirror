@@ -33,7 +33,15 @@ target_link_libraries( blockmirror
    ${Boost_LIBRARIES}
    ${OPENSSL_LIBRARIES}
    ${Secp256k1_LIBRARY}
+   ${LIBBSONXX_LIBRARIES}
+   ${LIBMONGOCXX_LIBRARIES}
 )
+
+include_directories("/usr/local/include/mongocxx/v_noabi")
+include_directories("/usr/local/include/bsoncxx/v_noabi")
+include_directories("/usr/local/include/libmongoc-1.0")
+include_directories("/usr/local/include/libbson-1.0")
+
 target_include_directories( blockmirror
   PUBLIC "${CMAKE_SOURCE_DIR}/include"
          "${CMAKE_SOURCE_DIR}/include/secp256k1_contrib"

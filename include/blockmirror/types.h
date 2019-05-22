@@ -21,7 +21,8 @@ struct Hasher {
   template <size_t N>
   size_t operator()(const std::array<uint8_t, N>& s) const {
     BOOST_STATIC_ASSERT(N > sizeof(size_t) + 1);
-    size_t size = *(size_t*)&s[1];
+    size_t size;
+    memcpy(&size, &s[1], sizeof(size));
     boost::endian::native_to_little_inplace(size);
     return size;
   }

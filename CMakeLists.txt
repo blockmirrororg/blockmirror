@@ -18,26 +18,23 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MT")
     add_definitions(-D_WIN32_WINNT=0x0600)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     
-    if ("${ADDITION_ROOT}" STREQUAL "")
-        set(Secp256k1_ROOT_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static")
-        set(OPENSSL_ROOT_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static")
-        set(BOOST_ROOT "C:/Users/Administrator/vcpkg/installed/x64-windows-static")
-		
-		set(spdlog_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static/share/spdlog")
-		set(fmt_DIR "C:/Users/Administrator/vcpkg/installed/x64-windows-static/share/fmt")
-		find_package(spdlog REQUIRED)
-		add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-    else()
-        set(Secp256k1_ROOT_DIR "${ADDITION_ROOT}")
-        set(OPENSSL_ROOT_DIR "${ADDITION_ROOT}")
-        set(BOOST_ROOT "${ADDITION_ROOT}")
-    endif()
-    set(ADDITION_LIBRARIES spdlog)
+    set(Secp256k1_ROOT_DIR "${ADDITION_ROOT}")
+    set(OPENSSL_ROOT_DIR "${ADDITION_ROOT}")
+    set(BOOST_ROOT "${ADDITION_ROOT}")
+    set(libmongoc-static-1.0_DIR "${ADDITION_ROOT}/share/libmongoc-static-1.0")
+    set(libbson-static-1.0_DIR "${ADDITION_ROOT}/share/libbson-static-1.0")
+    
+    add_definitions(-DBSONCXX_STATIC)
+    add_definitions(-DMONGOCXX_STATIC)
+    set(ADDITION_LIBRARIES spdlog ${ADDITION_ROOT}/lib/libmongocxx.lib ${ADDITION_ROOT}/lib/bsoncxx.lib
+         Dnsapi.lib Secur32.lib bcrypt.lib Crypt32.lib)
 else()
-    set(ADDITION_LIBRARIES pthread spdlog dl rt z)
+    set(ADDITION_LIBRARIES pthread spdlog dl rt z resolv)
+    find_package(libbsoncxx-static REQUIRED)
+    find_package(libmongocxx-static REQUIRED)
 endif()
-
 
 add_definitions(-DBOOST_ENABLE_ASSERT_HANDLER)
 
@@ -55,10 +52,6 @@ find_package(OpenSSL REQUIRED)
 
 find_package(Secp256k1 REQUIRED)
 
-find_package(libmongoc-1.0 1.8)
-find_package(libbson-1.0 REQUIRED)
-find_package(libbsoncxx-static REQUIRED)
-find_package(libmongocxx-static REQUIRED)
 find_package(libmongoc-static-1.0 REQUIRED)
 find_package(libbson-static-1.0 REQUIRED)
 

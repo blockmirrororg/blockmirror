@@ -18,7 +18,8 @@ Server::Server()
           boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v4(),
                                          blockmirror::globalConfig.rpc_bind},
           _context),
-      _producerTimer(_mainContext) {}
+      _producerTimer(_mainContext),
+      _strand(_workContext) {}
 
 void Server::handleSignals(int signo) {
   B_LOG("got signo {}", signo);
@@ -52,8 +53,10 @@ void Server::produceBlock(const boost::system::error_code& ec) {
   } else {
     auto block = _context.genBlock(globalConfig.miner_privkey, globalConfig.reward_pubkey);
 	if (block) {
-		// to be add
 		// 在工作线程提交数据到MONGODB
+          _workContext.post(
+              _strand.wrap(boost::bind(&store::BlockStore::saveToMongo,
+                                       &_context.getBlockStore(), block)));
 	}
   }
   nextProduce();

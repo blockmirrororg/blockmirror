@@ -1,4 +1,5 @@
 
+#include <blockmirror/serialization/json_oarchive.h>
 #include <blockmirror/store/block_store.h>
 #include <blockmirror/store/store.h>
 #include <boost/algorithm/hex.hpp>
@@ -6,7 +7,6 @@
 #include <bsoncxx/json.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/instance.hpp>
-#include <blockmirror/serialization/json_oarchive.h>
 
 struct EmptyDeleter {
   void operator()(blockmirror::Hash256 *) {}
@@ -15,7 +15,11 @@ struct EmptyDeleter {
 namespace blockmirror {
 namespace store {
 
-BlockStore::BlockStore() : _currentFileIndex(0), _loaded(false) {}
+BlockStore::BlockStore()
+    : _mongoInstance(),
+	_mongoClient(mongocxx::uri{ blockmirror::globalConfig.mongodbURI }),
+      _currentFileIndex(0),
+      _loaded(false) {}
 
 BlockStore::~BlockStore() {
   if (_loaded) close();
@@ -186,13 +190,18 @@ void BlockStore::saveToMongo(chain::BlockPtr &block) {
   }
 
   std::ostringstream oss;
-  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,false);
+  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
+                                                                       false);
   archive << block;
-  mongocxx::client conn{mongocxx::uri{blockmirror::globalConfig.mongodbURI}};
   bsoncxx::document::value doc = bsoncxx::from_json(oss.str());
+  /*mongocxx::client conn{mongocxx::uri{blockmirror::globalConfig.mongodbURI}};
   auto collection = conn[blockmirror::globalConfig.mongodbName]
                         [blockmirror::globalConfig.mongodbCollection];
-  collection.insert_one(doc.view());
+  collection.insert_one(doc.view());*/
+
+  mongocxx::database db = _mongoClient[blockmirror::globalConfig.mongodbName];
+  mongocxx::collection coll = db[blockmirror::globalConfig.mongodbCollection];
+  coll.insert_one(doc.view());
 }
 
 }  // namespace store

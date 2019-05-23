@@ -21,11 +21,10 @@ make -j2
 sudo make install
 popd
 
-export SSL_ENV=OPENSSL
 export INSTALL_PREFIX=/usr
 if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
-  export SSL_ENV=DARWIN
   export INSTALL_PREFIX=/usr/local
+  export OPENSSL_ROOT_DIR=/user/local/opt/openssl
 fi
 
 wget https://github.com/mongodb/mongo-c-driver/releases/download/1.13.0/mongo-c-driver-1.13.0.tar.gz
@@ -34,7 +33,7 @@ mkdir mongo-c-driver-1.13.0/build
 pushd mongo-c-driver-1.13.0/build
 cmake -DCMAKE_BUILD_TYPE=Release \
       -DENABLE_BSON=ON \
-      -DENABLE_SSL=${SSL_ENV} \
+      -DENABLE_SSL=OPENSSL \
       -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
       -DENABLE_STATIC=ON \
       -DENABLE_ICU=OFF \

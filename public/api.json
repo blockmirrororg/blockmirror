@@ -25,11 +25,11 @@
         "produces": ["application/json"],
         "parameters": [],
         "responses": {
-          "succeed": {
+          "200": {
             "description": "successful operation",
             "schema": { "type": "object" }
           },
-          "failed": {
+          "500": {
             "schema": { "$ref": "#/definitions/Error" }
           }
         }
@@ -44,11 +44,11 @@
         "produces": ["application/json"],
         "parameters": [],
         "responses": {
-          "succeed": {
+          "200": {
             "description": "successful operation",
             "schema": { "$ref": "#/definitions/Version" }
           },
-          "failed": {
+          "500": {
             "schema": { "$ref": "#/definitions/Error" }
           }
         }
@@ -63,7 +63,7 @@
         "produces": ["application/json"],
         "parameters": [],
         "responses": {
-          "succeed": {
+          "200": {
             "description": "successful operation",
             "schema": {
               "type": "object",
@@ -79,7 +79,7 @@
               }
             }
           },
-          "failed": {
+          "500": {
             "schema": { "$ref": "#/definitions/Error" }
           }
         }
@@ -109,11 +109,11 @@
           }
         ],
         "responses": {
-          "succeed": {
+          "200": {
             "description": "successful operation",
             "schema": { "type": "object" }
           },
-          "failed": {
+          "500": {
             "schema": { "$ref": "#/definitions/Error" }
           }
         }
@@ -127,11 +127,11 @@
         "produces": ["application/json"],
         "parameters": [],
         "responses": {
-          "succeed": {
+          "200": {
             "description": "successful operation",
             "schema": { "$ref": "#/definitions/ChainStatus" }
           },
-          "failed": {
+          "500": {
             "schema": { "$ref": "#/definitions/Error" }
           }
         }
@@ -145,11 +145,11 @@
         "produces": ["application/json"],
         "parameters": [],
         "responses": {
-          "succeed": {
+          "200": {
             "description": "successful operation",
             "schema": { "type": "string" }
           },
-          "failed": {
+          "500": {
             "schema": { "$ref": "#/definitions/Error" }
           }
         }
@@ -171,11 +171,11 @@
           }
         ],
         "responses": {
-          "succeed": {
+          "200": {
             "description": "successful operation",
             "schema": { "type": "string" }
           },
-          "failed": {
+          "500": {
             "schema": { "$ref": "#/definitions/Error" }
           }
         }
@@ -197,11 +197,11 @@
           }
         ],
         "responses": {
-          "succeed": {
+          "200": {
             "description": "successful operation",
             "schema": { "type": "string" }
           },
-          "failed": {
+          "500": {
             "schema": { "$ref": "#/definitions/Error" }
           }
         }
@@ -225,11 +225,11 @@
           }
         ],
         "responses": {
-          "succeed": {
+          "200": {
             "description": "successful operation",
             "schema": { "type": "object" }
           },
-          "failed": {
+          "500": {
             "schema": { "$ref": "#/definitions/Error" }
           }
         }
@@ -243,7 +243,7 @@
     "Version": {
       "type": "object",
       "properties": {
-        "version": { "type": "string" }
+        "version": { "type": "integer" }
       }
     },
     "Endpoint": {

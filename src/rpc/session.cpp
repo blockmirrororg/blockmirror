@@ -270,6 +270,8 @@ void Session::getNodeVersion(const char*) {
   res.keep_alive(req_.keep_alive());
   res.body() = "{\"version\":0}";
   res.prepare_payload();
+  res.set(http::field::content_type, "application/json");
+  
   return lambda_(std::move(res));
 }
 

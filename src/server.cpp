@@ -1,9 +1,9 @@
 
 #include <blockmirror/server.h>
+#include <blockmirror/store/mongo_store.h>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
-//#include <blockmirror/common.h>
 
 namespace blockmirror {
 
@@ -51,13 +51,13 @@ void Server::produceBlock(const boost::system::error_code& ec) {
   if (ec) {
     B_ERR("produce timer: {}", ec.message());
   } else {
-    auto block = _context.genBlock(globalConfig.miner_privkey, globalConfig.reward_pubkey);
-	if (block) {
-		// 在工作线程提交数据到MONGODB
-          _workContext.post(
-              _strand.wrap(boost::bind(&store::BlockStore::saveToMongo,
-                                       &_context.getBlockStore(), block)));
-	}
+    auto block = _context.genBlock(globalConfig.miner_privkey,
+                                   globalConfig.reward_pubkey);
+    if (block) {
+      // 在工作线程提交数据到MONGODB
+      _workContext.post(_strand.wrap(boost::bind(
+          &store::MongoStore::save, &store::MongoStore::get(), block)));
+    }
   }
   nextProduce();
 }

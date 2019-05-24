@@ -4,6 +4,21 @@ language: cpp
 
 matrix:
   include:
+    - os: osx
+      osx_image: xcode8.3
+      compiler: clang
+      env:
+        - COMPILER=clang++ C_COMPILER=clang BUILD_TYPE=Debug
+    - os: osx
+      osx_image: xcode8.3
+      compiler: clang
+      env:
+        - COMPILER=clang++ C_COMPILER=clang BUILD_TYPE=Release
+    - os: osx
+      osx_image: xcode8.3
+      compiler: gcc
+      env:
+        - COMPILER=g++-7 C_COMPILER=gcc-7  BUILD_TYPE=Debug
     # Clang w/ libc++ and MSAN
     - compiler: clang
       addons:
@@ -35,21 +50,6 @@ matrix:
         - LIBCXX_BUILD=1 LIBCXX_SANITIZER="Undefined;Address"
         - EXTRA_FLAGS="-g -O2 -fno-omit-frame-pointer -fsanitize=undefined,address -fno-sanitize-recover=all"
         - UBSAN_OPTIONS=print_stacktrace=1
-    - os: osx
-      osx_image: xcode8.3
-      compiler: clang
-      env:
-        - COMPILER=clang++ C_COMPILER=clang BUILD_TYPE=Debug
-    - os: osx
-      osx_image: xcode8.3
-      compiler: clang
-      env:
-        - COMPILER=clang++ C_COMPILER=clang BUILD_TYPE=Release
-    - os: osx
-      osx_image: xcode8.3
-      compiler: gcc
-      env:
-        - COMPILER=g++-7 C_COMPILER=gcc-7  BUILD_TYPE=Debug
     - compiler: gcc
       addons:
         apt:

@@ -4,6 +4,8 @@
 #pragma once
 
 #include <blockmirror/chain/block.h>
+#include <mongocxx/instance.hpp>
+#include <mongocxx/client.hpp>
 
 namespace blockmirror {
 namespace store {
@@ -21,6 +23,9 @@ class BlockStore {
   }
 
  private:
+  mongocxx::instance _mongoInstance;
+  mongocxx::client _mongoClient;
+
   // 写入文件的块
   std::unordered_map<Hash256Ptr, uint64_t, Hasher, EqualTo> _index;
 

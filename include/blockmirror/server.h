@@ -42,6 +42,8 @@ class Server : private boost::noncopyable {
   std::list<boost::shared_ptr<blockmirror::p2p::Connector> > _p2pConnecting;
   // rpc
   blockmirror::rpc::Listener _rpcListener;
+
+  boost::asio::io_context::strand _strand;
 };
 
 }  // namespace blockmirror

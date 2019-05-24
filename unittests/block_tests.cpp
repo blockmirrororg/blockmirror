@@ -77,6 +77,53 @@ void IS(const std::string &value, T &out) {
 
 BOOST_AUTO_TEST_SUITE(block_tests)
 
+/*
+BOOST_AUTO_TEST_CASE(block_tests_transaction) {
+  // std::string trxJSON =
+  //     "{\"expire\":2,\"nonce\":0,\"script\":{\"type\":3,\"value\":{\"name\":"
+  //     "\"stock\",\"desc\":\"代表五个浮点 股价上限 下限 最高 最低 平均 "
+  //     "发送一个\",\"dataFormat\":\"0101010101\",\"validScript\":\"01\","
+  //     "\"resultScript\":\"02\"}},\"signatures\":[{\"signer\":"
+  //     "\"02ECCAE0C5766164670E17C7F6796294375BE8CD3F3F135C035CE8C3024D54B6D4\","
+  //     "\"signature\":"
+  //     "\"D4F32C8838FAC8BE5D83D54489250E98405549E4BBDCF538CD4477454486651E478EFA"
+  //     "6E2EC236D5BDAC4FE91D4892B2C74816FFF57E128E55A47D84E9CD8249\"},{"
+  //     "\"signer\":"
+  //     "\"025D6860D335281760E2197A485A1BF7779396D4A1ACAAB6830480AA81CA17327B\","
+  //     "\"signature\":"
+  //     "\"ABEEE528CF22F12EB59751318E9AA4831127CB5EB1DEB672582E8089F6F90034E2B1A3"
+  //     "236B6174BD8B9F46234E57F55F4592C6999B96DEF220E16DB0D7171F7F\"}]}";
+  std::string trxJSON =
+      "{\"expire\":1000000,\"nonce\":0,\"script\":{\"type\":4,\"value\":{"
+      "\"format\":\"stock\",\"name\":\"aapl\",\"desc\":\"苹果的股票啊\"}},"
+      "\"signatures\":[{\"signer\":"
+      "\"0213E21D6D3A4D64994E938F51A128861DEA7395A456C08F62A4549DF904D4B525\","
+      "\"signature\":"
+      "\"B5789E9BCE973898E98534780E845CF744A70352C575AA18CD2E7D1B035B287D3D74E5"
+      "6EEF3E194636C4117D30840EE57403863B00CB12B1EFA9850A7847D671\"}]}";
+  blockmirror::chain::TransactionSigned trx;
+  IJ(trxJSON, trx);
+  std::cout << SS<JSON>(trx) << std::endl;
+  BOOST_CHECK(trx.verify());
+  auto bp1Priv =
+      "95D4B0DF5B1069B47F35C8C7A6764BB8B760D0359B6C1221DDCB46CE5830E14C";
+  auto bp2Priv =
+      "9DC54FB3E7493E97D7B9130DAB4CC75275DE02199FD19E4A4CBDBEF539F6D496";
+
+  trx.addSign(K(bp1Priv));
+  trx.addSign(K(bp2Priv));
+  std::cout << SS<JSON>(trx) << std::endl;
+  B_LOG("HASH: {:spn}",
+        spdlog::to_hex(SS<Bin>((blockmirror::chain::Transaction &)trx)));
+  B_LOG("HASH: {:spn}", spdlog::to_hex(trx.getHash()));
+  
+  std::cout << SS<JSON>(blockmirror::chain::Transaction(blockmirror::chain::scri::NewData("aaa", "bbb", "ccc"))) << std::endl;
+  
+  B_LOG("{:spn}",
+        spdlog::to_hex(SS<Bin>(blockmirror::chain::Transaction(blockmirror::chain::scri::NewData("aaa", "bbb", "ccc")))));
+}
+*/
+
 BOOST_AUTO_TEST_CASE(block_tests_generating) {
   // 接收RPC或者P2P网络中的交易和数据
   // 在网络线程中序列化检查完签名
@@ -139,7 +186,7 @@ BOOST_AUTO_TEST_CASE(block_tests_generating) {
   blockmirror::chain::TransactionSignedPtr newdata =
       std::make_shared<blockmirror::chain::TransactionSigned>(
           blockmirror::chain::scri::NewData("stock", "alibaba",
-                                              "阿里巴巴在纳斯达克的股票数据"));
+                                            "阿里巴巴在纳斯达克的股票数据"));
   newdata->setExpire(2);
   newdata->setNonce();
   newdata->addSign(K(bp1Priv));

@@ -14,11 +14,11 @@ matrix:
       compiler: clang
       env:
         - COMPILER=clang++ C_COMPILER=clang BUILD_TYPE=Release
-    - os: osx
-      osx_image: xcode8.3
-      compiler: gcc
-      env:
-        - COMPILER=g++-7 C_COMPILER=gcc-7  BUILD_TYPE=Debug
+    # - os: osx
+    #   osx_image: xcode8.3
+    #   compiler: gcc
+    #   env:
+    #     - COMPILER=g++-7 C_COMPILER=gcc-7  BUILD_TYPE=Debug
     # Clang w/ libc++ and MSAN
     - compiler: clang
       addons:

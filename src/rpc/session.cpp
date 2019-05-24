@@ -237,14 +237,19 @@ void Session::postChainData() {
     return lambda_(bad_request("data type not found"));
   }
   store::NewFormatPtr newFormat =
-      _context.getFormatStore().query(newData->getFormat());
+          _context.getFormatStore().query(newData->getFormat());
   if (!newFormat) {
     return lambda_(bad_request("data format not found"));
   }*/
 
-  blockmirror::Privkey priv;
-  boost::algorithm::unhex(globalConfig.miner_privkey, priv.begin());
-  dataSigned->sign(priv, _context.getHead()->getHeight());
+  try {
+    blockmirror::Privkey priv;
+    boost::algorithm::unhex(globalConfig.miner_privkey, priv.begin());
+    dataSigned->sign(priv, _context.getHead()->getHeight());
+  } catch (std::exception& e) {
+    return lambda_(server_error(e.what()));
+  }
+
   if (!_context.getDataSignatureStore().add(dataSigned)) {
     return lambda_(bad_request("repeat put, modified!"));
   }

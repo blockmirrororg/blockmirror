@@ -95,6 +95,9 @@ class Session : public std::enable_shared_from_this<Session> {
   void getChainLast(const char*);
   void getChainBlock(const char*);
   void getChainTransaction(const char*);
+  void getChainFormat(const char*);
+  void getChainDatatypes(const char*);
+  void getChainBps(const char*);
 
  private:
   void handle_request(http::request<http::string_body>&& req);

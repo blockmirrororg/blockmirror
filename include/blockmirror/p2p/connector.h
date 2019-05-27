@@ -3,14 +3,14 @@
 
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <blockmirror/p2p/channel.h>
 
 namespace blockmirror {
 namespace p2p {
 
 class Connector : public boost::enable_shared_from_this<Connector> {
  public:
-  Connector(boost::asio::io_context& ioc, const char* ip, unsigned short port,
-            unsigned char remote_type = 0, unsigned char local_type = 0);
+  Connector(boost::asio::io_context& ioc, const char* ip, unsigned short port);
 
   void start(bool now = true);
 
@@ -25,8 +25,7 @@ class Connector : public boost::enable_shared_from_this<Connector> {
 
   boost::asio::deadline_timer timer_;
   boost::asio::io_context& io_context_;
-  unsigned char remote_type_;
-  unsigned char local_type_;
+  ChannelPtr _newChannel;
 };
 
 }  // namespace p2p

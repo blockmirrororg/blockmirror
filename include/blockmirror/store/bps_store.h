@@ -49,6 +49,9 @@ class BpsStore {
  public:
   BpsStore();
   ~BpsStore();
+
+  std::vector<Pubkey>& getBps() { return _bps; }
+
   /**
    * @brief 从文件中加载store
    * @param path 路径

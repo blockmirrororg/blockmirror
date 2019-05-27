@@ -1,15 +1,17 @@
 
 #include <blockmirror/common.h>
 #include <blockmirror/serialization/access.h>
+#include <boost/serialization/array.hpp>
 
 namespace blockmirror {
 namespace p2p {
 
 // 心跳消息
 class MsgHeartbeat {
-  friend class blockmirror::serialization::access;
+  //friend class blockmirror::serialization::access;
+  friend class boost::serialization::access;
   template <typename Archive>
-  void serialize(Archive &) {}
+  void serialize(Archive &, unsigned int version) {}
 };
 static const uint64_t MSG_HEARTBEAT_TICK = 1000 * 7;  // 每10秒一个心跳
 static const uint64_t MSG_HEARTBEAT_TIMEOUT = 1000 * 15;  // 15秒没有消息则超时
@@ -23,9 +25,10 @@ class MsgGenerateBlock {
 // 1. 刚出完块
 // 2. 刚执行完一个网络上收到的块
 class MsgBroadcastBlock {
-  friend class blockmirror::serialization::access;
+  //friend class blockmirror::serialization::access;
+	friend class boost::serialization::access;
   template <typename Archive>
-  void serialize(Archive &ar) {
+  void serialize(Archive &ar, unsigned int magic) {
     ar &BOOST_SERIALIZATION_NVP(height) & BOOST_SERIALIZATION_NVP(hash);
   }
 
@@ -34,12 +37,13 @@ class MsgBroadcastBlock {
 };
 
 struct MessageHeader {
-	/*friend class blockmirror::serialization::access;
+	//friend class blockmirror::serialization::access;
+	friend class boost::serialization::access;
 	template<typename Archive>
-	void serialize(Archive &ar)
+	void serialize(Archive &ar, unsigned int version)
 	{
 		ar & BOOST_SERIALIZATION_NVP(magic) & BOOST_SERIALIZATION_NVP(length);
-	}*/
+	}
 
   uint16_t magic;
   uint16_t length;

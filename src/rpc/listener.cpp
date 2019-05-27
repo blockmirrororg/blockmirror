@@ -37,6 +37,12 @@ Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint,
       std::make_pair("/chain/transaction", &Session::getChainTransaction));
   Session::_getMethodPtrs.insert(
       std::make_pair("/node/connect", &Session::getNodeConnect));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/chain/format", &Session::getChainFormat));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/chain/datatypes", &Session::getChainDatatypes));
+  Session::_getMethodPtrs.insert(
+      std::make_pair("/chain/bps", &Session::getChainBps));
 
   Session::_postMethodPtrs.insert(
       std::make_pair("/chain/transaction", &Session::postChainTransaction));

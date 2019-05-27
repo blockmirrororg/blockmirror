@@ -11,15 +11,15 @@ Acceptor::Acceptor(boost::asio::io_context& ioc, unsigned short port)
                                  boost::asio::ip::tcp::v4(), port)) {}
 
 void Acceptor::startAccept() {
-  new_channel_.reset(new Channel(io_context_));
-  acceptor_.async_accept(new_channel_->socket(),
+  _newChannel.reset(new Channel(io_context_));
+  acceptor_.async_accept(_newChannel->socket(),
                          boost::bind(&Acceptor::handleAccept, this,
                                      boost::asio::placeholders::error));
 }
 
 void Acceptor::handleAccept(const boost::system::error_code& e) {
   if (!e) {
-    new_channel_->start();
+    _newChannel->start();
   }
 
   startAccept();

@@ -7,14 +7,11 @@ namespace blockmirror {
 namespace p2p {
 
 Connector::Connector(boost::asio::io_context& ioc, const char* ip,
-                     unsigned short port, unsigned char remote_type,
-                     unsigned char local_type)
+                     unsigned short port)
     : socket_(ioc),
       endpoint_(boost::asio::ip::address::from_string(ip), port),
       timer_(ioc),
-      io_context_(ioc),
-      remote_type_(remote_type),
-      local_type_(local_type) {}
+      io_context_(ioc){}
 
 void Connector::start(bool now) {
 

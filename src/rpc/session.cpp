@@ -367,6 +367,7 @@ void Session::getChainLast(const char*) {
   http::response<http::string_body> res{http::status::ok, req_.version()};
   res.keep_alive(req_.keep_alive());
   res.body() = oss.str();
+  res.set(http::field::content_type, "application/json");
   res.prepare_payload();
   return lambda_(std::move(res));
 }
@@ -424,6 +425,7 @@ void Session::getChainBlock(const char* arg) {
   http::response<http::string_body> res{http::status::ok, req_.version()};
   res.keep_alive(req_.keep_alive());
   res.body() = oss.str();
+  res.set(http::field::content_type, "application/json");
   res.prepare_payload();
   return lambda_(std::move(res));
 }
@@ -473,6 +475,128 @@ void Session::getChainTransaction(const char* arg) {
   http::response<http::string_body> res{http::status::ok, req_.version()};
   res.keep_alive(req_.keep_alive());
   res.body() = oss.str();
+  res.set(http::field::content_type, "application/json");
+  res.prepare_payload();
+  return lambda_(std::move(res));
+}
+
+void Session::getChainFormat(const char* arg) {
+  if (!arg) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"omit argument\"}";
+    res.set(http::field::content_type, "application/json");
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  store::FormatStore& fs = _context.getFormatStore();
+  store::NewFormatPtr format = fs.query(arg);
+  if (!format) {
+    http::response<http::string_body> res{http::status::ok, req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{}";
+	res.set(http::field::content_type, "application/json");
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  std::ostringstream oss;
+  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
+                                                                       false);
+  try {
+    archive << format;
+  } catch (std::exception& e) {
+    http::response<http::string_body> res{http::status::internal_server_error,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"";
+    res.body() += e.what();
+    res.body() += "\"}";
+    res.set(http::field::content_type, "application/json");
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  http::response<http::string_body> res{http::status::ok, req_.version()};
+  res.keep_alive(req_.keep_alive());
+  res.body() = oss.str();
+  res.prepare_payload();
+  return lambda_(std::move(res));
+}
+
+void Session::getChainDatatypes(const char* arg) {
+  if (!arg) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"omit argument\"}";
+    res.set(http::field::content_type, "application/json");
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  store::DataStore& ds = _context.getDataStore();
+  store::NewDataPtr data = ds.query(arg);
+  if (!data) {
+    http::response<http::string_body> res{http::status::ok, req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{}";
+	res.set(http::field::content_type, "application/json");
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  std::ostringstream oss;
+  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
+                                                                       false);
+  try {
+    archive << data;
+  } catch (std::exception& e) {
+    http::response<http::string_body> res{http::status::internal_server_error,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"";
+    res.body() += e.what();
+    res.body() += "\"}";
+    res.set(http::field::content_type, "application/json");
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  http::response<http::string_body> res{http::status::ok, req_.version()};
+  res.keep_alive(req_.keep_alive());
+  res.body() = oss.str();
+  res.set(http::field::content_type, "application/json");
+  res.prepare_payload();
+  return lambda_(std::move(res));
+}
+
+void Session::getChainBps(const char*) {
+  std::vector<Pubkey>& bps = _context.getBpsStore().getBps();
+
+  std::ostringstream oss;
+  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
+                                                                       false);
+  try {
+    archive << bps;
+  } catch (std::exception& e) {
+    http::response<http::string_body> res{http::status::internal_server_error,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"";
+    res.body() += e.what();
+    res.body() += "\"}";
+    res.set(http::field::content_type, "application/json");
+    res.prepare_payload();
+    return lambda_(std::move(res));
+  }
+
+  http::response<http::string_body> res{http::status::ok, req_.version()};
+  res.keep_alive(req_.keep_alive());
+  res.body() = oss.str();
+  res.set(http::field::content_type, "application/json");
   res.prepare_payload();
   return lambda_(std::move(res));
 }

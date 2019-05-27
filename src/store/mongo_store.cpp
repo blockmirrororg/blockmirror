@@ -25,7 +25,7 @@ void MongoStore::save(chain::BlockPtr& block) {
     mongocxx::collection coll = db[blockmirror::globalConfig.mongodbCollection];
     coll.insert_one(doc.view());
   } catch (std::exception& e) {
-    B_WARN("save to mongo exception: {}", e.what());
+    B_ERR("save to mongo exception: {}", e.what());
   }
 }
 

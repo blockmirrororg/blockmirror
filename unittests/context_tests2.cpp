@@ -8,6 +8,7 @@
 #include <blockmirror/store/transaction_store.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/test/unit_test.hpp>
+//#include <blockmirror/store/mongo_store.h>
 
 BOOST_AUTO_TEST_SUITE(context_tests2)
 
@@ -101,6 +102,12 @@ BOOST_AUTO_TEST_CASE(context_tests2_seq) {
       BOOST_CHECK_EQUAL(account.query(pub), 0);
     }
   }
+
+  // 6.存mongo db
+  /*blockmirror::globalConfig.init("config.json");
+  for (auto pos = blocks.begin(); pos != blocks.end(); ++pos) {
+	  blockmirror::store::MongoStore::get().save(*pos);
+  }*/
 }
 
 BOOST_AUTO_TEST_SUITE_END()

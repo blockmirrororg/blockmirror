@@ -54,5 +54,15 @@ bool DataSignatureStore::remove(const std::string& name) {
   return _datas.erase(name) > 0;
 }
 
+std::vector<chain::DataSignedPtr> DataSignatureStore::pop() {
+  boost::unique_lock<boost::shared_mutex> lock(_mutex);
+  std::vector<chain::DataSignedPtr> v;
+  for (auto i : _datas) {
+    v.push_back(i.second);
+  }
+  _datas.clear();
+  return std::move(v);
+}
+
 }  // namespace store
 }  // namespace blockmirror

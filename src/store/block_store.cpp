@@ -1,5 +1,3 @@
-
-#include <blockmirror/serialization/json_oarchive.h>
 #include <blockmirror/store/block_store.h>
 #include <blockmirror/store/store.h>
 #include <boost/algorithm/hex.hpp>
@@ -175,26 +173,6 @@ bool BlockStore::shouldSwitch(const chain::BlockPtr &head,
   }
   return true;
 }
-
-//void BlockStore::saveToMongo(chain::BlockPtr &block) {
-//  if (block == nullptr) {
-//    return;
-//  }
-//
-//  std::ostringstream oss;
-//  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
-//                                                                       false);
-//  archive << block;
-//  bsoncxx::document::value doc = bsoncxx::from_json(oss.str());
-//  /*mongocxx::client conn{mongocxx::uri{blockmirror::globalConfig.mongodbURI}};
-//  auto collection = conn[blockmirror::globalConfig.mongodbName]
-//                        [blockmirror::globalConfig.mongodbCollection];
-//  collection.insert_one(doc.view());*/
-//
-//  mongocxx::database db = _mongoClient[blockmirror::globalConfig.mongodbName];
-//  mongocxx::collection coll = db[blockmirror::globalConfig.mongodbCollection];
-//  coll.insert_one(doc.view());
-//}
 
 }  // namespace store
 }  // namespace blockmirror

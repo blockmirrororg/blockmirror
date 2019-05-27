@@ -25,7 +25,7 @@ class Context {
   store::TransactionStore _transaction;
   store::DataSignatureStore _dataSignature;
   chain::BlockPtr _head;
-
+ 
   bool _loaded;
   bool _bpChanged;
   /**

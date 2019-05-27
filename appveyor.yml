@@ -1,0 +1,32 @@
+version: '{build}'
+
+configuration:
+  - Debug
+  - Release
+
+environment:
+  matrix:
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    CMAKE_GENERATOR: "Visual Studio 15 2017 Win64"
+
+matrix:
+  fast_finish: true
+  
+
+install:
+  - git submodule update --init --recursive
+  - vcpkg.exe install boost:x64-windows-static
+  - vcpkg.exe install secp256k1:x64-windows-static
+  - vcpkg.exe install mongo-c-driver:x64-windows-static
+  - vcpkg.exe install mongo-cxx-driver:x64-windows-static
+  - vcpkg.exe install openssl:x64-windows-static
+
+build_script:
+  - md _build -Force
+  - cd _build
+  - echo %configuration%
+  - cmake -G "%CMAKE_GENERATOR%" "-DCMAKE_BUILD_TYPE=%configuration%" -DADDITION_ROOT="C:/Tools/vcpkg/installed/x64-windows-static" ..
+  - cmake --build . --config %configuration%
+
+test_script:
+  - ctest -C %configuration% --timeout 300 --output-on-failure

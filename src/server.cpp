@@ -55,8 +55,9 @@ void Server::produceBlock(const boost::system::error_code& ec) {
                                    globalConfig.reward_pubkey);
     if (block) {
       // 在工作线程提交数据到MONGODB
-      _workContext.post(_strand.wrap(boost::bind(
-          &store::MongoStore::save, &store::MongoStore::get(), block)));
+      _workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
+                                                 &store::MongoStore::get(),
+                                                 block, &_context)));
     }
   }
   nextProduce();

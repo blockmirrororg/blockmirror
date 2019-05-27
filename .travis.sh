@@ -12,7 +12,7 @@ if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
   ./bootstrap.sh --prefix=${INSTALL_PREFIX}
 
   while sleep 20; do echo "[ $SECONDS seconds, boost still building... ]"; done &
-  ./b2 toolset=${C_COMPILER} linkflags="-stdlib=libc++" link=static threading=multi --with-iostreams --with-date_time --with-filesystem --with-system --with-chrono --with-test --with-serialization -q -j2 >building.log 2>&1
+  ./b2 toolset=${C_COMPILER} link=static threading=multi --with-iostreams --with-date_time --with-filesystem --with-system --with-chrono --with-test --with-serialization -q -j2 >building.log 2>&1
   kill %1
   tail building.log
 
@@ -43,13 +43,14 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
       -DCMAKE_C_COMPILER=${C_COMPILER} -DCMAKE_CXX_COMPILER=${COMPILER} \
       -DENABLE_SNAPPY=OFF ..
-make -j16
+make -j2
 sudo make install
 popd
 
 git submodule update --init --recursive
 
 echo "Installing secp256k1"
+export CC=${C_COMPILER}
 git clone --depth=1 https://github.com/bitcoin-core/secp256k1.git
 pushd secp256k1
 ./autogen.sh

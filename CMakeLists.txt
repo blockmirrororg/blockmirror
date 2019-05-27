@@ -15,8 +15,9 @@ set( CXX_STANDARD_REQUIRED ON )
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     add_compile_options("/utf-8")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+    # 这里只能连接VC的MT库，因为find_package不能找到第三方的debug库 MTd会冲突
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MT")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
     add_definitions(-D_WIN32_WINNT=0x0600)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     

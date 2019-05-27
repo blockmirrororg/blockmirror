@@ -38,6 +38,7 @@ class BlockStore {
 
   chain::BlockPtr _loadBlock(uint64_t index);
   uint64_t _saveBlock(chain::BlockPtr block);
+
  public:
   BlockStore();
   ~BlockStore();
@@ -88,8 +89,6 @@ class BlockStore {
   bool shouldSwitch(const chain::BlockPtr &head, const chain::BlockPtr &fork,
                     std::vector<chain::BlockPtr> &back,
                     std::vector<chain::BlockPtr> &forward);
-
-  //void saveToMongo(chain::BlockPtr& block);
 };
 
 }  // namespace store

@@ -252,7 +252,14 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward,
       B_WARN("bad trx: {:spn}", spdlog::to_hex(trx->getHash()));
     }
   }
-  // FIXME: 将临时数据池的所有数据添加到区块中
+
+  std::vector<chain::DataSignedPtr> v = _dataSignature.pop();
+  DataBPPtr dataBP =
+      std::make_shared<blockmirror::chain::DataBP>(globalConfig.miner_pubkey);
+  for (auto i : v) {
+    dataBP->addData(i);
+  }
+  newBlock->addDataBP(dataBP);
 
   newBlock->finalize(key);
   _block.addBlock(newBlock);

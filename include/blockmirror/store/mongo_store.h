@@ -1,8 +1,8 @@
 #pragma once
 
+#include <blockmirror/chain/block.h>
 #include <mongocxx/client.hpp>
 #include <mongocxx/instance.hpp>
-#include <blockmirror/chain/block.h>
 
 namespace blockmirror {
 namespace store {
@@ -16,7 +16,7 @@ class MongoStore {
     return ms;
   }
 
-  void save(chain::BlockPtr& block);
+  void save(chain::BlockPtr& block, chain::Context* context);
 
  private:
   mongocxx::instance _instance;

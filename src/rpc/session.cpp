@@ -40,6 +40,11 @@ void Session::on_read(boost::system::error_code ec,
                       std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
+  if (ec)
+  {
+	  B_WARN("http on read {} {}", ec.message(), req_.body());
+  }
+
   if (ec == http::error::end_of_stream) return do_close();
 
   if (ec) return;
@@ -52,7 +57,11 @@ void Session::on_write(boost::system::error_code ec,
                        bool stopService) {
   boost::ignore_unused(bytes_transferred);
 
-  if (ec) return;
+  if (ec)
+  {
+	  B_WARN("http on write {}", ec.message());
+	  return;
+  }
 
   if (stopService) {
     blockmirror::Server::get().stop();
@@ -65,20 +74,13 @@ void Session::on_write(boost::system::error_code ec,
 }
 
 void Session::do_close() {
+  B_LOG("close connection {}", socket_.remote_endpoint().address().to_string());
   boost::system::error_code ec;
   socket_.shutdown(tcp::socket::shutdown_send, ec);
 }
 
 void Session::handle_request(http::request<http::string_body>&& req) {
-  auto const bad_request = [&req](boost::beast::string_view why) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req.version()};
-    res.keep_alive(req.keep_alive());
-	res.body() = "{\"error\":\"" + why.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  };
+  B_LOG("handle http request {} \n {}", req_.target().to_string(), req_.body());
 
   if (req.method() == http::verb::post) {
     auto funcPtr = postMethodFuncPtr(req_.target().to_string().c_str());
@@ -145,34 +147,6 @@ int Session::getUrlencodedValue(const char* data, char* item, int maxSize,
 }
 
 void Session::postChainTransaction() {
-  http::request<http::string_body>&& req = std::move(req_);
-  auto const bad_request = [&req](boost::beast::string_view why) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req.version()};
-    res.keep_alive(req.keep_alive());
-    res.body() = "{\"error\":\"" + why.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  };
-  auto const server_error = [&req](boost::beast::string_view what) {
-    http::response<http::string_body> res{http::status::internal_server_error,
-                                          req.version()};
-    res.keep_alive(req.keep_alive());
-    res.body() = "{\"error\":\"" + what.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  };
-  auto const ok = [&req]() {
-    http::response<http::string_body> res{http::status::ok, req.version()};
-    res.keep_alive(req.keep_alive());
-    res.body() = "{}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  };
-
   std::stringstream ss(req_.body());
   boost::property_tree::ptree ptree;
   blockmirror::chain::TransactionSignedPtr transaction =
@@ -193,38 +167,10 @@ void Session::postChainTransaction() {
     return lambda_(bad_request("repeat put, modified!"));
   }
 
-  return lambda_(ok());
+  return lambda_(ok("{}"));
 }
 
 void Session::postChainData() {
-  http::request<http::string_body>&& req = std::move(req_);
-  auto const bad_request = [&req](boost::beast::string_view why) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req.version()};
-    res.keep_alive(req.keep_alive());
-    res.body() = "{\"error\":\"" + why.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  };
-  auto const server_error = [&req](boost::beast::string_view what) {
-    http::response<http::string_body> res{http::status::internal_server_error,
-                                          req.version()};
-    res.keep_alive(req.keep_alive());
-    res.body() = "{\"error\":\"" + what.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  };
-  auto const ok = [&req]() {
-    http::response<http::string_body> res{http::status::ok, req.version()};
-    res.keep_alive(req.keep_alive());
-    res.body() = "{}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  };
-
   std::stringstream ss(req_.body());
   boost::property_tree::ptree ptree;
   chain::DataSignedPtr dataSigned = std::make_shared<chain::DataSigned>();
@@ -253,51 +199,28 @@ void Session::postChainData() {
     return lambda_(bad_request("repeat put, modified!"));
   }
 
-  return lambda_(ok());
+  return lambda_(ok("{}"));
 }
 
-void Session::getNodeStop(const char*)
-{
-	// 鉴权
-	std::string str = boost::lexical_cast<std::string>(req_[http::field::authorization]);
-	
-	http::response<http::string_body> res{ http::status::ok, req_.version() };
-	res.keep_alive(req_.keep_alive());
-	//res.body() = "{}";
-	res.body() = "i received your authorization: " + str;
-	res.prepare_payload();
-	return lambda_(std::move(res), true);
+void Session::getNodeStop(const char*) {
+  // 鉴权
+  std::string str =
+      boost::lexical_cast<std::string>(req_[http::field::authorization]);
+  return lambda_(ok("{}"), true);
 }
 
 void Session::getNodeVersion(const char*) {
-  http::response<http::string_body> res{http::status::ok, req_.version()};
-  res.keep_alive(req_.keep_alive());
-  res.body() = "{\"version\":0}";
-  res.prepare_payload();
-  res.set(http::field::content_type, "application/json");
-  
-  return lambda_(std::move(res));
+  return lambda_(ok("{\"version\":0}"));
 }
 
 void Session::getNodePeers(const char*) {
-  http::response<http::string_body> res{http::status::ok, req_.version()};
-  res.keep_alive(req_.keep_alive());
-  res.body() = "";
-  res.set(http::field::content_type, "application/json");
-  res.prepare_payload();
-  return lambda_(std::move(res));
+  return lambda_(ok("{}"));
 }
 
 void Session::getNodeConnect(const char* arg) {
 
   if (!arg) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"omit argument\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(bad_request("omit argument"));
   }
 
   // 需要鉴权
@@ -306,45 +229,24 @@ void Session::getNodeConnect(const char* arg) {
   getUrlencodedValue(arg, "port", sizeof(port) - 1, port);
   getUrlencodedValue(arg, "host", sizeof(host) - 1, host);
 
-  http::response<http::string_body> res{http::status::ok, req_.version()};
-  res.keep_alive(req_.keep_alive());
-  res.body() = "{}";
-  res.set(http::field::content_type, "application/json");
-  res.prepare_payload();
-  return lambda_(std::move(res));
+  return lambda_(ok("{}"));
 }
 
 void Session::getChainStatus(const char*) {
   chain::BlockPtr& head = _context.getHead();
   if (head == nullptr) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"not_found\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(bad_request("not found"));
   }
 
-  http::response<http::string_body> res{http::status::ok, req_.version()};
-  res.keep_alive(req_.keep_alive());
-  res.body() = "{\"height\":\"" +
-               boost::lexical_cast<std::string>(head->getHeight()) + "\"}";
-  res.set(http::field::content_type, "application/json");
-  res.prepare_payload();
-  return lambda_(std::move(res));
+  return lambda_(ok("{\"height\":\"" +
+                    boost::lexical_cast<std::string>(head->getHeight()) +
+                    "\"}"));
 }
 
 void Session::getChainLast(const char*) {
   chain::BlockPtr& head = _context.getHead();
   if (head == nullptr) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"not_found\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(bad_request("not found"));
   }
 
   std::ostringstream oss;
@@ -364,35 +266,13 @@ void Session::getChainLast(const char*) {
     return lambda_(std::move(res));
   }
 
-  http::response<http::string_body> res{http::status::ok, req_.version()};
-  res.keep_alive(req_.keep_alive());
-  res.body() = oss.str();
-  res.set(http::field::content_type, "application/json");
-  res.prepare_payload();
-  return lambda_(std::move(res));
+  return lambda_(ok(oss.str()));
 }
 
 void Session::getChainBlock(const char* arg) {
   if (!arg) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"omit argument\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(bad_request("omit argument"));
   }
-
-  http::request<http::string_body>&& req = std::move(req_);
-  auto const server_error = [&req](boost::beast::string_view what) {
-    http::response<http::string_body> res{http::status::internal_server_error,
-                                          req.version()};
-    res.keep_alive(req.keep_alive());
-    res.body() = "{\"error\":\"" + what.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  };
 
   Hash256 key;
   try {
@@ -404,13 +284,7 @@ void Session::getChainBlock(const char* arg) {
   store::BlockStore& bs = _context.getBlockStore();
   chain::BlockPtr block = bs.getBlock(key);
   if (block == nullptr) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"not_found\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(ok("{}"));
   }
 
   std::ostringstream oss;
@@ -419,26 +293,15 @@ void Session::getChainBlock(const char* arg) {
   try {
     archive << block;
   } catch (std::exception& e) {
-    lambda_(server_error(e.what()));
+    return lambda_(server_error(e.what()));
   }
 
-  http::response<http::string_body> res{http::status::ok, req_.version()};
-  res.keep_alive(req_.keep_alive());
-  res.body() = oss.str();
-  res.set(http::field::content_type, "application/json");
-  res.prepare_payload();
-  return lambda_(std::move(res));
+  return lambda_(ok(oss.str()));
 }
 
 void Session::getChainTransaction(const char* arg) {
   if (!arg) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"omit argument\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(bad_request("omit argument"));
   }
 
   Hash256Ptr h = std::make_shared<Hash256>(boost::lexical_cast<Hash256>(arg));
@@ -446,13 +309,7 @@ void Session::getChainTransaction(const char* arg) {
   chain::TransactionSignedPtr t = ts.getTransaction(h);
 
   if (t == nullptr) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"not_found\"}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(ok("{}"));
   }
 
   std::ostringstream oss;
@@ -472,34 +329,18 @@ void Session::getChainTransaction(const char* arg) {
     return lambda_(std::move(res));
   }
 
-  http::response<http::string_body> res{http::status::ok, req_.version()};
-  res.keep_alive(req_.keep_alive());
-  res.body() = oss.str();
-  res.set(http::field::content_type, "application/json");
-  res.prepare_payload();
-  return lambda_(std::move(res));
+  return lambda_(ok(oss.str()));
 }
 
 void Session::getChainFormat(const char* arg) {
   if (!arg) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"omit argument\"}";
-    res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(bad_request("omit argument"));
   }
 
   store::FormatStore& fs = _context.getFormatStore();
   store::NewFormatPtr format = fs.query(arg);
   if (!format) {
-    http::response<http::string_body> res{http::status::ok, req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(ok("{}"));
   }
 
   std::ostringstream oss;
@@ -519,33 +360,18 @@ void Session::getChainFormat(const char* arg) {
     return lambda_(std::move(res));
   }
 
-  http::response<http::string_body> res{http::status::ok, req_.version()};
-  res.keep_alive(req_.keep_alive());
-  res.body() = oss.str();
-  res.prepare_payload();
-  return lambda_(std::move(res));
+  return lambda_(ok(oss.str()));
 }
 
 void Session::getChainDatatypes(const char* arg) {
   if (!arg) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"omit argument\"}";
-    res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(bad_request("omit argument"));
   }
 
   store::DataStore& ds = _context.getDataStore();
   store::NewDataPtr data = ds.query(arg);
   if (!data) {
-    http::response<http::string_body> res{http::status::ok, req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{}";
-	res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    return lambda_(ok("{}"));
   }
 
   std::ostringstream oss;
@@ -565,12 +391,7 @@ void Session::getChainDatatypes(const char* arg) {
     return lambda_(std::move(res));
   }
 
-  http::response<http::string_body> res{http::status::ok, req_.version()};
-  res.keep_alive(req_.keep_alive());
-  res.body() = oss.str();
-  res.set(http::field::content_type, "application/json");
-  res.prepare_payload();
-  return lambda_(std::move(res));
+  return lambda_(ok(oss.str()));
 }
 
 void Session::getChainBps(const char*) {
@@ -593,12 +414,7 @@ void Session::getChainBps(const char*) {
     return lambda_(std::move(res));
   }
 
-  http::response<http::string_body> res{http::status::ok, req_.version()};
-  res.keep_alive(req_.keep_alive());
-  res.body() = oss.str();
-  res.set(http::field::content_type, "application/json");
-  res.prepare_payload();
-  return lambda_(std::move(res));
+  return lambda_(ok(oss.str()));
 }
 
 void Session::handle_file(http::request<http::string_body>&& req) {

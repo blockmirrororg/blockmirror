@@ -73,6 +73,35 @@ class Session : public std::enable_shared_from_this<Session> {
     }
   }
 
+  http::response<http::string_body> bad_request(std::string why) {
+    http::response<http::string_body> res{http::status::bad_request,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"" + why + "\"}";
+    res.set(http::field::content_type, "application/json");
+    res.prepare_payload();
+    return res;
+  }
+
+  http::response<http::string_body> server_error(std::string what) {
+    http::response<http::string_body> res{http::status::internal_server_error,
+                                          req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = "{\"error\":\"" + what + "\"}";
+    res.set(http::field::content_type, "application/json");
+    res.prepare_payload();
+    return res;
+  }
+
+  http::response<http::string_body> ok(std::string what) {
+    http::response<http::string_body> res{http::status::ok, req_.version()};
+    res.keep_alive(req_.keep_alive());
+    res.body() = what;
+    res.set(http::field::content_type, "application/json");
+    res.prepare_payload();
+    return res;
+  }
+
  public:
   explicit Session(tcp::socket socket, blockmirror::chain::Context& context);
 

@@ -1,14 +1,14 @@
 
 #include <blockmirror/rpc/listener.h>
 #include <blockmirror/rpc/session.h>
+#include <boost/asio/strand.hpp>
 
 namespace blockmirror {
 namespace rpc {
 
 Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint,
                    blockmirror::chain::Context& context)
-    : acceptor_(ioc), socket_(ioc), _context(context) {
-
+    : acceptor_(ioc), _context(context) {
   /*HttpHandler& httpHandler = HttpHandler::get();
   httpHandler.register_target("/node/stop", new GetNodeStop);
   httpHandler.register_target("/node/version", new GetNodeVersion);
@@ -52,38 +52,48 @@ Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint,
   boost::system::error_code ec;
   acceptor_.open(endpoint.protocol(), ec);
   if (ec) {
+    B_ERR("open {}", ec.message());
     return;
   }
 
   acceptor_.set_option(boost::asio::socket_base::reuse_address(true), ec);
   if (ec) {
+    B_ERR("set_option {}", ec.message());
     return;
   }
 
   acceptor_.bind(endpoint, ec);
   if (ec) {
+    B_ERR("bind {}", ec.message());
     return;
   }
 
   acceptor_.listen(boost::asio::socket_base::max_listen_connections, ec);
   if (ec) {
+    B_ERR("listen {}", ec.message());
     return;
   }
 }
 
 void Listener::run() {
-  if (!acceptor_.is_open()) return;
+  if (!acceptor_.is_open()) {
+    throw std::runtime_error("!acceptor_.is_open()");
+  }
   do_accept();
 }
 
 void Listener::do_accept() {
   acceptor_.async_accept(
-      socket_, std::bind(&Listener::on_accept, this, std::placeholders::_1));
+      boost::asio::make_strand(acceptor_.get_executor()),
+      boost::beast::bind_front_handler(&Listener::on_accept, this));
 }
 
-void Listener::on_accept(boost::system::error_code ec) {
+void Listener::on_accept(boost::system::error_code ec, tcp::socket socket) {
   if (!ec) {
-    std::make_shared<Session>(std::move(socket_), _context)->run();
+    B_LOG("new connection {}", socket.remote_endpoint().address().to_string());
+    std::make_shared<Session>(std::move(socket), _context)->run();
+  } else {
+    B_ERR("accept error {}", ec.message());
   }
 
   do_accept();

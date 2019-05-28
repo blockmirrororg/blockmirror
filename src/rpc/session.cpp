@@ -2,15 +2,14 @@
 #include <blockmirror/chain/context.h>
 #include <blockmirror/chain/transaction.h>
 #include <blockmirror/rpc/session.h>
+#include <blockmirror/serialization/binary_oarchive.h>
 #include <blockmirror/serialization/json_oarchive.h>
 #include <blockmirror/serialization/ptree_iarchive.h>
 #include <blockmirror/server.h>
 #include <blockmirror/store/data_store.h>
 #include <blockmirror/store/transaction_store.h>
-#include <blockmirror/serialization/binary_oarchive.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/algorithm/hex.hpp>
 
 namespace blockmirror {
 namespace rpc {
@@ -19,8 +18,7 @@ std::map<std::string, Session::GetMethodFuncPtr> Session::_getMethodPtrs;
 std::map<std::string, Session::PostMethodFuncPtr> Session::_postMethodPtrs;
 
 Session::Session(tcp::socket socket, blockmirror::chain::Context& context)
-    : socket_(std::move(socket)),
-      strand_(socket_.get_executor()),
+    : stream_(std::move(socket)),
       lambda_(*this),
       _context(context) {}
 
@@ -28,12 +26,11 @@ void Session::run() { do_read(); }
 
 void Session::do_read() {
   req_ = {};
+  stream_.expires_after(std::chrono::seconds(30));
 
   http::async_read(
-      socket_, buffer_, req_,
-      boost::asio::bind_executor(
-          strand_, std::bind(&Session::on_read, shared_from_this(),
-                             std::placeholders::_1, std::placeholders::_2)));
+      stream_, buffer_, req_,
+      boost::beast::bind_front_handler(&Session::on_read, shared_from_this()));
 }
 
 void Session::on_read(boost::system::error_code ec,
@@ -49,34 +46,33 @@ void Session::on_read(boost::system::error_code ec,
 
   if (ec) return;
 
-  handle_request(std::move(req_));
+  handle_request();
 }
 
-void Session::on_write(boost::system::error_code ec,
-                       std::size_t bytes_transferred, bool close,
-                       bool stopService) {
+void Session::on_write(bool close, beast::error_code ec,
+                       std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
-  if (ec)
-  {
-	  B_WARN("http on write {}", ec.message());
-	  return;
-  }
-
-  if (stopService) {
-    blockmirror::Server::get().stop();
+  if (ec) {
+    B_WARN("http on write {}", ec.message());
     return;
   }
 
-  if (close) return do_close();
+  if (close) {
+    do_close();
+    return;
+  }
+
+  res_ = nullptr;
 
   do_read();
 }
 
 void Session::do_close() {
   B_LOG("close connection {}", socket_.remote_endpoint().address().to_string());
+
   boost::system::error_code ec;
-  socket_.shutdown(tcp::socket::shutdown_send, ec);
+  stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
 }
 
 void Session::handle_request(http::request<http::string_body>&& req) {
@@ -156,6 +152,7 @@ void Session::postChainTransaction() {
     blockmirror::serialization::PTreeIArchive archive(ptree);
     archive >> transaction;
   } catch (std::exception& e) {
+    B_LOG("{}", e.what());
     return lambda_(server_error(e.what()));
   }
 
@@ -218,14 +215,13 @@ void Session::getNodePeers(const char*) {
 }
 
 void Session::getNodeConnect(const char* arg) {
-
   if (!arg) {
     return lambda_(bad_request("omit argument"));
   }
 
   // 需要鉴权
-  char host[50] = { 0 };
-  char port[50] = { 0 };
+  char host[50] = {0};
+  char port[50] = {0};
   getUrlencodedValue(arg, "port", sizeof(port) - 1, port);
   getUrlencodedValue(arg, "host", sizeof(host) - 1, host);
 
@@ -261,7 +257,7 @@ void Session::getChainLast(const char*) {
     res.body() = "{\"error\":\"";
     res.body() += e.what();
     res.body() += "\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
@@ -324,7 +320,7 @@ void Session::getChainTransaction(const char* arg) {
     res.body() = "{\"error\":\"";
     res.body() += e.what();
     res.body() += "\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }

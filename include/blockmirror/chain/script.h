@@ -148,7 +148,7 @@ class NewData { // 表示数据类型
 
  public:
   NewData() = default;
-  NewData(const NewData &o) : format(o.format), name(o.name) {}
+  NewData(const NewData &o) : format(o.format), name(o.name),desc(o.desc) {}
   NewData(const std::string &f, const std::string &n, const std::string &d)
       : format(f), name(n), desc(d) {}
 

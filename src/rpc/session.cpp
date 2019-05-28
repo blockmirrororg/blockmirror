@@ -2,15 +2,14 @@
 #include <blockmirror/chain/context.h>
 #include <blockmirror/chain/transaction.h>
 #include <blockmirror/rpc/session.h>
+#include <blockmirror/serialization/binary_oarchive.h>
 #include <blockmirror/serialization/json_oarchive.h>
 #include <blockmirror/serialization/ptree_iarchive.h>
 #include <blockmirror/server.h>
 #include <blockmirror/store/data_store.h>
 #include <blockmirror/store/transaction_store.h>
-#include <blockmirror/serialization/binary_oarchive.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/algorithm/hex.hpp>
 
 namespace blockmirror {
 namespace rpc {
@@ -19,8 +18,7 @@ std::map<std::string, Session::GetMethodFuncPtr> Session::_getMethodPtrs;
 std::map<std::string, Session::PostMethodFuncPtr> Session::_postMethodPtrs;
 
 Session::Session(tcp::socket socket, blockmirror::chain::Context& context)
-    : socket_(std::move(socket)),
-      strand_(socket_.get_executor()),
+    : stream_(std::move(socket)),
       lambda_(*this),
       _context(context) {}
 
@@ -28,54 +26,65 @@ void Session::run() { do_read(); }
 
 void Session::do_read() {
   req_ = {};
+  stream_.expires_after(std::chrono::seconds(30));
 
   http::async_read(
-      socket_, buffer_, req_,
-      boost::asio::bind_executor(
-          strand_, std::bind(&Session::on_read, shared_from_this(),
-                             std::placeholders::_1, std::placeholders::_2)));
+      stream_, buffer_, req_,
+      boost::beast::bind_front_handler(&Session::on_read, shared_from_this()));
 }
 
 void Session::on_read(boost::system::error_code ec,
                       std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
-  if (ec == http::error::end_of_stream) return do_close();
+  if (ec) {
+    B_WARN("http on read {} {}", ec.message(), req_.body());
+  }
+
+  if (ec == http::error::end_of_stream) {
+    return do_close();
+  }
 
   if (ec) return;
 
-  handle_request(std::move(req_));
+  handle_request();
 }
 
-void Session::on_write(boost::system::error_code ec,
-                       std::size_t bytes_transferred, bool close,
-                       bool stopService) {
+void Session::on_write(bool close, beast::error_code ec,
+                       std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
-  if (ec) return;
-
-  if (stopService) {
-    blockmirror::Server::get().stop();
+  if (ec) {
+    B_WARN("http on write {}", ec.message());
     return;
   }
 
-  if (close) return do_close();
+  if (close) {
+    do_close();
+    return;
+  }
+
+  res_ = nullptr;
 
   do_read();
 }
 
 void Session::do_close() {
+  B_LOG("close connection {}",
+        stream_.socket().remote_endpoint().address().to_string());
   boost::system::error_code ec;
-  socket_.shutdown(tcp::socket::shutdown_send, ec);
+  stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
 }
 
-void Session::handle_request(http::request<http::string_body>&& req) {
+void Session::handle_request() {
+  B_LOG("handle http request {} \n {}", req_.target().to_string(), req_.body());
+  auto &req = req_;
   auto const bad_request = [&req](boost::beast::string_view why) {
     http::response<http::string_body> res{http::status::bad_request,
                                           req.version()};
     res.keep_alive(req.keep_alive());
-	res.body() = "{\"error\":\"" + why.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
+    res.body() = "{\"error\":\"" + why.to_string() + "\"}";
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return res;
   };
@@ -151,7 +160,7 @@ void Session::postChainTransaction() {
                                           req.version()};
     res.keep_alive(req.keep_alive());
     res.body() = "{\"error\":\"" + why.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return res;
   };
@@ -160,7 +169,7 @@ void Session::postChainTransaction() {
                                           req.version()};
     res.keep_alive(req.keep_alive());
     res.body() = "{\"error\":\"" + what.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return res;
   };
@@ -168,7 +177,7 @@ void Session::postChainTransaction() {
     http::response<http::string_body> res{http::status::ok, req.version()};
     res.keep_alive(req.keep_alive());
     res.body() = "{}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return res;
   };
@@ -182,6 +191,7 @@ void Session::postChainTransaction() {
     blockmirror::serialization::PTreeIArchive archive(ptree);
     archive >> transaction;
   } catch (std::exception& e) {
+    B_LOG("{}", e.what());
     return lambda_(server_error(e.what()));
   }
 
@@ -203,7 +213,7 @@ void Session::postChainData() {
                                           req.version()};
     res.keep_alive(req.keep_alive());
     res.body() = "{\"error\":\"" + why.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return res;
   };
@@ -212,7 +222,7 @@ void Session::postChainData() {
                                           req.version()};
     res.keep_alive(req.keep_alive());
     res.body() = "{\"error\":\"" + what.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return res;
   };
@@ -220,7 +230,7 @@ void Session::postChainData() {
     http::response<http::string_body> res{http::status::ok, req.version()};
     res.keep_alive(req.keep_alive());
     res.body() = "{}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return res;
   };
@@ -256,17 +266,20 @@ void Session::postChainData() {
   return lambda_(ok());
 }
 
-void Session::getNodeStop(const char*)
-{
-	// 鉴权
-	std::string str = boost::lexical_cast<std::string>(req_[http::field::authorization]);
-	
-	http::response<http::string_body> res{ http::status::ok, req_.version() };
-	res.keep_alive(req_.keep_alive());
-	//res.body() = "{}";
-	res.body() = "i received your authorization: " + str;
-	res.prepare_payload();
-	return lambda_(std::move(res), true);
+void Session::getNodeStop(const char*) {
+  // 鉴权
+  std::string str =
+      boost::lexical_cast<std::string>(req_[http::field::authorization]);
+
+  http::response<http::string_body> res{http::status::ok, req_.version()};
+  res.keep_alive(req_.keep_alive());
+  // res.body() = "{}";
+  res.body() = "i received your authorization: " + str;
+  res.prepare_payload();
+
+  // _context.close(); 直接发个信号算了
+
+  return lambda_(std::move(res));
 }
 
 void Session::getNodeVersion(const char*) {
@@ -275,7 +288,7 @@ void Session::getNodeVersion(const char*) {
   res.body() = "{\"version\":0}";
   res.prepare_payload();
   res.set(http::field::content_type, "application/json");
-  
+
   return lambda_(std::move(res));
 }
 
@@ -289,20 +302,19 @@ void Session::getNodePeers(const char*) {
 }
 
 void Session::getNodeConnect(const char* arg) {
-
   if (!arg) {
     http::response<http::string_body> res{http::status::bad_request,
                                           req_.version()};
     res.keep_alive(req_.keep_alive());
     res.body() = "{\"error\":\"omit argument\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
 
   // 需要鉴权
-  char host[50] = { 0 };
-  char port[50] = { 0 };
+  char host[50] = {0};
+  char port[50] = {0};
   getUrlencodedValue(arg, "port", sizeof(port) - 1, port);
   getUrlencodedValue(arg, "host", sizeof(host) - 1, host);
 
@@ -321,7 +333,7 @@ void Session::getChainStatus(const char*) {
                                           req_.version()};
     res.keep_alive(req_.keep_alive());
     res.body() = "{\"error\":\"not_found\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
@@ -342,7 +354,7 @@ void Session::getChainLast(const char*) {
                                           req_.version()};
     res.keep_alive(req_.keep_alive());
     res.body() = "{\"error\":\"not_found\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
@@ -359,7 +371,7 @@ void Session::getChainLast(const char*) {
     res.body() = "{\"error\":\"";
     res.body() += e.what();
     res.body() += "\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
@@ -378,7 +390,7 @@ void Session::getChainBlock(const char* arg) {
                                           req_.version()};
     res.keep_alive(req_.keep_alive());
     res.body() = "{\"error\":\"omit argument\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
@@ -389,7 +401,7 @@ void Session::getChainBlock(const char* arg) {
                                           req.version()};
     res.keep_alive(req.keep_alive());
     res.body() = "{\"error\":\"" + what.to_string() + "\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return res;
   };
@@ -408,7 +420,7 @@ void Session::getChainBlock(const char* arg) {
                                           req_.version()};
     res.keep_alive(req_.keep_alive());
     res.body() = "{\"error\":\"not_found\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
@@ -436,7 +448,7 @@ void Session::getChainTransaction(const char* arg) {
                                           req_.version()};
     res.keep_alive(req_.keep_alive());
     res.body() = "{\"error\":\"omit argument\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
@@ -450,7 +462,7 @@ void Session::getChainTransaction(const char* arg) {
                                           req_.version()};
     res.keep_alive(req_.keep_alive());
     res.body() = "{\"error\":\"not_found\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
@@ -467,7 +479,7 @@ void Session::getChainTransaction(const char* arg) {
     res.body() = "{\"error\":\"";
     res.body() += e.what();
     res.body() += "\"}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
@@ -497,7 +509,7 @@ void Session::getChainFormat(const char* arg) {
     http::response<http::string_body> res{http::status::ok, req_.version()};
     res.keep_alive(req_.keep_alive());
     res.body() = "{}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }
@@ -543,7 +555,7 @@ void Session::getChainDatatypes(const char* arg) {
     http::response<http::string_body> res{http::status::ok, req_.version()};
     res.keep_alive(req_.keep_alive());
     res.body() = "{}";
-	res.set(http::field::content_type, "application/json");
+    res.set(http::field::content_type, "application/json");
     res.prepare_payload();
     return lambda_(std::move(res));
   }

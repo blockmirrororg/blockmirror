@@ -24,24 +24,21 @@ class Session : public std::enable_shared_from_this<Session> {
     explicit send_lambda(Session& self) : self_(self) {}
 
     template <bool isRequest, class Body, class Fields>
-    void operator()(http::message<isRequest, Body, Fields>&& msg,
-                    bool stopService = false) const {
+    void operator()(http::message<isRequest, Body, Fields>&& msg) const {
+      msg.keep_alive(true);
       auto sp = std::make_shared<http::message<isRequest, Body, Fields>>(
           std::move(msg));
       self_.res_ = sp;
+      B_LOG("replay {}", sp->need_eof());
 
       http::async_write(
-          self_.socket_, *sp,
-          boost::asio::bind_executor(
-              self_.strand_,
-              std::bind(&Session::on_write, self_.shared_from_this(),
-                        std::placeholders::_1, std::placeholders::_2,
-                        !sp->keep_alive(), stopService)));
+          self_.stream_, *sp,
+          beast::bind_front_handler(&Session::on_write,
+                                    self_.shared_from_this(), sp->need_eof()));
     }
   };
 
-  tcp::socket socket_;
-  boost::asio::strand<tcp::socket::executor_type> strand_;
+  boost::beast::tcp_stream stream_;
   boost::beast::flat_buffer buffer_;
   http::request<http::string_body> req_;
   std::shared_ptr<void> res_;
@@ -79,8 +76,8 @@ class Session : public std::enable_shared_from_this<Session> {
   void run();
   void do_read();
   void on_read(boost::system::error_code ec, std::size_t bytes_transferred);
-  void on_write(boost::system::error_code ec, std::size_t bytes_transferred,
-                bool close, bool stopService);
+  void on_write(bool close, beast::error_code ec,
+                std::size_t bytes_transferred);
   void do_close();
 
   // post
@@ -100,7 +97,7 @@ class Session : public std::enable_shared_from_this<Session> {
   void getChainBps(const char*);
 
  private:
-  void handle_request(http::request<http::string_body>&& req);
+  void handle_request();
 
   int getUrlencodedValue(const char* data, char* item, int maxSize, char* val);
 

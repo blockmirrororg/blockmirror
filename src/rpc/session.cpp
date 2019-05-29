@@ -101,9 +101,9 @@ void Session::handle_request() {
     (this->*funcPtr)();
 
   } else if (req_.method() == http::verb::get) {
-    if (req_.target().find(".") != std::string::npos) {
+    /*if (req_.target().find(".") != std::string::npos) {
       handle_file(std::move(req_));
-    } else {
+    } else {*/
       std::string strTarget = req_.target().to_string();
       const char* target = strTarget.c_str();
       char* ret = (char*)strchr(target, '?');
@@ -120,7 +120,7 @@ void Session::handle_request() {
       } else {
         (this->*funcPtr)(nullptr);
       }
-    }
+    /*}*/
 
   } else {
     return lambda_(bad_request("Illegal request-method"));
@@ -169,13 +169,18 @@ void Session::postChainTransaction() {
   } catch (std::exception& e) {
     B_LOG("{}", e.what());
     return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
   }
 
   if (!_context.check(transaction)) {
+    B_LOG("transaction check failed");
     return lambda_(bad_request("check failed"));
   }
   store::TransactionStore& ts = _context.getTransactionStore();
   if (!ts.add(transaction)) {
+    B_LOG("repeat put, modified!");
     return lambda_(bad_request("repeat put, modified!"));
   }
 
@@ -192,10 +197,15 @@ void Session::postChainData() {
     blockmirror::serialization::PTreeIArchive archive(ptree);
     archive >> data;
   } catch (std::exception& e) {
+    B_LOG("{}", e.what());
     return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
   }
 
   if (!_context.check(data)) {
+    B_LOG("data check failed");
     return lambda_(bad_request("check failed"));
   }
 
@@ -204,10 +214,15 @@ void Session::postChainData() {
     boost::algorithm::unhex(globalConfig.miner_privkey, priv.begin());
     dataSigned->sign(priv, _context.getHead()->getHeight());
   } catch (std::exception& e) {
+    B_LOG("{}", e.what());
     return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
   }
 
   if (!_context.getDataSignatureStore().add(dataSigned)) {
+    B_LOG("repeat put, modified!");
     return lambda_(bad_request("repeat put, modified!"));
   }
 
@@ -231,6 +246,7 @@ void Session::getNodePeers(const char*) {
 
 void Session::getNodeConnect(const char* arg) {
   if (!arg) {
+    B_LOG("omit argument");
     return lambda_(bad_request("omit argument"));
   }
 
@@ -246,6 +262,7 @@ void Session::getNodeConnect(const char* arg) {
 void Session::getChainStatus(const char*) {
   chain::BlockPtr& head = _context.getHead();
   if (head == nullptr) {
+    B_LOG("head not found");
     return lambda_(bad_request("not found"));
   }
 
@@ -257,6 +274,7 @@ void Session::getChainStatus(const char*) {
 void Session::getChainLast(const char*) {
   chain::BlockPtr& head = _context.getHead();
   if (head == nullptr) {
+    B_LOG("head not found");
     return lambda_(bad_request("not found"));
   }
 
@@ -266,15 +284,11 @@ void Session::getChainLast(const char*) {
   try {
     archive << head;
   } catch (std::exception& e) {
-    http::response<http::string_body> res{http::status::internal_server_error,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"";
-    res.body() += e.what();
-    res.body() += "\"}";
-    res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    B_LOG("{}", e.what());
+    return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
   }
 
   return lambda_(ok(oss.str()));
@@ -282,6 +296,7 @@ void Session::getChainLast(const char*) {
 
 void Session::getChainBlock(const char* arg) {
   if (!arg) {
+    B_LOG("omit argument");
     return lambda_(bad_request("omit argument"));
   }
 
@@ -289,7 +304,11 @@ void Session::getChainBlock(const char* arg) {
   try {
     boost::algorithm::unhex(arg, key.begin());
   } catch (std::exception& e) {
+    B_LOG("{}", e.what());
     return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
   }
 
   store::BlockStore& bs = _context.getBlockStore();
@@ -304,7 +323,11 @@ void Session::getChainBlock(const char* arg) {
   try {
     archive << block;
   } catch (std::exception& e) {
+    B_LOG("{}", e.what());
     return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
   }
 
   return lambda_(ok(oss.str()));
@@ -312,12 +335,23 @@ void Session::getChainBlock(const char* arg) {
 
 void Session::getChainTransaction(const char* arg) {
   if (!arg) {
+    B_LOG("omit argument");
     return lambda_(bad_request("omit argument"));
   }
 
-  Hash256Ptr h = std::make_shared<Hash256>(boost::lexical_cast<Hash256>(arg));
+  Hash256Ptr key;
+  try {
+    boost::algorithm::unhex(arg, key->begin());
+  } catch (std::exception& e) {
+    B_LOG("{}", e.what());
+    return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
+  }
+
   store::TransactionStore& ts = _context.getTransactionStore();
-  chain::TransactionSignedPtr t = ts.getTransaction(h);
+  chain::TransactionSignedPtr t = ts.getTransaction(key);
 
   if (t == nullptr) {
     return lambda_(ok("{}"));
@@ -329,15 +363,11 @@ void Session::getChainTransaction(const char* arg) {
   try {
     archive << t;
   } catch (std::exception& e) {
-    http::response<http::string_body> res{http::status::internal_server_error,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"";
-    res.body() += e.what();
-    res.body() += "\"}";
-    res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    B_LOG("{}", e.what());
+    return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
   }
 
   return lambda_(ok(oss.str()));
@@ -345,6 +375,7 @@ void Session::getChainTransaction(const char* arg) {
 
 void Session::getChainFormat(const char* arg) {
   if (!arg) {
+    B_LOG("omit argument");
     return lambda_(bad_request("omit argument"));
   }
 
@@ -360,15 +391,11 @@ void Session::getChainFormat(const char* arg) {
   try {
     archive << format;
   } catch (std::exception& e) {
-    http::response<http::string_body> res{http::status::internal_server_error,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"";
-    res.body() += e.what();
-    res.body() += "\"}";
-    res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    B_LOG("{}", e.what());
+    return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
   }
 
   return lambda_(ok(oss.str()));
@@ -376,6 +403,7 @@ void Session::getChainFormat(const char* arg) {
 
 void Session::getChainDatatypes(const char* arg) {
   if (!arg) {
+    B_LOG("omit argument");
     return lambda_(bad_request("omit argument"));
   }
 
@@ -391,15 +419,11 @@ void Session::getChainDatatypes(const char* arg) {
   try {
     archive << data;
   } catch (std::exception& e) {
-    http::response<http::string_body> res{http::status::internal_server_error,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"";
-    res.body() += e.what();
-    res.body() += "\"}";
-    res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    B_LOG("{}", e.what());
+    return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
   }
 
   return lambda_(ok(oss.str()));
@@ -414,15 +438,11 @@ void Session::getChainBps(const char*) {
   try {
     archive << bps;
   } catch (std::exception& e) {
-    http::response<http::string_body> res{http::status::internal_server_error,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"";
-    res.body() += e.what();
-    res.body() += "\"}";
-    res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return lambda_(std::move(res));
+    B_LOG("{}", e.what());
+    return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_LOG("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
   }
 
   return lambda_(ok(oss.str()));

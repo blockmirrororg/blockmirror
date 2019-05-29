@@ -18,6 +18,7 @@ class Listener {
   tcp::acceptor acceptor_;
   tcp::socket socket_;
   blockmirror::chain::Context &_context;
+  boost::asio::io_context &_ioc;
 
  public:
   Listener(boost::asio::io_context &ioc, tcp::endpoint endpoint,

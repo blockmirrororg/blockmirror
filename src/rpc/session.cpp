@@ -17,9 +17,9 @@ namespace rpc {
 std::map<std::string, Session::GetMethodFuncPtr> Session::_getMethodPtrs;
 std::map<std::string, Session::PostMethodFuncPtr> Session::_postMethodPtrs;
 
-Session::Session(tcp::socket socket, blockmirror::chain::Context& context)
+Session::Session(tcp::socket socket, blockmirror::chain::Context& context, boost::asio::io_context &ioc)
     : socket_(std::move(socket)),
-      strand_(socket_.get_executor()),
+      strand_(boost::asio::make_strand(ioc)),
       lambda_(*this),
       _context(context) {}
 

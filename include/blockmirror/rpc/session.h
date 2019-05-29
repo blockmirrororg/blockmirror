@@ -71,7 +71,7 @@ class Session : public std::enable_shared_from_this<Session> {
   http::response<http::string_body> ok(std::string what);
 
  public:
-  explicit Session(tcp::socket socket, blockmirror::chain::Context& context);
+  explicit Session(tcp::socket socket, blockmirror::chain::Context& context, boost::asio::io_context &ioc);
 
   void run();
   void do_read();

@@ -8,7 +8,7 @@ namespace rpc {
 
 Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint,
                    blockmirror::chain::Context& context)
-    : acceptor_(ioc), socket_(ioc), _context(context) {
+    : acceptor_(ioc), socket_(ioc), _context(context), _ioc(ioc) {
   /*HttpHandler& httpHandler = HttpHandler::get();
   httpHandler.register_target("/node/stop", new GetNodeStop);
   httpHandler.register_target("/node/version", new GetNodeVersion);
@@ -92,7 +92,7 @@ void Listener::do_accept() {
 void Listener::on_accept(boost::system::error_code ec/*, tcp::socket socket*/) {
   if (!ec) {
     B_LOG("new connection {}", socket_.remote_endpoint().address().to_string());
-    std::make_shared<Session>(std::move(socket_), _context)->run();
+    std::make_shared<Session>(std::move(socket_), _context, _ioc)->run();
   } else {
     B_ERR("accept error {}", ec.message());
   }

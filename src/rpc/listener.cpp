@@ -8,7 +8,7 @@ namespace rpc {
 
 Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint,
                    blockmirror::chain::Context& context)
-    : acceptor_(ioc), _context(context) {
+    : acceptor_(ioc), socket_(ioc), _context(context) {
   /*HttpHandler& httpHandler = HttpHandler::get();
   httpHandler.register_target("/node/stop", new GetNodeStop);
   httpHandler.register_target("/node/version", new GetNodeVersion);
@@ -83,15 +83,16 @@ void Listener::run() {
 }
 
 void Listener::do_accept() {
-  acceptor_.async_accept(
+  /*acceptor_.async_accept(
       boost::asio::make_strand(acceptor_.get_executor()),
-      boost::beast::bind_front_handler(&Listener::on_accept, this));
+      boost::beast::bind_front_handler(&Listener::on_accept, this));*/
+  acceptor_.async_accept(socket_, std::bind(&Listener::on_accept, this, std::placeholders::_1));
 }
 
-void Listener::on_accept(boost::system::error_code ec, tcp::socket socket) {
+void Listener::on_accept(boost::system::error_code ec/*, tcp::socket socket*/) {
   if (!ec) {
-    B_LOG("new connection {}", socket.remote_endpoint().address().to_string());
-    std::make_shared<Session>(std::move(socket), _context)->run();
+    B_LOG("new connection {}", socket_.remote_endpoint().address().to_string());
+    std::make_shared<Session>(std::move(socket_), _context)->run();
   } else {
     B_ERR("accept error {}", ec.message());
   }

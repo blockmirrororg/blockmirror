@@ -24,21 +24,31 @@ class Session : public std::enable_shared_from_this<Session> {
     explicit send_lambda(Session& self) : self_(self) {}
 
     template <bool isRequest, class Body, class Fields>
-    void operator()(http::message<isRequest, Body, Fields>&& msg) const {
+    void operator()(http::message<isRequest, Body, Fields>&& msg, bool stopService = false) const {
       msg.keep_alive(true);
       auto sp = std::make_shared<http::message<isRequest, Body, Fields>>(
           std::move(msg));
       self_.res_ = sp;
       B_LOG("replay {}", sp->need_eof());
 
-      http::async_write(
+      /*http::async_write(
           self_.stream_, *sp,
           beast::bind_front_handler(&Session::on_write,
-                                    self_.shared_from_this(), sp->need_eof()));
+                                    self_.shared_from_this(), sp->need_eof()));*/
+      http::async_write(
+          self_.socket_, *sp,
+          boost::asio::bind_executor(
+              self_.strand_,
+              std::bind(&Session::on_write, self_.shared_from_this(),
+                        std::placeholders::_1, std::placeholders::_2,
+                        !sp->keep_alive(), stopService)));
     }
   };
 
-  boost::beast::tcp_stream stream_;
+  //boost::beast::tcp_stream stream_;
+  tcp::socket socket_;
+  boost::asio::strand<boost::asio::io_context::executor_type> strand_;
+
   boost::beast::flat_buffer buffer_;
   http::request<http::string_body> req_;
   std::shared_ptr<void> res_;
@@ -53,51 +63,12 @@ class Session : public std::enable_shared_from_this<Session> {
   static std::map<std::string, GetMethodFuncPtr> _getMethodPtrs;
   static std::map<std::string, PostMethodFuncPtr> _postMethodPtrs;
 
-  static GetMethodFuncPtr getMethodFuncPtr(const char* target) {
-    auto pos = _getMethodPtrs.find(target);
-    if (pos != _getMethodPtrs.end()) {
-      return pos->second;
-    } else {
-      return nullptr;
-    }
-  }
-  static PostMethodFuncPtr postMethodFuncPtr(const char* target) {
-    auto pos = _postMethodPtrs.find(target);
-    if (pos != _postMethodPtrs.end()) {
-      return pos->second;
-    } else {
-      return nullptr;
-    }
-  }
+  static GetMethodFuncPtr getMethodFuncPtr(const char* target);
+  static PostMethodFuncPtr postMethodFuncPtr(const char* target);
 
-  http::response<http::string_body> bad_request(std::string why) {
-    http::response<http::string_body> res{http::status::bad_request,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"" + why + "\"}";
-    res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  }
-
-  http::response<http::string_body> server_error(std::string what) {
-    http::response<http::string_body> res{http::status::internal_server_error,
-                                          req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = "{\"error\":\"" + what + "\"}";
-    res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  }
-
-  http::response<http::string_body> ok(std::string what) {
-    http::response<http::string_body> res{http::status::ok, req_.version()};
-    res.keep_alive(req_.keep_alive());
-    res.body() = what;
-    res.set(http::field::content_type, "application/json");
-    res.prepare_payload();
-    return res;
-  }
+  http::response<http::string_body> bad_request(std::string why);
+  http::response<http::string_body> server_error(std::string what);
+  http::response<http::string_body> ok(std::string what);
 
  public:
   explicit Session(tcp::socket socket, blockmirror::chain::Context& context);
@@ -105,8 +76,8 @@ class Session : public std::enable_shared_from_this<Session> {
   void run();
   void do_read();
   void on_read(boost::system::error_code ec, std::size_t bytes_transferred);
-  void on_write(bool close, beast::error_code ec,
-                std::size_t bytes_transferred);
+  void on_write(beast::error_code ec, std::size_t bytes_transferred,
+                bool close, bool stopService);
   void do_close();
 
   // post

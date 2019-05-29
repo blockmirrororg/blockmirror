@@ -16,6 +16,7 @@ using tcp = boost::asio::ip::tcp;
 
 class Listener {
   tcp::acceptor acceptor_;
+  tcp::socket socket_;
   blockmirror::chain::Context &_context;
 
  public:
@@ -24,7 +25,7 @@ class Listener {
 
   void run();
   void do_accept();
-  void on_accept(boost::system::error_code ec, tcp::socket socket);
+  void on_accept(boost::system::error_code ec/*, tcp::socket socket*/);
 };
 
 }  // namespace rpc

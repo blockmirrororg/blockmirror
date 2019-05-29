@@ -18,7 +18,8 @@ std::map<std::string, Session::GetMethodFuncPtr> Session::_getMethodPtrs;
 std::map<std::string, Session::PostMethodFuncPtr> Session::_postMethodPtrs;
 
 Session::Session(tcp::socket socket, blockmirror::chain::Context& context)
-    : stream_(std::move(socket)),
+    : socket_(std::move(socket)),
+      strand_(socket_.get_executor()),
       lambda_(*this),
       _context(context) {}
 
@@ -26,11 +27,16 @@ void Session::run() { do_read(); }
 
 void Session::do_read() {
   req_ = {};
-  stream_.expires_after(std::chrono::seconds(30));
+  //stream_.expires_after(std::chrono::seconds(30));
 
-  http::async_read(
+  /*http::async_read(
       stream_, buffer_, req_,
-      boost::beast::bind_front_handler(&Session::on_read, shared_from_this()));
+      boost::beast::bind_front_handler(&Session::on_read, shared_from_this()));*/
+  http::async_read(
+      socket_, buffer_, req_,
+      boost::asio::bind_executor(
+          strand_, std::bind(&Session::on_read, shared_from_this(),
+                             std::placeholders::_1, std::placeholders::_2)));
 }
 
 void Session::on_read(boost::system::error_code ec,
@@ -49,12 +55,20 @@ void Session::on_read(boost::system::error_code ec,
   handle_request();
 }
 
-void Session::on_write(bool close, beast::error_code ec,
-                       std::size_t bytes_transferred) {
+//void Session::on_write(bool close, beast::error_code ec,
+//                       std::size_t bytes_transferred, bool stopService) {
+void Session::on_write(boost::system::error_code ec,
+                       std::size_t bytes_transferred, bool close,
+                       bool stopService) {
   boost::ignore_unused(bytes_transferred);
 
   if (ec) {
     B_WARN("http on write {}", ec.message());
+    return;
+  }
+
+  if (stopService) {
+    blockmirror::Server::get().stop();
     return;
   }
 
@@ -72,20 +86,21 @@ void Session::do_close() {
   B_LOG("close connection {}", socket_.remote_endpoint().address().to_string());
 
   boost::system::error_code ec;
-  stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
+  socket_.shutdown(tcp::socket::shutdown_send, ec);
+  //stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
 }
 
-void Session::handle_request(http::request<http::string_body>&& req) {
+void Session::handle_request() {
   B_LOG("handle http request {} \n {}", req_.target().to_string(), req_.body());
 
-  if (req.method() == http::verb::post) {
+  if (req_.method() == http::verb::post) {
     auto funcPtr = postMethodFuncPtr(req_.target().to_string().c_str());
     if (!funcPtr) {
       return lambda_(bad_request("Illegal request-target"));
     }
     (this->*funcPtr)();
 
-  } else if (req.method() == http::verb::get) {
+  } else if (req_.method() == http::verb::get) {
     if (req_.target().find(".") != std::string::npos) {
       handle_file(std::move(req_));
     } else {
@@ -517,6 +532,55 @@ std::string Session::path_cat(beast::string_view base,
   if (result.back() == path_separator) result.resize(result.size() - 1);
   result.append(path.data(), path.size());
   return result;
+}
+
+Session::GetMethodFuncPtr Session::getMethodFuncPtr(const char* target) {
+  auto pos = _getMethodPtrs.find(target);
+  if (pos != _getMethodPtrs.end()) {
+    return pos->second;
+  }
+  else {
+    return nullptr;
+  }
+}
+
+Session::PostMethodFuncPtr Session::postMethodFuncPtr(const char* target) {
+  auto pos = _postMethodPtrs.find(target);
+  if (pos != _postMethodPtrs.end()) {
+    return pos->second;
+  }
+  else {
+    return nullptr;
+  }
+}
+
+http::response<http::string_body> Session::bad_request(std::string why) {
+  http::response<http::string_body> res{http::status::bad_request,
+                                        req_.version()};
+  res.keep_alive(req_.keep_alive());
+  res.body() = "{\"error\":\"" + why + "\"}";
+  res.set(http::field::content_type, "application/json");
+  res.prepare_payload();
+  return res;
+}
+
+http::response<http::string_body> Session::server_error(std::string what) {
+  http::response<http::string_body> res{http::status::internal_server_error,
+                                        req_.version()};
+  res.keep_alive(req_.keep_alive());
+  res.body() = "{\"error\":\"" + what + "\"}";
+  res.set(http::field::content_type, "application/json");
+  res.prepare_payload();
+  return res;
+}
+
+http::response<http::string_body> Session::ok(std::string what) {
+  http::response<http::string_body> res{http::status::ok, req_.version()};
+  res.keep_alive(req_.keep_alive());
+  res.body() = what;
+  res.set(http::field::content_type, "application/json");
+  res.prepare_payload();
+  return res;
 }
 
 }  // namespace rpc

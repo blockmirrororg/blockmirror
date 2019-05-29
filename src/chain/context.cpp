@@ -486,7 +486,7 @@ bool Context::check(const chain::DataPtr& data) {
     return false;
   }
 
-  store::NewFormatPtr newFormat = _format.query(newData->getName());
+  store::NewFormatPtr newFormat = _format.query(newData->getFormat());
   if (!newFormat) {
     return false;
   }
@@ -515,11 +515,6 @@ bool Context::check(const chain::DataPtr& data) {
   if (dataSize != d.size() * sizeof(uint8_t)) {
     return false;
   }
-
-  chain::DataSignedPtr dataSingned =
-      std::make_shared<chain::DataSigned>(data->getName(), data->getData());
-  dataSingned->sign(globalConfig.miner_privkey, _head->getHeight());
-  _dataSignature.add(dataSingned);
 
   return true;
 }

@@ -6,16 +6,16 @@
 #include <mongocxx/instance.hpp>
 
 namespace blockmirror {
+
+namespace chain {
+class Context;
+}
+
 namespace store {
 
 class MongoStore {
  public:
   MongoStore();
-
-  static MongoStore& get() {
-    static MongoStore ms;
-    return ms;
-  }
 
   void save(chain::BlockPtr& block, chain::Context* context);
 

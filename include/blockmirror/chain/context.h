@@ -9,6 +9,7 @@
 #include <blockmirror/store/data_store.h>
 #include <blockmirror/store/format_store.h>
 #include <blockmirror/store/transaction_store.h>
+#include <blockmirror/store/mongo_store.h>
 
 namespace blockmirror {
 namespace chain {
@@ -24,6 +25,7 @@ class Context {
   store::FormatStore _format;
   store::TransactionStore _transaction;
   store::DataSignatureStore _dataSignature;
+  store::MongoStore _mongo;
   chain::BlockPtr _head;
  
   bool _loaded;
@@ -99,6 +101,7 @@ class Context {
   chain::BlockPtr& getHead() { return _head; }
   store::BlockStore& getBlockStore() { return _block; }
   store::FormatStore& getFormatStore() { return _format; }
+  store::MongoStore& getMongoStore() { return _mongo; }
 };
 
 }  // namespace chain

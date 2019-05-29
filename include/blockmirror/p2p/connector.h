@@ -3,7 +3,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <blockmirror/p2p/channel.h>
 
 namespace blockmirror {
 namespace p2p {
@@ -24,8 +23,7 @@ class Connector : public boost::enable_shared_from_this<Connector> {
   boost::asio::ip::tcp::endpoint endpoint_;
 
   boost::asio::deadline_timer timer_;
-  boost::asio::io_context& io_context_;
-  ChannelPtr _newChannel;
+  boost::asio::io_context& _ioContext;
 };
 
 }  // namespace p2p

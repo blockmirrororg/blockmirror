@@ -19,9 +19,18 @@ std::map<std::string, Session::PostMethodFuncPtr> Session::_postMethodPtrs;
 
 Session::Session(tcp::socket socket, blockmirror::chain::Context& context, boost::asio::io_context &ioc)
     : socket_(std::move(socket)),
-      strand_(boost::asio::make_strand(ioc)),
+
+
+#if BOOST_VERSION >= 107000
+  strand_(boost::asio::make_strand(ioc)),
+#else
+  strand_(socket_.get_executor()),
+#endif
+      
       lambda_(*this),
       _context(context) {}
+
+
 
 void Session::run() { do_read(); }
 

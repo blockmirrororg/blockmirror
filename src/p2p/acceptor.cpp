@@ -6,15 +6,15 @@ namespace blockmirror {
 namespace p2p {
 
 Acceptor::Acceptor(boost::asio::io_context& ioc, unsigned short port)
-    : io_context_(ioc),
-      acceptor_(io_context_, boost::asio::ip::tcp::endpoint(
+    : _ioContext(ioc),
+      _acceptor(_ioContext, boost::asio::ip::tcp::endpoint(
                                  boost::asio::ip::tcp::v4(), port)) {}
 
 void Acceptor::startAccept() {
-  _newChannel.reset(new Channel(io_context_));
-  acceptor_.async_accept(_newChannel->socket(),
+  /*_newChannel.reset(new Channel(_ioContext));
+  _acceptor.async_accept(_newChannel->socket(),
                          boost::bind(&Acceptor::handleAccept, this,
-                                     boost::asio::placeholders::error));
+                                     boost::asio::placeholders::error));*/
 }
 
 void Acceptor::handleAccept(const boost::system::error_code& e) {
@@ -22,11 +22,6 @@ void Acceptor::handleAccept(const boost::system::error_code& e) {
     _newChannel->start();
   }
 
-  startAccept();
-}
-
-void Acceptor::run() {
-  if (!acceptor_.is_open()) return;
   startAccept();
 }
 

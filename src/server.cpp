@@ -3,6 +3,7 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
+#include <blockmirror/store/mongo_store.h>
 
 namespace blockmirror {
 
@@ -54,8 +55,11 @@ void Server::produceBlock(const boost::system::error_code& ec) {
                                    globalConfig.reward_pubkey);
     if (block) {
       // 在工作线程提交数据到MONGODB
-      _workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
+      /*_workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
         &_context.getMongoStore(),
+        block, &_context)));*/
+      _workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
+        &store::MongoStore::get(),
         block, &_context)));
     }
   }
@@ -94,7 +98,7 @@ void Server::run() {
     _context.getBpsStore().add(globalConfig.genesis_pubkey);
   }
 
-  _p2pAcceptor.run();
+  _p2pAcceptor.startAccept();
   // rpc
   _rpcListener.run();
 

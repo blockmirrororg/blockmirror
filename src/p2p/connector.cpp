@@ -1,7 +1,9 @@
 
 #include <blockmirror/p2p/connector.h>
+#include <blockmirror/p2p/channel.h>
 #include <boost/bind.hpp>
 #include <iostream>
+#include <boost/make_shared.hpp>
 
 namespace blockmirror {
 namespace p2p {
@@ -11,7 +13,7 @@ Connector::Connector(boost::asio::io_context& ioc, const char* ip,
     : socket_(ioc),
       endpoint_(boost::asio::ip::address::from_string(ip), port),
       timer_(ioc),
-      io_context_(ioc){}
+      _ioContext(ioc) {}
 
 void Connector::start(bool now) {
 
@@ -27,14 +29,16 @@ void Connector::start(bool now) {
 }
 
 void Connector::handle_connect(const boost::system::error_code& ec) {
-  if (!ec) {
-    // build a channel
+  /*if (!ec) {
+    boost::shared_ptr<Channel> channel = boost::make_shared<Channel>(_ioContext);
+    channel->setConnector(shared_from_this());
+    channel->start();
   } else {
     socket_.close();
     timer_.expires_from_now(boost::posix_time::seconds(10));
     timer_.async_wait(
         boost::bind(&Connector::handle_timer, shared_from_this()));
-  }
+  }*/
 }
 
 void Connector::handle_timer() {

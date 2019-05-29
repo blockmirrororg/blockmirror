@@ -4,28 +4,33 @@
 namespace blockmirror {
 namespace p2p {
 
-ChannelManager::ChannelManager() : channel_id_(-1) {}
+ChannelManager::ChannelManager() : _channelId(-1) {}
 
-ChannelManager &ChannelManager::get() {
-  static ChannelManager channel_mgr;
-  return channel_mgr;
+void ChannelManager::addChannel(boost::shared_ptr<Channel>& channel) {
+  channel->id(++_channelId);
+
+  boost::asio::detail::mutex::scoped_lock lock(_mutex);
+  _channels.insert(
+      std::pair<int, boost::weak_ptr<Channel> >(channel->id(), channel));
 }
 
-void ChannelManager::add_channel(boost::shared_ptr<Channel> &channel) {
-	channel->id(++channel_id_);
-
-  boost::asio::detail::mutex::scoped_lock lock(mutex_);
-  channels_.insert(std::pair<int, boost::weak_ptr<Channel> >(channel->id(), channel));
+boost::shared_ptr<Channel> ChannelManager::findChannel(int id) {
+  boost::asio::detail::mutex::scoped_lock lock(_mutex);
+  auto pos = _channels.find(id);
+  if (pos != _channels.end())
+    return pos->second.lock();
+  else
+    return nullptr;
 }
 
-boost::shared_ptr<Channel> ChannelManager::find_channel(int channel_id)
+void ChannelManager::removeChannel(int id)
 {
-	boost::asio::detail::mutex::scoped_lock lock(mutex_);
-	boost::unordered_map<int, boost::weak_ptr<Channel> >::iterator pos = channels_.find(channel_id);
-	if (pos != channels_.end())
-		return pos->second.lock();
-	else
-		return boost::shared_ptr<Channel>();
+  boost::asio::detail::mutex::scoped_lock lock(_mutex);
+  auto pos = _channels.find(id);
+  if (pos != _channels.end())
+  {
+    _channels.erase(pos);
+  }
 }
 
 }  // namespace p2p

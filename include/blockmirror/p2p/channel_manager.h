@@ -12,15 +12,19 @@ class ChannelManager {
  public:
   ChannelManager();
 
-  static ChannelManager &get();
-  void add_channel(boost::shared_ptr<Channel> &channel);
-  void remove_channel(int channel_id);
-  boost::shared_ptr<Channel> find_channel(int channel_id);
+  static ChannelManager &get() {
+    static ChannelManager channel_mgr;
+    return channel_mgr;
+  }
+
+  void addChannel(boost::shared_ptr<Channel>& channel);
+  void removeChannel(int id);
+  boost::shared_ptr<Channel> findChannel(int id);
 
  private:
-  boost::unordered_map<int, boost::weak_ptr<Channel> > channels_;
-  boost::atomic_int channel_id_;
-  boost::asio::detail::mutex mutex_;
+  boost::unordered_map<int, boost::weak_ptr<Channel>> _channels;
+  boost::atomic_int _channelId;
+  boost::asio::detail::mutex _mutex;
 };
 
 }  // namespace p2p

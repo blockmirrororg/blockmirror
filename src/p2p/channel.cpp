@@ -1,6 +1,6 @@
 
 #include <blockmirror/p2p/channel.h>
-#include <blockmirror/store/store.h>
+#include <blockmirror/p2p/channel_manager.h>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/bind.hpp>
@@ -8,11 +8,23 @@
 namespace blockmirror {
 namespace p2p {
 
-Channel::Channel(boost::asio::io_context& ioc) : _socket(ioc) {}
+Channel::Channel(boost::shared_ptr<boost::asio::ip::tcp::socket>& socket) : _socket(socket) {}
+
+// ChannelManager引用的是weak_ptr，那么Channel什么时候会析构，当没有处于异步recv或者send状态中的operation，即没有shared_from_this() hold住shared_ptr
+Channel::~Channel()
+{
+  ChannelManager::get().removeChannel(_channelId);
+  /*if (_connector)
+  {
+    _connector
+  }*/
+}
 
 void Channel::start() {
+  ChannelManager::get().addChannel(shared_from_this());
+
   boost::asio::async_read(
-      _socket, _binaryBuf, boost::asio::transfer_exactly(sizeof(MessageHeader)),
+      *_socket, _binaryBuf, boost::asio::transfer_exactly(sizeof(MessageHeader)),
       boost::bind(&Channel::handleReadHeader, shared_from_this(),
                   boost::asio::placeholders::error));
 }
@@ -24,7 +36,7 @@ void Channel::handleReadHeader(const boost::system::error_code& e) {
     archive >> header;
 
     boost::asio::async_read(
-        _socket, _binaryBuf, boost::asio::transfer_exactly(header.length),
+        *_socket, _binaryBuf, boost::asio::transfer_exactly(header.length),
         boost::bind(&Channel::handleReadBody, shared_from_this(),
                     boost::asio::placeholders::error));
   }
@@ -55,14 +67,14 @@ void Channel::handleReadBody(const boost::system::error_code& e) {
 
 void Channel::close() {
   boost::system::error_code ignored_ec;
-  _socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+  _socket->shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
 }
 
 void Channel::send(const Message& msg) {
   boost::archive::binary_oarchive archive(_binaryBuf);
   archive << msg;
   boost::asio::async_write(
-      _socket, _binaryBuf,
+      *_socket, _binaryBuf,
       boost::bind(&Channel::handleWrite, shared_from_this(),
                   boost::asio::placeholders::error));
 }

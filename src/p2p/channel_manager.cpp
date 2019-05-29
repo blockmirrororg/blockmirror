@@ -6,7 +6,7 @@ namespace p2p {
 
 ChannelManager::ChannelManager() : _channelId(-1) {}
 
-void ChannelManager::addChannel(boost::shared_ptr<Channel>& channel) {
+void ChannelManager::addChannel(boost::shared_ptr<Channel> channel) {
   channel->id(++_channelId);
 
   boost::asio::detail::mutex::scoped_lock lock(_mutex);

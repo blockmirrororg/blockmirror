@@ -17,7 +17,7 @@ class ChannelManager {
     return channel_mgr;
   }
 
-  void addChannel(boost::shared_ptr<Channel>& channel);
+  void addChannel(boost::shared_ptr<Channel> channel);
   void removeChannel(int id);
   boost::shared_ptr<Channel> findChannel(int id);
 

@@ -106,6 +106,8 @@ class Session : public std::enable_shared_from_this<Session> {
   beast::string_view mime_type(beast::string_view path);
 
   std::string path_cat(beast::string_view base, beast::string_view path);
+
+  bool url_decode(const std::string& in, std::string& out);
 };
 
 }  // namespace rpc

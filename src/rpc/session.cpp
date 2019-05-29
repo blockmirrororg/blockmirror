@@ -125,7 +125,10 @@ void Session::handle_request() {
     }
 
     if (ret) {
-      (this->*funcPtr)(ret + 1);
+      std::string out;
+      url_decode(ret+1, out);
+      //(this->*funcPtr)(ret + 1);
+      (this->*funcPtr)(out.c_str());
     } else {
       (this->*funcPtr)(nullptr);
     }
@@ -305,7 +308,7 @@ void Session::getChainBlock(const char* arg) {
     B_WARN("omit argument");
     return lambda_(bad_request("omit argument"));
   }
-
+    
   Hash256 key;
   try {
     boost::algorithm::unhex(arg, key.begin());
@@ -605,6 +608,32 @@ http::response<http::string_body> Session::ok(std::string what) {
   res.set(http::field::content_type, "application/json");
   res.prepare_payload();
   return res;
+}
+
+bool Session::url_decode(const std::string& in, std::string& out) {
+  out.clear();
+  out.reserve(in.size());
+  for (std::size_t i = 0; i < in.size(); ++i) {
+    if (in[i] == '%') {
+      if (i + 3 <= in.size()) {
+        int value = 0;
+        std::istringstream is(in.substr(i + 1, 2));
+        if (is >> std::hex >> value) {
+          out += static_cast<char>(value);
+          i += 2;
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    } else if (in[i] == '+') {
+      out += ' ';
+    } else {
+      out += in[i];
+    }
+  }
+  return true;
 }
 
 }  // namespace rpc

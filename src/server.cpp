@@ -1,6 +1,5 @@
 
 #include <blockmirror/server.h>
-#include <blockmirror/store/mongo_store.h>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
@@ -56,8 +55,8 @@ void Server::produceBlock(const boost::system::error_code& ec) {
     if (block) {
       // 在工作线程提交数据到MONGODB
       _workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
-                                                 &store::MongoStore::get(),
-                                                 block, &_context)));
+        &_context.getMongoStore(),
+        block, &_context)));
     }
   }
   nextProduce();

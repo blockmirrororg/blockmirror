@@ -167,20 +167,20 @@ void Session::postChainTransaction() {
     blockmirror::serialization::PTreeIArchive archive(ptree);
     archive >> transaction;
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 
   if (!_context.check(transaction)) {
-    B_LOG("transaction check failed");
+    B_WARN("transaction check failed");
     return lambda_(bad_request("check failed"));
   }
   store::TransactionStore& ts = _context.getTransactionStore();
   if (!ts.add(transaction)) {
-    B_LOG("repeat put, modified!");
+    B_WARN("repeat put, modified!");
     return lambda_(bad_request("repeat put, modified!"));
   }
 
@@ -197,15 +197,15 @@ void Session::postChainData() {
     blockmirror::serialization::PTreeIArchive archive(ptree);
     archive >> data;
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 
   if (!_context.check(data)) {
-    B_LOG("data check failed");
+    B_WARN("data check failed");
     return lambda_(bad_request("check failed"));
   }
 
@@ -214,15 +214,15 @@ void Session::postChainData() {
     boost::algorithm::unhex(globalConfig.miner_privkey, priv.begin());
     dataSigned->sign(priv, _context.getHead()->getHeight());
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 
   if (!_context.getDataSignatureStore().add(dataSigned)) {
-    B_LOG("repeat put, modified!");
+    B_WARN("repeat put, modified!");
     return lambda_(bad_request("repeat put, modified!"));
   }
 
@@ -246,7 +246,7 @@ void Session::getNodePeers(const char*) {
 
 void Session::getNodeConnect(const char* arg) {
   if (!arg) {
-    B_LOG("omit argument");
+    B_WARN("omit argument");
     return lambda_(bad_request("omit argument"));
   }
 
@@ -262,7 +262,7 @@ void Session::getNodeConnect(const char* arg) {
 void Session::getChainStatus(const char*) {
   chain::BlockPtr& head = _context.getHead();
   if (head == nullptr) {
-    B_LOG("head not found");
+    B_WARN("head not found");
     return lambda_(bad_request("not found"));
   }
 
@@ -274,7 +274,7 @@ void Session::getChainStatus(const char*) {
 void Session::getChainLast(const char*) {
   chain::BlockPtr& head = _context.getHead();
   if (head == nullptr) {
-    B_LOG("head not found");
+    B_WARN("head not found");
     return lambda_(bad_request("not found"));
   }
 
@@ -284,10 +284,10 @@ void Session::getChainLast(const char*) {
   try {
     archive << head;
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 
@@ -296,7 +296,7 @@ void Session::getChainLast(const char*) {
 
 void Session::getChainBlock(const char* arg) {
   if (!arg) {
-    B_LOG("omit argument");
+    B_WARN("omit argument");
     return lambda_(bad_request("omit argument"));
   }
 
@@ -304,10 +304,10 @@ void Session::getChainBlock(const char* arg) {
   try {
     boost::algorithm::unhex(arg, key.begin());
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 
@@ -323,10 +323,10 @@ void Session::getChainBlock(const char* arg) {
   try {
     archive << block;
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 
@@ -335,7 +335,7 @@ void Session::getChainBlock(const char* arg) {
 
 void Session::getChainTransaction(const char* arg) {
   if (!arg) {
-    B_LOG("omit argument");
+    B_WARN("omit argument");
     return lambda_(bad_request("omit argument"));
   }
 
@@ -343,10 +343,10 @@ void Session::getChainTransaction(const char* arg) {
   try {
     boost::algorithm::unhex(arg, key->begin());
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 
@@ -363,10 +363,10 @@ void Session::getChainTransaction(const char* arg) {
   try {
     archive << t;
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 
@@ -375,7 +375,7 @@ void Session::getChainTransaction(const char* arg) {
 
 void Session::getChainFormat(const char* arg) {
   if (!arg) {
-    B_LOG("omit argument");
+    B_WARN("omit argument");
     return lambda_(bad_request("omit argument"));
   }
 
@@ -391,10 +391,10 @@ void Session::getChainFormat(const char* arg) {
   try {
     archive << format;
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 
@@ -403,7 +403,7 @@ void Session::getChainFormat(const char* arg) {
 
 void Session::getChainDatatypes(const char* arg) {
   if (!arg) {
-    B_LOG("omit argument");
+    B_WARN("omit argument");
     return lambda_(bad_request("omit argument"));
   }
 
@@ -419,10 +419,10 @@ void Session::getChainDatatypes(const char* arg) {
   try {
     archive << data;
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 
@@ -438,10 +438,10 @@ void Session::getChainBps(const char*) {
   try {
     archive << bps;
   } catch (std::exception& e) {
-    B_LOG("{}", e.what());
+    B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
   } catch (...) {
-    B_LOG("unknown exception!");
+    B_WARN("unknown exception!");
     return lambda_(server_error("unknown exception!"));
   }
 

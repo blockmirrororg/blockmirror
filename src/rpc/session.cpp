@@ -27,11 +27,12 @@ void Session::run() { do_read(); }
 
 void Session::do_read() {
   req_ = {};
-  //stream_.expires_after(std::chrono::seconds(30));
+  // stream_.expires_after(std::chrono::seconds(30));
 
   /*http::async_read(
       stream_, buffer_, req_,
-      boost::beast::bind_front_handler(&Session::on_read, shared_from_this()));*/
+      boost::beast::bind_front_handler(&Session::on_read,
+     shared_from_this()));*/
   http::async_read(
       socket_, buffer_, req_,
       boost::asio::bind_executor(
@@ -43,9 +44,8 @@ void Session::on_read(boost::system::error_code ec,
                       std::size_t bytes_transferred) {
   boost::ignore_unused(bytes_transferred);
 
-  if (ec)
-  {
-	  B_WARN("http on read {} {}", ec.message(), req_.body());
+  if (ec) {
+    B_WARN("http on read {} {}", ec.message(), req_.body());
   }
 
   if (ec == http::error::end_of_stream) return do_close();
@@ -55,7 +55,7 @@ void Session::on_read(boost::system::error_code ec,
   handle_request();
 }
 
-//void Session::on_write(bool close, beast::error_code ec,
+// void Session::on_write(bool close, beast::error_code ec,
 //                       std::size_t bytes_transferred, bool stopService) {
 void Session::on_write(boost::system::error_code ec,
                        std::size_t bytes_transferred, bool close,
@@ -87,7 +87,7 @@ void Session::do_close() {
 
   boost::system::error_code ec;
   socket_.shutdown(tcp::socket::shutdown_send, ec);
-  //stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
+  // stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
 }
 
 void Session::handle_request() {
@@ -104,22 +104,22 @@ void Session::handle_request() {
     /*if (req_.target().find(".") != std::string::npos) {
       handle_file(std::move(req_));
     } else {*/
-      std::string strTarget = req_.target().to_string();
-      const char* target = strTarget.c_str();
-      char* ret = (char*)strchr(target, '?');
-      if (ret) {
-        *ret = 0;  // 更改目标、参数分隔符'?'为字符串结尾符'\0'
-      }
-      auto funcPtr = getMethodFuncPtr(target);
-      if (!funcPtr) {
-        return lambda_(bad_request("Illegal request-target"));
-      }
+    std::string strTarget = req_.target().to_string();
+    const char* target = strTarget.c_str();
+    char* ret = (char*)strchr(target, '?');
+    if (ret) {
+      *ret = 0;  // 更改目标、参数分隔符'?'为字符串结尾符'\0'
+    }
+    auto funcPtr = getMethodFuncPtr(target);
+    if (!funcPtr) {
+      return lambda_(bad_request("Illegal request-target"));
+    }
 
-      if (ret) {
-        (this->*funcPtr)(ret + 1);
-      } else {
-        (this->*funcPtr)(nullptr);
-      }
+    if (ret) {
+      (this->*funcPtr)(ret + 1);
+    } else {
+      (this->*funcPtr)(nullptr);
+    }
     /*}*/
 
   } else {
@@ -210,9 +210,8 @@ void Session::postChainData() {
   }
 
   try {
-    blockmirror::Privkey priv;
-    boost::algorithm::unhex(globalConfig.miner_privkey, priv.begin());
-    dataSigned->sign(priv, _context.getHead()->getHeight());
+    dataSigned->sign(globalConfig.miner_privkey,
+                     _context.getHead()->getHeight());
   } catch (std::exception& e) {
     B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));
@@ -240,9 +239,7 @@ void Session::getNodeVersion(const char*) {
   return lambda_(ok("{\"version\":0}"));
 }
 
-void Session::getNodePeers(const char*) {
-  return lambda_(ok("{}"));
-}
+void Session::getNodePeers(const char*) { return lambda_(ok("{}")); }
 
 void Session::getNodeConnect(const char* arg) {
   if (!arg) {
@@ -558,8 +555,7 @@ Session::GetMethodFuncPtr Session::getMethodFuncPtr(const char* target) {
   auto pos = _getMethodPtrs.find(target);
   if (pos != _getMethodPtrs.end()) {
     return pos->second;
-  }
-  else {
+  } else {
     return nullptr;
   }
 }
@@ -568,8 +564,7 @@ Session::PostMethodFuncPtr Session::postMethodFuncPtr(const char* target) {
   auto pos = _postMethodPtrs.find(target);
   if (pos != _postMethodPtrs.end()) {
     return pos->second;
-  }
-  else {
+  } else {
     return nullptr;
   }
 }

@@ -126,7 +126,10 @@ void Session::handle_request() {
 
     if (ret) {
       std::string out;
-      url_decode(ret+1, out);
+      if (!url_decode(ret + 1, out)) {
+        B_WARN("url_decode failed");
+        return lambda_(bad_request("url_decode failed"));
+      }
       //(this->*funcPtr)(ret + 1);
       (this->*funcPtr)(out.c_str());
     } else {

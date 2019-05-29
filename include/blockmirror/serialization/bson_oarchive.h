@@ -12,6 +12,38 @@
 namespace blockmirror {
 namespace serialization {
 
+template <typename T, typename Archive>
+class has_serialze {
+ private:
+  typedef char YesType[1];
+  typedef char NoType[2];
+
+  template <typename C>
+  static YesType &test(decltype(&C::template serialize<Archive>));
+  template <typename C>
+  static NoType &test(...);
+
+ public:
+  enum { value = sizeof(test<T>(0)) == sizeof(YesType) };
+};
+
+template <typename Archive>
+class BSONVisitor : public boost::static_visitor<void> {
+  Archive &_ar;
+
+ public:
+  BSONVisitor(Archive &ar) : _ar(ar){};
+
+  template <typename T>
+  typename std::enable_if<has_serialze<T, Archive>::value, void>::type
+  operator()(T &value) const;
+  template <typename T>
+  typename std::enable_if<!has_serialze<T, Archive>::value, void>::type
+  operator()(T &value) const {
+    _ar << value;
+  }
+};
+
 template <typename DOCUMENT>
 class BSONOArchive : private boost::noncopyable {
  public:
@@ -32,6 +64,7 @@ class BSONOArchive : private boost::noncopyable {
 
  public:
   inline DOCUMENT &doc() { return _stream; }
+  inline chain::Context &ctx() { return _context; }
 
   BSONOArchive(chain::Context &context, DOCUMENT &doc)
       : _context(context), _stream(doc) {}
@@ -53,7 +86,10 @@ class BSONOArchive : private boost::noncopyable {
                                                     !std::is_enum<T>::value,
                                                 int>::type = 0>
   BSONOArchive &operator<<(const T &t) {
-    access::serialize(*this, const_cast<T &>(t));
+    bsoncxx::builder::stream::document doc;
+    BSONOArchive<decltype(doc)> archiveValue(ctx(), doc);
+    access::serialize(archiveValue, const_cast<T &>(t));
+    _stream << bsoncxx::builder::concatenate(doc.view());
     return *this;
   }
   // Number
@@ -72,16 +108,11 @@ class BSONOArchive : private boost::noncopyable {
   // Binary
   template <size_t N>
   BSONOArchive &operator<<(const std::array<uint8_t, N> &value) {
-    _stream << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary,
-                                        (uint32_t)value.size(), value.data()};
+    _stream << boost::algorithm::hex(std::string(value.begin(), value.end()));
     return *this;
   }
   BSONOArchive &operator<<(const std::vector<uint8_t> &value) {
-    uint8_t zero = 0;
-    const uint8_t *data = &zero;
-    if (value.size()) data = value.data();
-    _stream << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary,
-                                        (uint32_t)value.size(), data};
+    _stream << boost::algorithm::hex(std::string(value.begin(), value.end()));
     return *this;
   }
   // String
@@ -110,11 +141,10 @@ class BSONOArchive : private boost::noncopyable {
     archive << BOOST_SERIALIZATION_NVP(type);
 
     auto valueDoc = (objDoc << std::string("value"));
-    // bsoncxx::builder::stream::document doc;
-    // BSONOArchive<decltype(valueDoc)> archiveValue(_context, valueDoc);
-    // BSONOArchive<decltype(valueDoc)> archiveValue(_context, valueDoc);
-    // boost::apply_visitor(VariantVisitor<decltype(archiveValue)>(archiveValue),
-    //                      value);
+
+    BSONOArchive<decltype(valueDoc)> archiveValue(_context, valueDoc);
+    boost::apply_visitor(BSONVisitor<decltype(archiveValue)>(archiveValue),
+                         value);
 
     objDoc << bsoncxx::builder::stream::close_document;
     return *this;
@@ -164,6 +194,16 @@ class BSONOArchive : private boost::noncopyable {
 */
 #endif
 };
+
+template <typename Archive>
+template <typename T>
+typename std::enable_if<has_serialze<T, Archive>::value, void>::type
+BSONVisitor<Archive>::operator()(T &value) const {
+  bsoncxx::builder::stream::document doc;
+  BSONOArchive<decltype(doc)> archiveValue(_ar.ctx(), doc);
+  archiveValue << value;
+  _ar.doc() << bsoncxx::builder::concatenate(doc.view());
+}
 
 }  // namespace serialization
 }  // namespace blockmirror

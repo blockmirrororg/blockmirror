@@ -24,12 +24,14 @@
 #include <string>
 #include <vector>
 
-struct TTTClass {
+class TTTClass {
+  private:
   friend class blockmirror::serialization::access;
   template <typename Archive>
   void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(val);
   }
+  public:
   int val;
   TTTClass() : val(111) {}
 };
@@ -38,8 +40,7 @@ using VariantType =
     boost::variant<unsigned int, float, std::string, int, std::vector<uint8_t>,
                    std::array<uint8_t, 4>, std::shared_ptr<int>>;
 using VariantType2 =
-    boost::variant<unsigned int, float, std::string, int, std::vector<uint8_t>,
-                   std::array<uint8_t, 4>, std::shared_ptr<int>, TTTClass>;
+    boost::variant<unsigned int, TTTClass>;
 
 template <typename T>
 static inline bool operator==(const std::vector<T> &a,
@@ -157,10 +158,6 @@ BOOST_AUTO_TEST_CASE(serialization_tests_bson) {
   blockmirror::chain::Context context;
   context.load();
 
-  bsoncxx::builder::stream::document doc;
-  blockmirror::serialization::BSONOArchive<bsoncxx::builder::stream::document>
-      archive(context, doc);
-
   uint32_t uint32_test = 1314;
   BOOST_CHECK_EQUAL(toBSONStr("uint32", uint32_test), "{\"uint32\":1314}");
   float float_test = 1314.0f;
@@ -169,8 +166,7 @@ BOOST_AUTO_TEST_CASE(serialization_tests_bson) {
   key.fill(0);
   BOOST_CHECK_EQUAL(
       toBSONStr("key", key),
-      "{\"key\":{\"$binary\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\","
-      "\"$type\":\"00\"}}");
+      "{\"key\":\"0000000000000000000000000000000000000000000000000000000000000000\"}");
   std::string strValue = "342532432";
   BOOST_CHECK_EQUAL(toBSONStr("strValue", strValue),
                     "{\"strValue\":\"342532432\"}");
@@ -178,9 +174,12 @@ BOOST_AUTO_TEST_CASE(serialization_tests_bson) {
   BOOST_CHECK_EQUAL(toBSONStr("strArray", strArray),
                     "{\"strArray\":[\"1111\",\"2222\",\"3333\"]}");
 
-  auto var1 = VariantType2((int)-0x11);
+  auto var1 = VariantType2((unsigned int)0x11);
   BOOST_CHECK_EQUAL(toBSONStr("var1", var1),
-                    "{\"var1\":{\"type\":3,\"value\":-17}}");
+                    "{\"var1\":{\"type\":0,\"value\":17}}");
+  auto var2 = VariantType2(TTTClass{});
+  BOOST_CHECK_EQUAL(toBSONStr("var2", var2),
+                    "{\"var2\":{\"type\":1,\"value\":{\"val\":111}}}");
   // auto var2 = VariantType((float)-0.11f);
   // BOOST_CHECK_EQUAL(toBSONStr("var2", var2), "{\"float\":1314.0}");
   // auto var3 = VariantType(std::string{"112233"});
@@ -194,10 +193,14 @@ BOOST_AUTO_TEST_CASE(serialization_tests_bson) {
   // auto var7 = VariantType(std::make_shared<int>(0x11));
   // BOOST_CHECK_EQUAL(toBSONStr("var7", var7), "{\"float\":1314.0}");
 
-  blockmirror::chain::BlockHeader block1;
-  // initFullBlock(block);
+  bsoncxx::builder::stream::document doc;
+  blockmirror::serialization::BSONOArchive<bsoncxx::builder::stream::document>
+      archive(context, doc);
 
-  archive << block1;
+  blockmirror::chain::Block block;
+  initFullBlock(block);
+
+  archive << BOOST_SERIALIZATION_NVP(block);
 
   std::cout << bsoncxx::to_json(doc.view()) << std::endl;
 }

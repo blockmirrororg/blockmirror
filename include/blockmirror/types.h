@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 
+#include <boost/algorithm/hex.hpp>
 #include <boost/endian/conversion.hpp>
 
 namespace blockmirror {
@@ -16,6 +17,19 @@ using Hash256Ptr = std::shared_ptr<Hash256>;
 using PubkeyPtr = std::shared_ptr<Pubkey>;
 using SignaturePtr = std::shared_ptr<Signature>;
 using PrivkeyPtr = std::shared_ptr<Privkey>;
+
+template <size_t N>
+void fromHex(std::array<uint8_t, N>& s, const std::string& hexStr) {
+  if (hexStr.size() != N * 2) {
+    throw std::runtime_error("bad hexstr length");
+  }
+  boost::algorithm::unhex(hexStr, s.begin());
+}
+
+template <typename Container>
+std::string toHex(const Container& s) {
+  return boost::algorithm::hex(s);
+}
 
 struct Hasher {
   template <size_t N>

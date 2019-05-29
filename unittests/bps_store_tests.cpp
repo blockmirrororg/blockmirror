@@ -1,12 +1,14 @@
 #include <blockmirror/store/bps_store.h>
 #include <boost/test/unit_test.hpp>
+#include "test_helper.h"
 
 BOOST_AUTO_TEST_SUITE(bps_tests)
 
 BOOST_AUTO_TEST_CASE(bps_tests_ok) {
+  removeContextFiles();
+
   blockmirror::Pubkey pk1{1, 2, 3, 4, 5, 6, 7, 8};
   blockmirror::Pubkey pk2{1, 2, 3, 4, 5, 5};
-  boost::filesystem::remove("./bps");
   {
     blockmirror::store::BpsStore store;
     store.load(".");
@@ -72,11 +74,12 @@ BOOST_AUTO_TEST_CASE(bps_tests_ok) {
 }
 
 BOOST_AUTO_TEST_CASE(bps_tests_producerTime) {
+  removeContextFiles();
+
   using namespace blockmirror;
   Pubkey pk1{1, 2, 3, 4, 5, 6, 7, 8};
   Pubkey pk2{1, 2, 3, 4, 5, 5};
   Pubkey pk3{1, 2};
-  boost::filesystem::remove("./bps");
   auto now = (now_ms_since_1970() / BLOCK_PER_MS) * BLOCK_PER_MS;
   {
     store::BpsStore store;

@@ -1,12 +1,14 @@
 #include <blockmirror/store/account_store.h>
 #include <boost/test/unit_test.hpp>
+#include "test_helper.h"
 
 BOOST_AUTO_TEST_SUITE(account_tests)
 
 BOOST_AUTO_TEST_CASE(account_tests_ok) {
+  removeContextFiles();
+
   blockmirror::Pubkey pk1{1, 2, 3, 4, 5, 6, 7, 8};
   blockmirror::Pubkey pk2{1, 2, 3, 4, 5, 5};
-  boost::filesystem::remove("./account");
   {
     blockmirror::store::AccountStore store;
     store.load(".");

@@ -8,19 +8,12 @@
 #include <blockmirror/store/transaction_store.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/test/unit_test.hpp>
-//#include <blockmirror/store/mongo_store.h>
+#include "test_helper.h"
 
 BOOST_AUTO_TEST_SUITE(context_tests2)
 
 BOOST_AUTO_TEST_CASE(context_tests2_seq) {
-  boost::filesystem::remove("./0.block");
-  boost::filesystem::remove("./index");
-  boost::filesystem::remove("./account");
-  boost::filesystem::remove("./bps");
-  boost::filesystem::remove("./data");
-  boost::filesystem::remove("./format");
-  boost::filesystem::remove("./transaction");
-  boost::filesystem::remove("./head");
+  removeContextFiles();
 
   std::vector<blockmirror::chain::BlockPtr> blocks;
   std::vector<blockmirror::Privkey> privs;

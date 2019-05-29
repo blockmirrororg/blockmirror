@@ -1,20 +1,13 @@
 #include <blockmirror/store/block_store.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/test/unit_test.hpp>
-
-#include <blockmirror/serialization/json_oarchive.h>
-using JSON = blockmirror::serialization::JSONOArchive<std::ostringstream>;
-template <typename Archive, typename T>
-std::string SS(const T &obj) {
-  std::ostringstream oss;
-  Archive archive(oss);
-  archive << obj;
-  return oss.str();
-}
+#include "test_helper.h"
 
 BOOST_AUTO_TEST_SUITE(blockstore_tests)
 
 BOOST_AUTO_TEST_CASE(blockstore_tests_simple) {
+  removeContextFiles();
+
   blockmirror::chain::BlockPtr block1 =
       std::make_shared<blockmirror::chain::Block>();
   blockmirror::chain::BlockPtr block2 =
@@ -32,15 +25,13 @@ BOOST_AUTO_TEST_CASE(blockstore_tests_simple) {
                     0xde, 0x15, 0x81, 0x48, 0xb4, 0x25, 0x66, 0x07,
                     0x23, 0xb9, 0xf9, 0xa6, 0x6e, 0x61, 0xf7, 0x47});
 
-  boost::filesystem::remove("./0.block");
-  boost::filesystem::remove("./index");
   {
     blockmirror::store::BlockStore store;
     store.load(".");
 
     BOOST_CHECK(store.addBlock(block1));
     BOOST_CHECK(store.addBlock(block2));
-    BOOST_CHECK(!store.addBlock(block2)); // 重复添加
+    BOOST_CHECK(!store.addBlock(block2));  // 重复添加
 
     BOOST_CHECK(store.contains(block1->getHashPtr()));
     BOOST_CHECK(store.contains(block1->getHash()));
@@ -65,15 +56,14 @@ BOOST_AUTO_TEST_CASE(blockstore_tests_simple) {
   {
     blockmirror::store::BlockStore store;
     store.load(".");
-    
+
     BOOST_CHECK(store.contains(block1->getHashPtr()));
     BOOST_CHECK(store.contains(block2->getHashPtr()));
   }
 }
 
 BOOST_AUTO_TEST_CASE(blockstore_tests_branch) {
-  boost::filesystem::remove("./0.block");
-  boost::filesystem::remove("./index");
+  removeContextFiles();
 
   blockmirror::store::BlockStore store;
   std::vector<blockmirror::chain::BlockPtr> blks;

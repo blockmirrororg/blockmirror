@@ -3,132 +3,134 @@
 #include <blockmirror/chain/context.h>
 #include <blockmirror/common.h>
 #include <blockmirror/serialization/access.h>
-#include <boost/algorithm/hex.hpp>
+
+#include <bsoncxx/builder/stream/array.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/builder/stream/helpers.hpp>
+#include <bsoncxx/types.hpp>
 
 namespace blockmirror {
 namespace serialization {
 
-template <typename StreamType>
+template <typename DOCUMENT>
 class BSONOArchive : private boost::noncopyable {
  public:
-  using IsBSON = std::true_type;
+  using IsJSON = std::true_type;  // 假装是JSON
   using IsSaving = std::true_type;
 
- private:
-  StreamType &_stream;
-  chain::Context &_context;
-  size_t _depth;
-  size_t _array_size;
-  bool _object_begin;
-  bool _indent;
+#define BSONCXX_ENUM(name, val)                                     \
+  BSONOArchive &operator<<(const bsoncxx::types::b_##name &value) { \
+    _stream << value;                                               \
+    return *this;                                                   \
+  }
+#include <bsoncxx/enums/type.hpp>
+#undef BSONCXX_ENUM
 
-  void _tag(const char *tag) {
-    if (!_object_begin) _stream << ", ";
-    _make_indent();
-    _stream << '"' << tag << "\": ";
-    _object_begin = false;
-  }
-  void _make_indent() {
-    if (_indent) {
-      _stream << '\n' << std::string(2 * _depth, ' ');
-    }
-  }
-  void _begin_object() {
-    _stream << "{";
-    _object_begin = true;
-    ++_depth;
-  }
-  void _end_object() {
-    --_depth;
-    _make_indent();
-    _stream << "}";
-  }
-  void _begin_array(size_t s = 0) {
-    _array_size = s;
-    ++_depth;
-    _stream << "[ ";
-  }
-  void _delimit_array() { _stream << ", "; }
-  void _end_array() {
-    --_depth;
-    if (0 < _array_size) {
-      _make_indent();
-    }
-    _stream << "]";
-  }
+ private:
+  DOCUMENT &_stream;
+  chain::Context &_context;
 
  public:
-  BSONOArchive(StreamType &stream, chain::Context &context, bool indent = true)
-      : _stream(stream),
-        _context(context),
-        _depth(0),
-        _array_size(0),
-        _object_begin(false),
-        _indent(indent) {}
+  inline DOCUMENT &doc() { return _stream; }
+
+  BSONOArchive(chain::Context &context, DOCUMENT &doc)
+      : _context(context), _stream(doc) {}
 
   template <typename T>
   BSONOArchive &operator<<(const ::boost::serialization::nvp<T> &t) {
-    _tag(t.name());
-    return *this << t.const_value();
+    auto valueDoc = (_stream << std::string(t.name()));
+    BSONOArchive<decltype(valueDoc)> value(_context, valueDoc);
+    value << t.const_value();
+    return *this;
   }
 
   template <typename T>
   BSONOArchive &operator&(const T &t) {
     return *this << t;
   }
-
   // Object
   template <typename T, typename std::enable_if<!std::is_arithmetic<T>::value &&
                                                     !std::is_enum<T>::value,
                                                 int>::type = 0>
   BSONOArchive &operator<<(const T &t) {
-    _begin_object();
     access::serialize(*this, const_cast<T &>(t));
-    _end_object();
     return *this;
   }
   // Number
-  template <typename T, typename std::enable_if<std::is_arithmetic<T>::value,
-                                                int>::type = 0>
+  template <typename T,
+            typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
   BSONOArchive &operator<<(const T &t) {
-    _stream << +t;
+    _stream << bsoncxx::types::b_int64{(int64_t)t};
+    return *this;
+  }
+  template <typename T, typename std::enable_if<
+                            std::is_floating_point<T>::value, int>::type = 0>
+  BSONOArchive &operator<<(const T &t) {
+    _stream << bsoncxx::types::b_double{(double)t};
     return *this;
   }
   // Binary
   template <size_t N>
   BSONOArchive &operator<<(const std::array<uint8_t, N> &value) {
-    _stream << '"';
-    boost::algorithm::hex(value.begin(), value.end(),
-                          std::ostream_iterator<char>(_stream));
-    _stream << '"';
+    _stream << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary,
+                                        (uint32_t)value.size(), value.data()};
     return *this;
   }
   BSONOArchive &operator<<(const std::vector<uint8_t> &value) {
-    _stream << '"';
-    boost::algorithm::hex(value.begin(), value.end(),
-                          std::ostream_iterator<char>(_stream));
-    _stream << '"';
+    uint8_t zero = 0;
+    const uint8_t *data = &zero;
+    if (value.size()) data = value.data();
+    _stream << bsoncxx::types::b_binary{bsoncxx::binary_sub_type::k_binary,
+                                        (uint32_t)value.size(), data};
     return *this;
   }
   // String
   BSONOArchive &operator<<(const std::string &value) {
-    _stream << '"' << value << '"';
+    _stream << value;
     return *this;
   }
   // Vector
   template <typename T>
   BSONOArchive &operator<<(const std::vector<T> &arr) {
-    _begin_array();
+    auto arrDoc = (_stream << bsoncxx::builder::stream::open_array);
+    BSONOArchive<decltype(arrDoc)> archive(_context, arrDoc);
     for (auto &val : arr) {
-      *this << val;
-      if (&val != &arr.back()) {
-        _delimit_array();
-      }
+      archive << val;
     }
-    _end_array();
+    arrDoc << bsoncxx::builder::stream::close_array;
     return *this;
   }
+  // boost::variant
+  template <typename... T>
+  BSONOArchive &operator<<(const boost::variant<T...> &value) {
+    auto objDoc = (_stream << bsoncxx::builder::stream::open_document);
 
+    BSONOArchive<decltype(objDoc)> archive(_context, objDoc);
+    uint32_t type = (uint32_t)value.which();
+    archive << BOOST_SERIALIZATION_NVP(type);
+
+    auto valueDoc = (objDoc << std::string("value"));
+    // bsoncxx::builder::stream::document doc;
+    // BSONOArchive<decltype(valueDoc)> archiveValue(_context, valueDoc);
+    // BSONOArchive<decltype(valueDoc)> archiveValue(_context, valueDoc);
+    // boost::apply_visitor(VariantVisitor<decltype(archiveValue)>(archiveValue),
+    //                      value);
+
+    objDoc << bsoncxx::builder::stream::close_document;
+    return *this;
+  }
+  // shared_ptr
+  template <typename T>
+  BSONOArchive &operator<<(const std::shared_ptr<T> &value) {
+    if (value.get()) {
+      return *this << *value;
+    } else {
+      return *this << T();
+    }
+  }
+#if 0
+
+/*
   // Vector<chain::DataSignedPtr>
   BSONOArchive &operator<<(const std::vector<chain::DataSignedPtr> &arr) {
     _begin_array();
@@ -159,27 +161,8 @@ class BSONOArchive : private boost::noncopyable {
     _end_array();
     return *this;
   }
-
-  // boost::variant
-  template <typename... T>
-  BSONOArchive &operator<<(const boost::variant<T...> &value) {
-    _begin_object();
-    uint32_t type = (uint32_t)value.which();
-    *this << BOOST_SERIALIZATION_NVP(type);
-    _tag("value");
-    boost::apply_visitor(VariantVisitor<BSONOArchive>(*this), value);
-    _end_object();
-    return *this;
-  }
-  // shared_ptr
-  template <typename T>
-  BSONOArchive &operator<<(const std::shared_ptr<T> &value) {
-    if (value.get()) {
-      return *this << *value;
-    } else {
-      return *this << T();
-    }
-  }
+*/
+#endif
 };
 
 }  // namespace serialization

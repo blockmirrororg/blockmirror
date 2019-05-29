@@ -1,6 +1,7 @@
 #pragma once
 
 #include <blockmirror/chain/block.h>
+#include <blockmirror/chain/context.h>
 #include <mongocxx/client.hpp>
 #include <mongocxx/instance.hpp>
 

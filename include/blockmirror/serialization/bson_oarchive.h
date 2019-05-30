@@ -158,41 +158,31 @@ class BSONOArchive : private boost::noncopyable {
       return *this << T();
     }
   }
-#if 0
 
-/*
   // Vector<chain::DataSignedPtr>
   BSONOArchive &operator<<(const std::vector<chain::DataSignedPtr> &arr) {
-    _begin_array();
+    auto arrDoc = (_stream << bsoncxx::builder::stream::open_array);
     for (auto &val : arr) {
-      std::string name = val->getName();
-      _stream << "{" << '"' << "name" << '"' << ": ";
-      _stream << '"' << name << '"' << ", ";
-      _stream << '"' << "data" << '"' << ": " << '"';
       store::FormatStore &store = _context.getFormatStore();
+      std::string name = val->getName();
       store::NewFormatPtr n = store.query(name);
+      std::string value;
       if (n) {
         const std::vector<uint8_t> v = n->getDataFormat();
         for (const auto &i : v) {
-          *this << i;
+          value += boost::lexical_cast<std::string>((int)i);
         }
       }
-      _stream << '"' << ", ";
-      _stream << '"' << "signature" << '"' << ": " << '"';
-      boost::algorithm::hex(val->getSignature().begin(),
-                            val->getSignature().end(),
-                            std::ostream_iterator<char>(_stream));
-      _stream << '"' << "}";
-
-      if (&val != &arr.back()) {
-        _delimit_array();
-      }
+      arrDoc =
+          arrDoc << bsoncxx::builder::stream::open_document << "name" << name
+                 << "data" << value << "signature"
+                 << boost::algorithm::hex(std::string(
+                        val->getSignature().begin(), val->getSignature().end()))
+                 << bsoncxx::builder::stream::close_document;
     }
-    _end_array();
+    arrDoc << bsoncxx::builder::stream::close_array;
     return *this;
   }
-*/
-#endif
 };
 
 template <typename Archive>

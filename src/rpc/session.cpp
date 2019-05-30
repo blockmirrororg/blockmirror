@@ -206,8 +206,7 @@ void Session::postChainData() {
   std::stringstream ss(req_.body());
   boost::property_tree::ptree ptree;
   chain::DataSignedPtr dataSigned = std::make_shared<chain::DataSigned>();
-  //chain::DataPtr data = std::dynamic_pointer_cast<chain::Data>(dataSigned);
-  chain::DataPtr data = dataSigned;
+  chain::DataPtr data = std::dynamic_pointer_cast<chain::Data>(dataSigned);
   try {
     boost::property_tree::read_json(ss, ptree);
     blockmirror::serialization::PTreeIArchive archive(ptree);

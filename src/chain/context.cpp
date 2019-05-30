@@ -254,12 +254,14 @@ chain::BlockPtr Context::genBlock(const Privkey& key, const Pubkey& reward,
   }
 
   std::vector<chain::DataSignedPtr> v = _dataSignature.pop();
-  DataBPPtr dataBP =
-      std::make_shared<blockmirror::chain::DataBP>(globalConfig.miner_pubkey);
-  for (auto i : v) {
-    dataBP->addData(i);
+  if (v.size() > 0) {
+    DataBPPtr dataBP =
+        std::make_shared<blockmirror::chain::DataBP>(globalConfig.miner_pubkey);
+    for (auto i : v) {
+      dataBP->addData(i);
+    }
+    newBlock->addDataBP(dataBP);
   }
-  newBlock->addDataBP(dataBP);
 
   newBlock->finalize(key);
   _block.addBlock(newBlock);

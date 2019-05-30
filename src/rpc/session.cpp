@@ -17,20 +17,18 @@ namespace rpc {
 std::map<std::string, Session::GetMethodFuncPtr> Session::_getMethodPtrs;
 std::map<std::string, Session::PostMethodFuncPtr> Session::_postMethodPtrs;
 
-Session::Session(tcp::socket socket, blockmirror::chain::Context& context, boost::asio::io_context &ioc)
+Session::Session(tcp::socket socket, blockmirror::chain::Context& context,
+                 boost::asio::io_context& ioc)
     : socket_(std::move(socket)),
-
-
 #if BOOST_VERSION >= 107000
-  strand_(boost::asio::make_strand(ioc)),
+      strand_(boost::asio::make_strand(ioc)),
 #else
-  strand_(socket_.get_executor()),
+      strand_(socket_.get_executor()),
 #endif
-      
+
       lambda_(*this),
-      _context(context) {}
-
-
+      _context(context) {
+}
 
 void Session::run() { do_read(); }
 
@@ -205,8 +203,7 @@ void Session::postChainTransaction() {
 void Session::postChainData() {
   std::stringstream ss(req_.body());
   boost::property_tree::ptree ptree;
-  chain::DataSignedPtr dataSigned = std::make_shared<chain::DataSigned>();
-  chain::DataPtr data = std::dynamic_pointer_cast<chain::Data>(dataSigned);
+  chain::DataPtr data = std::make_shared<chain::Data>();
   try {
     boost::property_tree::read_json(ss, ptree);
     blockmirror::serialization::PTreeIArchive archive(ptree);
@@ -224,6 +221,8 @@ void Session::postChainData() {
     return lambda_(bad_request("check failed"));
   }
 
+  chain::DataSignedPtr dataSigned =
+      std::make_shared<chain::DataSigned>(data->getName(), data->getData());
   try {
     dataSigned->sign(globalConfig.miner_privkey,
                      _context.getHead()->getHeight());
@@ -311,7 +310,7 @@ void Session::getChainBlock(const char* arg) {
     B_WARN("omit argument");
     return lambda_(bad_request("omit argument"));
   }
-    
+
   Hash256 key;
   try {
     boost::algorithm::unhex(arg, key.begin());

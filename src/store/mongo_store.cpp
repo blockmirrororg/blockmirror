@@ -1,6 +1,6 @@
 
 #include <blockmirror/common.h>
-#include <blockmirror/serialization/json_oarchive.h>
+#include <blockmirror/serialization/bson_oarchive.h>
 #include <blockmirror/store/mongo_store.h>
 #include <bsoncxx/json.hpp>
 
@@ -14,12 +14,11 @@ void MongoStore::save(chain::BlockPtr& block, chain::Context* context) {
   if (!block) return;
 
   try {
-    std::ostringstream oss;
-    blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
-                                                                         false);
-
+    auto oss = bsoncxx::builder::stream::document{};
+    blockmirror::serialization::BSONOArchive<bsoncxx::builder::stream::document>
+        archive(*context, oss);
     archive << block;
-    bsoncxx::document::value doc = bsoncxx::from_json(oss.str());
+    bsoncxx::document::value doc = oss.extract();
 
     mongocxx::database db = _client[blockmirror::globalConfig.mongodbName];
     mongocxx::collection coll = db[blockmirror::globalConfig.mongodbCollection];

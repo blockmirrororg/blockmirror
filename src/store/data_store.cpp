@@ -51,5 +51,16 @@ bool DataStore::remove(const std::string& name) {
   return _datas.erase(name) > 0;
 }
 
+std::vector<store::NewDataPtr>& DataStore::queryEx(std::string format) {
+  std::vector<store::NewDataPtr> v;
+  boost::shared_lock<boost::shared_mutex> lock(_mutex);
+  for (auto pos = _datas.begin(); pos != _datas.end(); ++pos) {
+    if (pos->second->getFormat() == format) {
+      v.emplace_back(pos->second);
+    }
+  }
+  return v;
+}
+
 }  // namespace store
 }  // namespace blockmirror

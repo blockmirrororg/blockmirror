@@ -7,6 +7,8 @@
 
 #include <blockmirror/chain/script.h>
 #include <blockmirror/common.h>
+#include <blockmirror/serialization/access.h>
+#include <boost/serialization/vector.hpp>
 
 namespace blockmirror {
 namespace store {
@@ -14,6 +16,16 @@ namespace store {
 using NewFormatPtr = std::shared_ptr<chain::scri::NewFormat>;
 
 class FormatStore {
+  friend class blockmirror::serialization::access;
+  template<typename Archive>
+  void serialize(Archive& ar) {
+    std::vector<store::NewFormatPtr> v;
+    for (auto pos = _formats.begin(); pos != _formats.end(); ++pos) {
+      v.emplace_back(pos->second);
+    }
+    ar& v;
+  }
+
  private:
   std::unordered_map<std::string, store::NewFormatPtr> _formats;
 

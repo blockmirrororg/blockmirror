@@ -93,7 +93,9 @@ class Session : public std::enable_shared_from_this<Session> {
   void getChainBlock(const char*);
   void getChainTransaction(const char*);
   void getChainFormat(const char*);
+  void getChainFormats(const char*);
   void getChainDatatypes(const char*);
+  void getChainDatatype(const char*);
   void getChainBps(const char*);
 
  private:

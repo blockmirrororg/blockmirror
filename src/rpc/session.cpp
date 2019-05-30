@@ -206,7 +206,8 @@ void Session::postChainData() {
   std::stringstream ss(req_.body());
   boost::property_tree::ptree ptree;
   chain::DataSignedPtr dataSigned = std::make_shared<chain::DataSigned>();
-  chain::DataPtr data = std::dynamic_pointer_cast<chain::Data>(dataSigned);
+  //chain::DataPtr data = std::dynamic_pointer_cast<chain::Data>(dataSigned);
+  chain::DataPtr data = dataSigned;
   try {
     boost::property_tree::read_json(ss, ptree);
     blockmirror::serialization::PTreeIArchive archive(ptree);
@@ -413,6 +414,25 @@ void Session::getChainFormat(const char* arg) {
   return lambda_(ok(oss.str()));
 }
 
+void Session::getChainFormats(const char*) {
+  store::FormatStore& fs = _context.getFormatStore();
+
+  std::ostringstream oss;
+  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
+                                                                       false);
+  try {
+    archive << fs;
+  } catch (std::exception& e) {
+    B_WARN("{}", e.what());
+    return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_WARN("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
+  }
+
+  return lambda_(ok(oss.str()));
+}
+
 void Session::getChainDatatypes(const char* arg) {
   if (!arg) {
     B_WARN("omit argument");
@@ -430,6 +450,31 @@ void Session::getChainDatatypes(const char* arg) {
                                                                        false);
   try {
     archive << data;
+  } catch (std::exception& e) {
+    B_WARN("{}", e.what());
+    return lambda_(server_error(e.what()));
+  } catch (...) {
+    B_WARN("unknown exception!");
+    return lambda_(server_error("unknown exception!"));
+  }
+
+  return lambda_(ok(oss.str()));
+}
+
+void Session::getChainDatatype(const char* arg) {
+  if (!arg) {
+    B_WARN("omit argument");
+    return lambda_(bad_request("omit argument"));
+  }
+
+  store::DataStore& ds = _context.getDataStore();
+  std::vector<store::NewDataPtr> v = ds.queryEx(arg);
+
+  std::ostringstream oss;
+  blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
+                                                                       false);
+  try {
+    archive << v;
   } catch (std::exception& e) {
     B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));

@@ -163,7 +163,7 @@ class BSONOArchive : private boost::noncopyable {
   BSONOArchive &operator<<(const std::vector<chain::DataSignedPtr> &arr) {
     auto arrDoc = (_stream << bsoncxx::builder::stream::open_array);
     for (auto &val : arr) {
-      std::string value;
+      std::ostringstream oss;
       std::string name = val->getName();
       store::DataStore &ds = _context.getDataStore();
       store::NewDataPtr nd = ds.query(name);
@@ -171,12 +171,45 @@ class BSONOArchive : private boost::noncopyable {
         store::FormatStore &fs = _context.getFormatStore();
         store::NewFormatPtr nf = fs.query(nd->getFormat());
         if (nf) {
-          const std::vector<uint8_t> v = nf->getDataFormat();
-          for (const auto &i : v) {
-            value += boost::lexical_cast<std::string>((int)i);
+          const std::vector<uint8_t> data = val->getData();
+          const std::vector<uint8_t> dataFormat = nf->getDataFormat();
+          size_t formatSize = dataFormat.size();
+          size_t index = 0;
+          for (size_t i = 0; i < formatSize; i++) {
+            switch (dataFormat[i]) {
+              case chain::scri::NewFormat::TYPE_FLOAT:
+                float fl;
+                memcpy(&fl, &data[index], sizeof(float));
+                oss << fl;
+                index += sizeof(float);
+                break;
+              case chain::scri::NewFormat::TYPE_DOUBLE:
+                double dou;
+                memcpy(&dou, &data[index], sizeof(double));
+                oss << dou;
+                index += sizeof(double);
+                break;
+              case chain::scri::NewFormat::TYPE_UINT:
+                uint32_t uin;
+                memcpy(&uin, &data[index], sizeof(uint32_t));
+                oss << uin;
+                index += sizeof(uint32_t);
+                break;
+              case chain::scri::NewFormat::TYPE_INT:
+                int in;
+                memcpy(&in, &data[index], sizeof(int));
+                oss << in;
+                index += sizeof(int);
+                break;
+              default:;
+            }
+            if ((i + 1) != formatSize) {
+              oss << ",";
+            }
           }
         }
       }
+      std::string value = oss.str();
       arrDoc =
           arrDoc << bsoncxx::builder::stream::open_document << "name" << name
                  << "data" << value << "signature"

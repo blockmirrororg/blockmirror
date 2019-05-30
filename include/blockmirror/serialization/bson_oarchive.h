@@ -163,14 +163,18 @@ class BSONOArchive : private boost::noncopyable {
   BSONOArchive &operator<<(const std::vector<chain::DataSignedPtr> &arr) {
     auto arrDoc = (_stream << bsoncxx::builder::stream::open_array);
     for (auto &val : arr) {
-      store::FormatStore &store = _context.getFormatStore();
-      std::string name = val->getName();
-      store::NewFormatPtr n = store.query(name);
       std::string value;
-      if (n) {
-        const std::vector<uint8_t> v = n->getDataFormat();
-        for (const auto &i : v) {
-          value += boost::lexical_cast<std::string>((int)i);
+      std::string name = val->getName();
+      store::DataStore &ds = _context.getDataStore();
+      store::NewDataPtr nd = ds.query(name);
+      if (nd) {
+        store::FormatStore &fs = _context.getFormatStore();
+        store::NewFormatPtr nf = fs.query(nd->getFormat());
+        if (nf) {
+          const std::vector<uint8_t> v = nf->getDataFormat();
+          for (const auto &i : v) {
+            value += boost::lexical_cast<std::string>((int)i);
+          }
         }
       }
       arrDoc =

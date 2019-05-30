@@ -5,9 +5,11 @@
 #include <blockmirror/store/data_signature_store.h>
 #include <blockmirror/store/data_store.h>
 #include <blockmirror/store/format_store.h>
+#include <blockmirror/store/mongo_store.h>
 #include <blockmirror/store/transaction_store.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/test/unit_test.hpp>
+#include <bsoncxx/json.hpp>
 #include "test_helper.h"
 
 BOOST_AUTO_TEST_SUITE(context_tests)
@@ -579,12 +581,12 @@ BOOST_AUTO_TEST_CASE(context_tests_ok9) {
     std::vector<uint8_t> v1{3, 3, 3};
     blockmirror::store::NewFormatPtr pformat =
         std::make_shared<blockmirror::chain::scri::NewFormat>(
-            std::string{"111"}, std::string{"222"}, v1, v1, v1);
+            std::string{"abc"}, std::string{"222"}, v1, v1, v1);
 
     blockmirror::store::FormatStore formatStore;
     formatStore.load(".");
     formatStore.add(pformat);
-    BOOST_CHECK(formatStore.query("111"));
+    BOOST_CHECK(formatStore.query("abc"));
   }
 
   blockmirror::chain::DataPtr ptr1 = std::make_shared<blockmirror::chain::Data>(
@@ -615,11 +617,154 @@ BOOST_AUTO_TEST_CASE(context_tests_ok9) {
     BOOST_CHECK(!c.check(ptr4));
     c.close();
   }
+}
+
+BOOST_AUTO_TEST_CASE(context_tests_ok10) {
+  removeContextFiles();
+  createKey();
+  createBlock();
+  inittPtr();
+  // addBP();
 
   {
-    blockmirror::store::DataSignatureStore dataSignStore;
-    dataSignStore.load(".");
-    BOOST_CHECK(dataSignStore.query("111"));
+    blockmirror::store::NewDataPtr data1 =
+        std::make_shared<blockmirror::chain::scri::NewData>(
+            std::string{"aaa"}, std::string{"111"}, std::string{"+++"});
+
+    blockmirror::store::NewDataPtr data2 =
+        std::make_shared<blockmirror::chain::scri::NewData>(
+            std::string{"bbb"}, std::string{"222"}, std::string{"+++"});
+
+    blockmirror::store::NewDataPtr data3 =
+        std::make_shared<blockmirror::chain::scri::NewData>(
+            std::string{"ccc"}, std::string{"333"}, std::string{"+++"});
+
+    blockmirror::store::DataStore dataStore;
+    dataStore.load(".");
+    dataStore.add(data1);
+    dataStore.add(data2);
+    dataStore.add(data3);
+  }
+
+  {
+    std::vector<uint8_t> v1{1, 1, 3};
+    blockmirror::store::NewFormatPtr p1 =
+        std::make_shared<blockmirror::chain::scri::NewFormat>(
+            std::string{"aaa"}, std::string{"ddd"}, v1, v1, v1);
+
+    std::vector<uint8_t> v2{2, 3, 2};
+    blockmirror::store::NewFormatPtr p2 =
+        std::make_shared<blockmirror::chain::scri::NewFormat>(
+            std::string{"bbb"}, std::string{"ccc"}, v2, v2, v2);
+
+    std::vector<uint8_t> v3{3, 3, 3};
+    blockmirror::store::NewFormatPtr p3 =
+        std::make_shared<blockmirror::chain::scri::NewFormat>(
+            std::string{"ccc"}, std::string{"ccc"}, v3, v3, v3);
+
+    blockmirror::store::FormatStore formatStore;
+    formatStore.load(".");
+    formatStore.add(p1);
+    formatStore.add(p2);
+    formatStore.add(p3);
+  }
+
+  {
+    blockmirror::globalConfig.init("../config.json");
+    blockmirror::chain::Context c;
+    c.load();
+
+    if (!c.getBpsStore().contains(blockmirror::globalConfig.genesis_pubkey)) {
+      c.getBpsStore().add(blockmirror::globalConfig.genesis_pubkey);
+    }
+
+    uint64_t height = 0;
+    blockmirror::chain::BlockPtr head = c.getHead();
+    if (head) {
+      height = head->getHeight();
+    } else {
+      height = 1;
+    }
+
+    blockmirror::store::DataSignatureStore& dataSignature =
+        c.getDataSignatureStore();
+
+    std::vector<uint8_t> v5{7, 8, 9};
+    blockmirror::chain::DataPtr data1 =
+        std::make_shared<blockmirror::chain::Data>("111", v5);
+    blockmirror::chain::DataSignedPtr dataSingned1 =
+        std::make_shared<blockmirror::chain::DataSigned>(data1->getName(),
+                                                         data1->getData());
+    dataSingned1->sign(blockmirror::globalConfig.miner_privkey, height);
+    dataSignature.add(dataSingned1);
+
+    std::vector<uint8_t> v6{11, 18, 92};
+    blockmirror::chain::DataPtr data2 =
+        std::make_shared<blockmirror::chain::Data>("222", v6);
+    blockmirror::chain::DataSignedPtr dataSingned2 =
+        std::make_shared<blockmirror::chain::DataSigned>(data2->getName(),
+                                                         data2->getData());
+    dataSingned2->sign(blockmirror::globalConfig.miner_privkey, height);
+    dataSignature.add(dataSingned2);
+
+    std::vector<uint8_t> v7{5, 6, 6};
+    blockmirror::chain::DataPtr data3 =
+        std::make_shared<blockmirror::chain::Data>("333", v7);
+    blockmirror::chain::DataSignedPtr dataSingned3 =
+        std::make_shared<blockmirror::chain::DataSigned>(data3->getName(),
+                                                         data3->getData());
+    dataSingned3->sign(blockmirror::globalConfig.miner_privkey, height);
+    dataSignature.add(dataSingned3);
+
+    BOOST_CHECK(dataSignature.query("111"));
+    BOOST_CHECK(dataSignature.query("222"));
+    BOOST_CHECK(dataSignature.query("333"));
+  }
+
+  static blockmirror::store::MongoStore& mongoStore =
+      blockmirror::store::MongoStore::get();
+  {  //删除mongodb数据
+    mongocxx::client client{
+        mongocxx::uri{blockmirror::globalConfig.mongodbURI}};
+    mongocxx::database db = client[blockmirror::globalConfig.mongodbName];
+    mongocxx::collection coll = db[blockmirror::globalConfig.mongodbCollection];
+
+    bsoncxx::stdx::optional<mongocxx::result::delete_result> result =
+        coll.delete_many({});  //清空数据库
+
+    if (result) {
+      std::cout << "delete:" << result->deleted_count() << "\n";
+    }
+  }
+
+  {
+    blockmirror::chain::Context c;
+    c.load();
+
+    auto now = blockmirror::alignTimestamp(blockmirror::now_ms_since_1970());
+    auto blk = c.genBlock(blockmirror::globalConfig.miner_privkey,
+                          blockmirror::globalConfig.reward_pubkey, now);
+    mongoStore.save(blk, &c);
+  }
+
+  {
+    blockmirror::store::DataSignatureStore dataSignature;
+    BOOST_CHECK(!dataSignature.query("111"));
+    BOOST_CHECK(!dataSignature.query("222"));
+    BOOST_CHECK(!dataSignature.query("333"));
+  }
+
+  {
+    mongocxx::client client{
+        mongocxx::uri{blockmirror::globalConfig.mongodbURI}};
+    mongocxx::database db = client[blockmirror::globalConfig.mongodbName];
+    mongocxx::collection coll = db[blockmirror::globalConfig.mongodbCollection];
+
+    mongocxx::cursor cursor = coll.find({});
+    for (auto doc : cursor) {
+      std::cout << bsoncxx::to_json(doc) << std::endl;
+      std::cout << std::endl;
+    }
   }
 }
 

@@ -92,6 +92,23 @@ class BSONOArchive : private boost::noncopyable {
     _stream << bsoncxx::builder::concatenate(doc.view());
     return *this;
   }
+
+  // chain::BlockPtr
+  template <
+      typename std::enable_if<!std::is_arithmetic<chain::BlockPtr>::value &&
+                                  !std::is_enum<chain::BlockPtr>::value,
+                              int>::type = 0>
+  BSONOArchive &operator<<(const chain::BlockPtr &t) {
+    bsoncxx::builder::stream::document doc;
+    doc << "_hash"
+        << boost::algorithm::hex(
+               std::string(t->getHash().begin(), t->getHash().end()));
+    BSONOArchive<decltype(doc)> archiveValue(ctx(), doc);
+    access::serialize(archiveValue, *t);
+    _stream << bsoncxx::builder::concatenate(doc.view());
+    return *this;
+  }
+
   // Number
   template <typename T,
             typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
@@ -209,10 +226,9 @@ class BSONOArchive : private boost::noncopyable {
           }
         }
       }
-      std::string value = oss.str();
       arrDoc =
           arrDoc << bsoncxx::builder::stream::open_document << "name" << name
-                 << "data" << value << "signature"
+                 << "data" << oss.str() << "signature"
                  << boost::algorithm::hex(std::string(
                         val->getSignature().begin(), val->getSignature().end()))
                  << bsoncxx::builder::stream::close_document;

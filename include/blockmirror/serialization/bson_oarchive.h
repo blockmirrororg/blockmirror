@@ -100,7 +100,7 @@ class BSONOArchive : private boost::noncopyable {
                               int>::type = 0>
   BSONOArchive &operator<<(const chain::BlockPtr &t) {
     bsoncxx::builder::stream::document doc;
-    doc << "_hash"
+    doc << "hash"
         << boost::algorithm::hex(
                std::string(t->getHash().begin(), t->getHash().end()));
     BSONOArchive<decltype(doc)> archiveValue(ctx(), doc);

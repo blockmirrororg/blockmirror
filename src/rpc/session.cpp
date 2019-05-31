@@ -140,7 +140,7 @@ void Session::handle_request() {
   }
 }
 
-int Session::getUrlencodedValue(const char* data, char* item, int maxSize,
+int Session::getUrlencodedValue(const char* data, const char* item, int maxSize,
                                 char* val) {
   char* p1 = NULL;
   char* p2 = NULL;

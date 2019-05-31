@@ -101,7 +101,7 @@ class Session : public std::enable_shared_from_this<Session> {
  private:
   void handle_request();
 
-  int getUrlencodedValue(const char* data, char* item, int maxSize, char* val);
+  int getUrlencodedValue(const char* data, const char* item, int maxSize, char* val);
 
   void handle_file(http::request<http::string_body>&& req);
 

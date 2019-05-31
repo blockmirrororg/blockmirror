@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(data_tests_ok) {
     BOOST_CHECK(store.add(p8));
     BOOST_CHECK(store.add(p9));
 
-    std::vector<blockmirror::store::NewDataPtr>& r = store.queryFormat("111");
+    std::vector<blockmirror::store::NewDataPtr> r = store.queryFormat("111");
 
     BOOST_CHECK_EQUAL(store.query("abc"), p1);
     BOOST_CHECK_EQUAL(store.query("222"), p2);

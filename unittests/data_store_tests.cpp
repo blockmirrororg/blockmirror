@@ -71,7 +71,12 @@ BOOST_AUTO_TEST_CASE(data_tests_ok) {
     BOOST_CHECK(store.add(p8));
     BOOST_CHECK(store.add(p9));
 
-    std::vector<blockmirror::store::NewDataPtr> r = store.queryFormat("111");
+    // gcc异于vs2017编译器：不允许引用临时对象
+    std::vector<blockmirror::store::NewDataPtr> v = store.queryFormat("111");
+    BOOST_CHECK(v.size() == 5);
+    for (auto i = 0; i < v.size(); ++i) {
+      BOOST_CHECK(v[i]->getFormat() == "111");
+    }
 
     BOOST_CHECK_EQUAL(store.query("abc"), p1);
     BOOST_CHECK_EQUAL(store.query("222"), p2);

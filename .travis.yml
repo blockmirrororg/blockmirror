@@ -1,6 +1,9 @@
 sudo: required
 dist: xenial
 language: cpp
+language: node_js
+node_js:
+  - "8"
 
 matrix:
   include:

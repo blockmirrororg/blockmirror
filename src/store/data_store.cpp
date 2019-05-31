@@ -92,24 +92,14 @@ bool DataStore::remove(const std::string& name) {
   return idx.erase(name) > 0;
 }
 
-//std::vector<store::NewDataPtr>& DataStore::queryEx(std::string format) {
-//  std::vector<store::NewDataPtr> v;
-//  boost::shared_lock<boost::shared_mutex> lock(_mutex);
-//  for (auto pos = _datas.begin(); pos != _datas.end(); ++pos) {
-//    if (pos->second->getFormat() == format) {
-//      v.emplace_back(pos->second);
-//    }
-//  }
-//  return v;
-//}
-
-std::vector<store::NewDataPtr> DataStore::queryEx(std::string format) {
+std::vector<store::NewDataPtr> DataStore::queryFormat(std::string format) {
   std::vector<store::NewDataPtr> v;
   boost::shared_lock<boost::shared_mutex> lock(_mutex);
-  auto &idx = _container.get<tagFormat>();
-  for (auto i = idx.begin(); i != idx.end(); ++i)
+  auto ret = _container.get<tagFormat>().equal_range(format);
+  while (ret.first != ret.second)
   {
-    v.emplace_back(i->data);
+    v.emplace_back(ret.first->data);
+    ++ret.first;
   }
 
   return v;

@@ -76,7 +76,7 @@ private:
     DataItem,
     boost::multi_index::indexed_by<
     boost::multi_index::hashed_unique<boost::multi_index::tag<tagName>, BOOST_MULTI_INDEX_CONST_MEM_FUN(DataItem, std::string, name)>,
-    boost::multi_index::ordered_non_unique<boost::multi_index::tag<tagFormat>, BOOST_MULTI_INDEX_CONST_MEM_FUN(DataItem, std::string, format)>
+    boost::multi_index::hashed_non_unique<boost::multi_index::tag<tagFormat>, BOOST_MULTI_INDEX_CONST_MEM_FUN(DataItem, std::string, format)>
     >> DataContainer;
 
   DataContainer _container;
@@ -115,7 +115,7 @@ private:
   /**
    * @brief 查找所有的NewData
    */
-  std::vector<store::NewDataPtr> queryEx(std::string format);
+  std::vector<store::NewDataPtr> queryFormat(std::string format);
 };
 
 }  // namespace store

@@ -466,7 +466,7 @@ void Session::getChainDatatype(const char* arg) {
   }
 
   store::DataStore& ds = _context.getDataStore();
-  std::vector<store::NewDataPtr> v = ds.queryEx(arg);
+  std::vector<store::NewDataPtr> v = ds.queryFormat(arg);
 
   std::ostringstream oss;
   blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,

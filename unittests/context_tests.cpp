@@ -9,8 +9,12 @@
 #include <blockmirror/store/transaction_store.h>
 #include <boost/algorithm/hex.hpp>
 #include <boost/test/unit_test.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/json.hpp>
 #include "test_helper.h"
+
+using bsoncxx::builder::stream::document;
+using bsoncxx::builder::stream::finalize;
 
 BOOST_AUTO_TEST_SUITE(context_tests)
 
@@ -578,7 +582,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok9) {
     dataStore.add(pdata);
     BOOST_CHECK(dataStore.query("111"));
 
-    std::vector<uint8_t> v1{3, 3, 3};
+    std::vector<uint8_t> v1{4, 4, 4};
     blockmirror::store::NewFormatPtr pformat =
         std::make_shared<blockmirror::chain::scri::NewFormat>(
             std::string{"abc"}, std::string{"222"}, v1, v1, v1);
@@ -647,12 +651,12 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
   }
 
   {
-    std::vector<uint8_t> v1{1, 1, 3};
+    std::vector<uint8_t> v1{1, 2, 3};
     blockmirror::store::NewFormatPtr p1 =
         std::make_shared<blockmirror::chain::scri::NewFormat>(
             std::string{"aaa"}, std::string{"ddd"}, v1, v1, v1);
 
-    std::vector<uint8_t> v2{2, 3, 2};
+    std::vector<uint8_t> v2{2, 3, 4};
     blockmirror::store::NewFormatPtr p2 =
         std::make_shared<blockmirror::chain::scri::NewFormat>(
             std::string{"bbb"}, std::string{"ccc"}, v2, v2, v2);
@@ -689,7 +693,24 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
     blockmirror::store::DataSignatureStore& dataSignature =
         c.getDataSignatureStore();
 
-    std::vector<uint8_t> v5{7, 8, 9};
+    std::vector<uint8_t> v5;  // 1 2 3 float double uint32_t 4+8+4=16
+    v5.resize(16);
+    {
+      float fl = 21.2334;
+      double dou = -114.112;
+      uint32_t uin = 21;
+
+      size_t index = 0;
+
+      memcpy(&v5[index], &fl, sizeof(float));
+      index += sizeof(float);
+
+      memcpy(&v5[index], &dou, sizeof(double));
+      index += sizeof(double);
+
+      memcpy(&v5[index], &uin, sizeof(uint32_t));
+      index += sizeof(uint32_t);
+    }
     blockmirror::chain::DataPtr data1 =
         std::make_shared<blockmirror::chain::Data>("111", v5);
     blockmirror::chain::DataSignedPtr dataSingned1 =
@@ -698,7 +719,24 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
     dataSingned1->sign(blockmirror::globalConfig.miner_privkey, height);
     dataSignature.add(dataSingned1);
 
-    std::vector<uint8_t> v6{11, 18, 92};
+    std::vector<uint8_t> v6;  // 2 3 4 double uint32_t int 8+4+4=16
+    v6.resize(16);
+    {
+      double dou = 0.91132;
+      uint32_t uin = 1821;
+      int in = -3331;
+
+      size_t index = 0;
+
+      memcpy(&v6[index], &dou, sizeof(double));
+      index += sizeof(double);
+
+      memcpy(&v6[index], &uin, sizeof(uint32_t));
+      index += sizeof(uint32_t);
+
+      memcpy(&v6[index], &in, sizeof(int));
+      index += sizeof(int);
+    }
     blockmirror::chain::DataPtr data2 =
         std::make_shared<blockmirror::chain::Data>("222", v6);
     blockmirror::chain::DataSignedPtr dataSingned2 =
@@ -707,7 +745,24 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
     dataSingned2->sign(blockmirror::globalConfig.miner_privkey, height);
     dataSignature.add(dataSingned2);
 
-    std::vector<uint8_t> v7{5, 6, 6};
+    std::vector<uint8_t> v7;  // 3 3 3 uint32_t uint32_t uint32_t 4+4+4=12
+    v7.resize(12);
+    {
+      uint32_t uin1 = 317199;
+      uint32_t uin2 = 0;
+      uint32_t uin3 = 233;
+
+      size_t index = 0;
+
+      memcpy(&v7[index], &uin1, sizeof(uint32_t));
+      index += sizeof(uint32_t);
+
+      memcpy(&v7[index], &uin2, sizeof(uint32_t));
+      index += sizeof(uint32_t);
+
+      memcpy(&v7[index], &uin3, sizeof(uint32_t));
+      index += sizeof(uint32_t);
+    }
     blockmirror::chain::DataPtr data3 =
         std::make_shared<blockmirror::chain::Data>("333", v7);
     blockmirror::chain::DataSignedPtr dataSingned3 =
@@ -723,7 +778,8 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
 
   static blockmirror::store::MongoStore& mongoStore =
       blockmirror::store::MongoStore::get();
-  {  //删除mongodb数据
+
+  /* {  //删除mongodb数据
     mongocxx::client client{
         mongocxx::uri{blockmirror::globalConfig.mongodbURI}};
     mongocxx::database db = client[blockmirror::globalConfig.mongodbName];
@@ -733,10 +789,11 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
         coll.delete_many({});  //清空数据库
 
     if (result) {
-      std::cout << "delete:" << result->deleted_count() << "\n";
+      // std::cout << "delete:" << result->deleted_count() << "\n";
     }
-  }
+  } */
 
+  uint64_t timestamp = 0;
   {
     blockmirror::chain::Context c;
     c.load();
@@ -745,6 +802,8 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
     auto blk = c.genBlock(blockmirror::globalConfig.miner_privkey,
                           blockmirror::globalConfig.reward_pubkey, now);
     mongoStore.save(blk, &c);
+
+    timestamp = blk->getTimestamp();
   }
 
   {
@@ -760,10 +819,52 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
     mongocxx::database db = client[blockmirror::globalConfig.mongodbName];
     mongocxx::collection coll = db[blockmirror::globalConfig.mongodbCollection];
 
-    mongocxx::cursor cursor = coll.find({});
-    for (auto doc : cursor) {
-      std::cout << bsoncxx::to_json(doc) << std::endl;
-      std::cout << std::endl;
+    /*     mongocxx::cursor cursor = coll.find({});
+        for (auto doc : cursor) {
+          std::cout << bsoncxx::to_json(doc) << std::endl;
+        } */
+
+    // 查询单个文档
+    bsoncxx::stdx::optional<bsoncxx::document::value> result = coll.find_one(
+        document{} << "timestamp" << bsoncxx::types::b_int64{(int64_t)timestamp}
+                   << finalize);
+    if (result) {
+      bsoncxx::document::view view = result->view();
+
+      bsoncxx::document::element element1 = view["hash"];
+      if (element1.type() == bsoncxx::type::k_utf8) {
+        auto hash = element1.get_utf8().value.to_string();
+        BOOST_CHECK(!hash.empty());
+      }
+
+      bsoncxx::document::element element2 = view["datas"];
+      bsoncxx::array::view datas = element2.get_array().value;
+      for (bsoncxx::array::element var : datas) {
+        bsoncxx::document::view v1 = var.get_document().value;
+        bsoncxx::document::element ele1 = v1["datas"];
+        bsoncxx::array::view datas1 = ele1.get_array().value;
+
+        size_t pos = 0;
+        for (auto i = datas1.begin(); i != datas1.end(); i++) {
+          bsoncxx::document::view v2 = (*i).get_document().value;
+          bsoncxx::document::element ele2 = v2["name"];
+          std::string name = ele2.get_utf8().value.to_string();
+          bsoncxx::document::element ele3 = v2["data"];
+          std::string data = ele3.get_utf8().value.to_string();
+
+          pos++;
+          if (1 == pos) {
+            BOOST_CHECK(name == "111");
+            BOOST_CHECK(data == "21.2334,-114.112,21");
+          } else if (2 == pos) {
+            BOOST_CHECK(name == "222");
+            BOOST_CHECK(data == "0.91132,1821,-3331");
+          } else if (3 == pos) {
+            BOOST_CHECK(name == "333");
+            BOOST_CHECK(data == "317199,0,233");
+          }
+        }
+      }
     }
   }
 }

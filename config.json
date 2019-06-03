@@ -5,7 +5,7 @@
   "p2p_bind": 18888,
   "rpc_bind": 8080,
   "rpc_resource": "../public",
-  "mongodbURI": "mongodb://dk.fingera.cn:27017",
+  "mongodbURI": "mongodb://dk.fingera.cn:10086",
   "mongodbName": "blockmirror",
   "mongodbCollection": "block",
   "seeds": ["188.11.11.11:3333", "188.11.11.22:3333"]

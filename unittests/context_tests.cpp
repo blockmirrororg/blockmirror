@@ -702,12 +702,15 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
 
       size_t index = 0;
 
+      boost::endian::native_to_little_inplace(fl);
       memcpy(&v5[index], &fl, sizeof(float));
       index += sizeof(float);
 
+      boost::endian::native_to_little_inplace(dou);
       memcpy(&v5[index], &dou, sizeof(double));
       index += sizeof(double);
 
+      boost::endian::native_to_little_inplace(uin);
       memcpy(&v5[index], &uin, sizeof(uint32_t));
       index += sizeof(uint32_t);
     }
@@ -728,12 +731,15 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
 
       size_t index = 0;
 
+      boost::endian::native_to_little_inplace(dou);
       memcpy(&v6[index], &dou, sizeof(double));
       index += sizeof(double);
 
+      boost::endian::native_to_little_inplace(uin);
       memcpy(&v6[index], &uin, sizeof(uint32_t));
       index += sizeof(uint32_t);
 
+      boost::endian::native_to_little_inplace(in);
       memcpy(&v6[index], &in, sizeof(int));
       index += sizeof(int);
     }
@@ -754,12 +760,15 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
 
       size_t index = 0;
 
+      boost::endian::native_to_little_inplace(uin1);
       memcpy(&v7[index], &uin1, sizeof(uint32_t));
       index += sizeof(uint32_t);
 
+      boost::endian::native_to_little_inplace(uin2);
       memcpy(&v7[index], &uin2, sizeof(uint32_t));
       index += sizeof(uint32_t);
 
+      boost::endian::native_to_little_inplace(uin3);
       memcpy(&v7[index], &uin3, sizeof(uint32_t));
       index += sizeof(uint32_t);
     }

@@ -165,21 +165,17 @@ class BSONOArchive : private boost::noncopyable {
           for (size_t i = 0; i < formatSize; i++) {
             switch (dataFormat[i]) {
               case chain::scri::NewFormat::TYPE_FLOAT: {
-                int32_t t;
-                memcpy(&t, &data[index], sizeof(float));
-                boost::endian::little_to_native_inplace(t);
                 float fl;
-                memcpy(&fl, &t, sizeof(int32_t));
+                memcpy(&fl, &data[index], sizeof(float));
+                boost::endian::little_to_native_inplace(fl);
                 oss << fl;
                 index += sizeof(float);
                 break;
               }
               case chain::scri::NewFormat::TYPE_DOUBLE: {
-                int64_t t;
-                memcpy(&t, &data[index], sizeof(double));
-                boost::endian::little_to_native_inplace(t);
                 double dou;
-                memcpy(&dou, &t, sizeof(int64_t));
+                memcpy(&dou, &data[index], sizeof(double));
+                boost::endian::little_to_native_inplace(dou);
                 oss << dou;
                 index += sizeof(double);
                 break;

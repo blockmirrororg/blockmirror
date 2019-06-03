@@ -8,20 +8,24 @@
 namespace blockmirror {
 namespace p2p {
 
-Channel::Channel(boost::shared_ptr<boost::asio::ip::tcp::socket>& socket) : _socket(socket) {}
+Channel::Channel(boost::shared_ptr<boost::asio::ip::tcp::socket>& socket, boost::asio::io_context& ioc)
+    : _socket(socket), _timer(ioc) {}
 
-// ChannelManager引用的是weak_ptr，那么Channel什么时候会析构，当没有处于异步recv或者send状态中的operation，即没有shared_from_this() hold住shared_ptr
-Channel::~Channel()
-{
+// ChannelManager引用的是weak_ptr，那么Channel什么时候会析构，当没有处于异步recv或者send状态中的operation，即没有shared_from_this()
+// hold住shared_ptr
+Channel::~Channel() {
   ChannelManager::get().removeChannel(_channelId);
-  /*if (_connector)
-  {
-    _connector
-  }*/
+  if (_connector) {
+    _connector->start(false);
+  }
 }
 
 void Channel::start() {
   ChannelManager::get().addChannel(shared_from_this());
+
+	_current = std::time(0);
+	_timer.expires_from_now(boost::posix_time::seconds(10));
+	_timer.async_wait(boost::bind(&Channel::handleTimer, shared_from_this()));
 
   boost::asio::async_read(
       *_socket, _binaryBuf, boost::asio::transfer_exactly(sizeof(MessageHeader)),
@@ -35,6 +39,12 @@ void Channel::handleReadHeader(const boost::system::error_code& e) {
     boost::archive::binary_iarchive archive(_binaryBuf);
     archive >> header;
 
+    if (header.length > MESSAGE_MAX_LENGTH)
+    {
+      close();
+      return;
+    }
+
     boost::asio::async_read(
         *_socket, _binaryBuf, boost::asio::transfer_exactly(header.length),
         boost::bind(&Channel::handleReadBody, shared_from_this(),
@@ -42,11 +52,15 @@ void Channel::handleReadHeader(const boost::system::error_code& e) {
   }
 }
 
+// 收到的网络消息在这里处理
 class MessageVisitor : public boost::static_visitor<> {
  public:
   MessageVisitor(Channel& channel) : _channel(channel) {}
 
-  void operator()(const MsgHeartbeat& msg) const {}
+  void operator()(const MsgHeartbeat& msg) const
+	{
+		_channel._current = std::time(0);
+	}
 
   void operator()(const MsgBroadcastBlock& msg) const {}
 
@@ -71,17 +85,33 @@ void Channel::close() {
 }
 
 void Channel::send(const Message& msg) {
-  boost::archive::binary_oarchive archive(_binaryBuf);
+  boost::asio::streambuf binaryBuf;
+  boost::archive::binary_oarchive archive(binaryBuf);
   archive << msg;
   boost::asio::async_write(
-      *_socket, _binaryBuf,
+      *_socket, binaryBuf,
       boost::bind(&Channel::handleWrite, shared_from_this(),
                   boost::asio::placeholders::error));
 }
 
 void Channel::handleWrite(const boost::system::error_code& e) {
   if (!e) {
+    // do nothing
   }
+}
+
+void Channel::handleTimer() {
+  if (_connector) {
+    send(MsgHeartbeat());  // 每隔10秒向服务端发送心跳包
+  } else {
+    if (std::time(0) - _current > 15) {
+      close();
+      return;
+    }
+  }
+
+  _timer.expires_from_now(boost::posix_time::seconds(10));
+  _timer.async_wait(boost::bind(&Channel::handleTimer, shared_from_this()));
 }
 
 }  // namespace p2p

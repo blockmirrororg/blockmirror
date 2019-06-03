@@ -1,49 +1,46 @@
 
-#include <blockmirror/p2p/connector.h>
 #include <blockmirror/p2p/channel.h>
+#include <blockmirror/p2p/connector.h>
 #include <boost/bind.hpp>
-#include <iostream>
 #include <boost/make_shared.hpp>
+#include <iostream>
 
 namespace blockmirror {
 namespace p2p {
 
 Connector::Connector(boost::asio::io_context& ioc, const char* ip,
                      unsigned short port)
-    : socket_(ioc),
-      endpoint_(boost::asio::ip::address::from_string(ip), port),
-      timer_(ioc),
+    : endpoint_(boost::asio::ip::address::from_string(ip), port),
+      _timer(ioc),
       _ioContext(ioc) {}
 
 void Connector::start(bool now) {
-
+  _socket.reset(new boost::asio::ip::tcp::socket(_ioContext));
   if (now) {
-    socket_.async_connect(
-        endpoint_, boost::bind(&Connector::handle_connect, shared_from_this(),
+    _socket->async_connect(
+        endpoint_, boost::bind(&Connector::handleConnect, shared_from_this(),
                                boost::asio::placeholders::error));
   } else {
-    timer_.expires_from_now(boost::posix_time::seconds(5));
-    timer_.async_wait(
-        boost::bind(&Connector::handle_timer, shared_from_this()));
+    _timer.expires_from_now(boost::posix_time::seconds(5));
+    _timer.async_wait(boost::bind(&Connector::handleTimer, shared_from_this()));
   }
 }
 
-void Connector::handle_connect(const boost::system::error_code& ec) {
-  /*if (!ec) {
-    boost::shared_ptr<Channel> channel = boost::make_shared<Channel>(_ioContext);
+void Connector::handleConnect(const boost::system::error_code& ec) {
+  if (!ec) {
+    boost::shared_ptr<Channel> channel = boost::make_shared<Channel>(_socket, _ioContext);
     channel->setConnector(shared_from_this());
     channel->start();
   } else {
-    socket_.close();
-    timer_.expires_from_now(boost::posix_time::seconds(10));
-    timer_.async_wait(
-        boost::bind(&Connector::handle_timer, shared_from_this()));
-  }*/
+    _socket->close();
+    _timer.expires_from_now(boost::posix_time::seconds(10));
+    _timer.async_wait(boost::bind(&Connector::handleTimer, shared_from_this()));
+  }
 }
 
-void Connector::handle_timer() {
-  socket_.async_connect(
-      endpoint_, boost::bind(&Connector::handle_connect, shared_from_this(),
+void Connector::handleTimer() {
+  _socket->async_connect(
+      endpoint_, boost::bind(&Connector::handleConnect, shared_from_this(),
                              boost::asio::placeholders::error));
 }
 

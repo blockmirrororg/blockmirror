@@ -14,15 +14,15 @@ class Connector : public boost::enable_shared_from_this<Connector> {
   void start(bool now = true);
 
  private:
-  void handle_connect(const boost::system::error_code& ec);
-  void handle_write(const boost::system::error_code& ec);
-  void handle_timer();
+  void handleConnect(const boost::system::error_code& ec);
+  //void handleWrite(const boost::system::error_code& ec);
+  void handleTimer();
 
  private:
-  boost::asio::ip::tcp::socket socket_;
+  boost::shared_ptr<boost::asio::ip::tcp::socket> _socket;
   boost::asio::ip::tcp::endpoint endpoint_;
 
-  boost::asio::deadline_timer timer_;
+  boost::asio::deadline_timer _timer;
   boost::asio::io_context& _ioContext;
 };
 

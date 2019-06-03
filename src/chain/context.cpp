@@ -507,14 +507,14 @@ bool Context::check(const chain::DataPtr& data) {
         dataSize += sizeof(uint32_t);
         break;
       case chain::scri::NewFormat::TYPE_INT:
-        dataSize += sizeof(int);
+        dataSize += sizeof(int32_t);
         break;
       default:
         return false;
     }
   }
-  const std::vector<uint8_t> d = data->getData();
-  if (dataSize != d.size() * sizeof(uint8_t)) {
+
+  if (dataSize != data->getData().size() * sizeof(uint8_t)) {
     return false;
   }
 

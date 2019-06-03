@@ -194,30 +194,42 @@ class BSONOArchive : private boost::noncopyable {
           size_t index = 0;
           for (size_t i = 0; i < formatSize; i++) {
             switch (dataFormat[i]) {
-              case chain::scri::NewFormat::TYPE_FLOAT:
+              case chain::scri::NewFormat::TYPE_FLOAT: {
+                int32_t t;
+                memcpy(&t, &data[index], sizeof(float));
+                boost::endian::little_to_native_inplace(t);
                 float fl;
-                memcpy(&fl, &data[index], sizeof(float));
+                memcpy(&fl, &t, sizeof(int32_t));
                 oss << fl;
                 index += sizeof(float);
                 break;
-              case chain::scri::NewFormat::TYPE_DOUBLE:
+              }
+              case chain::scri::NewFormat::TYPE_DOUBLE: {
+                int64_t t;
+                memcpy(&t, &data[index], sizeof(double));
+                boost::endian::little_to_native_inplace(t);
                 double dou;
-                memcpy(&dou, &data[index], sizeof(double));
+                memcpy(&dou, &t, sizeof(int64_t));
                 oss << dou;
                 index += sizeof(double);
                 break;
-              case chain::scri::NewFormat::TYPE_UINT:
+              }
+              case chain::scri::NewFormat::TYPE_UINT: {
                 uint32_t uin;
                 memcpy(&uin, &data[index], sizeof(uint32_t));
+                boost::endian::little_to_native_inplace(uin);
                 oss << uin;
                 index += sizeof(uint32_t);
                 break;
-              case chain::scri::NewFormat::TYPE_INT:
-                int in;
-                memcpy(&in, &data[index], sizeof(int));
+              }
+              case chain::scri::NewFormat::TYPE_INT: {
+                int32_t in;
+                memcpy(&in, &data[index], sizeof(int32_t));
+                boost::endian::little_to_native_inplace(in);
                 oss << in;
-                index += sizeof(int);
+                index += sizeof(int32_t);
                 break;
+              }
               default:;
             }
             if ((i + 1) != formatSize) {

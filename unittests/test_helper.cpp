@@ -1,18 +1,27 @@
 #include "test_helper.h"
 
 void initFullBlock(blockmirror::chain::Block &block) {
+  float initializeData[] = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
+  for (size_t i = 0; i < sizeof(initializeData) / sizeof(initializeData[0]);
+       i++) {
+    boost::endian::native_to_little_inplace(initializeData[i]);
+  }
+  std::vector<uint8_t> nativeData((uint8_t *)initializeData, (uint8_t *)(initializeData + 5));
+
   // 设置父区块
   block.setGenesis();  // 创世块
+  block.setTimestamp(1559541065000);
   // block.setPrevious(parentBlock);
   // 填充coinbase的受益账号
   block.setCoinbase(PUB(pubZhaoliu));
+  block.getCoinbase()->setNonce(778905127);
   // 将未确认交易加入
   // 1. 转账 A => B
   blockmirror::chain::TransactionSignedPtr transfer =
       std::make_shared<blockmirror::chain::TransactionSigned>(
           blockmirror::chain::scri::Transfer(PUB(pubSunqi), 1000000));
   transfer->setExpire(2);
-  transfer->setNonce();
+  transfer->setNonce(2807220144);
   transfer->addSign(PRIV(privZhaoliu));
   // BOOST_CHECK(transfer->verify());
   block.addTransaction(transfer);
@@ -21,7 +30,7 @@ void initFullBlock(blockmirror::chain::Block &block) {
       std::make_shared<blockmirror::chain::TransactionSigned>(
           blockmirror::chain::scri::BPJoin(PUB(pubWangwu)));
   bpjoin->setExpire(2);
-  bpjoin->setNonce();
+  bpjoin->setNonce(2206937323);
   bpjoin->addSign(PRIV(privZhangsan));
   bpjoin->addSign(PRIV(privLisi));
   // BOOST_CHECK(bpjoin->verify());
@@ -31,7 +40,7 @@ void initFullBlock(blockmirror::chain::Block &block) {
       std::make_shared<blockmirror::chain::TransactionSigned>(
           blockmirror::chain::scri::BPExit(PUB(pubWangwu)));
   bpexit->setExpire(2);
-  bpexit->setNonce();
+  bpexit->setNonce(224074457);
   bpexit->addSign(PRIV(privZhangsan));
   bpexit->addSign(PRIV(privLisi));
   // BOOST_CHECK(bpjoin->verify());
@@ -45,7 +54,7 @@ void initFullBlock(blockmirror::chain::Block &block) {
            NewFormat::TYPE_FLOAT, NewFormat::TYPE_FLOAT},
           {0x01}, {0x02}));
   newformat->setExpire(2);
-  newformat->setNonce();
+  newformat->setNonce(4074770719);
   newformat->addSign(PRIV(privZhangsan));
   newformat->addSign(PRIV(privLisi));
   // BOOST_CHECK(bpjoin->verify());
@@ -53,20 +62,31 @@ void initFullBlock(blockmirror::chain::Block &block) {
   // 5. 新的数据种类
   blockmirror::chain::TransactionSignedPtr newdata =
       std::make_shared<blockmirror::chain::TransactionSigned>(
-          blockmirror::chain::scri::NewData("stock", "alibaba",
-                                            "阿里巴巴在纳斯达克的股票数据"));
+          blockmirror::chain::scri::NewData("stock", "APPLE",
+                                            "苹果股票"));
   newdata->setExpire(2);
-  newdata->setNonce();
+  newdata->setNonce(2224478161);
   newdata->addSign(PRIV(privZhangsan));
   newdata->addSign(PRIV(privLisi));
   // BOOST_CHECK(bpjoin->verify());
   block.addTransaction(newdata);
+  blockmirror::chain::TransactionSignedPtr newdata2 =
+      std::make_shared<blockmirror::chain::TransactionSigned>(
+          blockmirror::chain::scri::NewData("stock", "GOOGLE",
+                                            "谷歌股票"));
+  newdata2->setExpire(2);
+  newdata2->setNonce(592043445);
+  newdata2->addSign(PRIV(privZhangsan));
+  newdata2->addSign(PRIV(privLisi));
+  // BOOST_CHECK(bpjoin->verify());
+  block.addTransaction(newdata2);
+
   // BP1提供的数据
   blockmirror::chain::DataBPPtr bp1Data =
       std::make_shared<blockmirror::chain::DataBP>(PUB(pubZhangsan));
   blockmirror::chain::DataSignedPtr bp1Apple =
       std::make_shared<blockmirror::chain::DataSigned>(
-          "APPLE", std::vector<uint8_t>{0x11, 0x22, 0x33, 0x44});
+          "APPLE", nativeData);
   blockmirror::chain::DataSignedPtr bp1Google =
       std::make_shared<blockmirror::chain::DataSigned>(
           "GOOGLE", std::vector<uint8_t>{0x11, 0x22, 0x33, 0x44});
@@ -83,10 +103,10 @@ void initFullBlock(blockmirror::chain::Block &block) {
       std::make_shared<blockmirror::chain::DataBP>(PUB(pubLisi));
   blockmirror::chain::DataSignedPtr bp2Apple =
       std::make_shared<blockmirror::chain::DataSigned>(
-          "APPLE", std::vector<uint8_t>{0x11, 0x22, 0x33, 0x44});
+          "APPLE", nativeData);
   blockmirror::chain::DataSignedPtr bp2Google =
       std::make_shared<blockmirror::chain::DataSigned>(
-          "GOOGLE", std::vector<uint8_t>{0x11, 0x22, 0x33, 0x44});
+          "GOOGLE", nativeData);
   bp2Apple->sign(PRIV(privLisi), block.getHeight());
   bp2Google->sign(PRIV(privLisi), block.getHeight());
   // BOOST_CHECK(bp2Apple->verify(PUB(pubLisi), block.getHeight()));

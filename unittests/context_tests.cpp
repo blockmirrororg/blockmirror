@@ -813,6 +813,8 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
     BOOST_CHECK(!dataSignature.query("333"));
   }
 
+// 不是测试本程序逻辑的代码？
+#if 0
   {
     mongocxx::client client{
         mongocxx::uri{blockmirror::globalConfig.mongodbURI}};
@@ -867,6 +869,7 @@ BOOST_AUTO_TEST_CASE(context_tests_ok10) {
       }
     }
   }
+#endif
 }
 
 BOOST_AUTO_TEST_SUITE_END()

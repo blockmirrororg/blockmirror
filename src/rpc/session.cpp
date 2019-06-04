@@ -108,9 +108,6 @@ void Session::handle_request() {
     (this->*funcPtr)();
 
   } else if (req_.method() == http::verb::get) {
-    /*if (req_.target().find(".") != std::string::npos) {
-      handle_file(std::move(req_));
-    } else {*/
     std::string strTarget = req_.target().to_string();
     const char* target = strTarget.c_str();
     char* ret = (char*)strchr(target, '?');
@@ -119,7 +116,11 @@ void Session::handle_request() {
     }
     auto funcPtr = getMethodFuncPtr(target);
     if (!funcPtr) {
-      return lambda_(bad_request("Illegal request-target"));
+      if (req_.target().find(".") != std::string::npos) {
+        return handle_file(std::move(req_));
+      } else {
+        return lambda_(bad_request("Illegal request-target"));
+      }
     }
 
     if (ret) {
@@ -133,8 +134,6 @@ void Session::handle_request() {
     } else {
       (this->*funcPtr)(nullptr);
     }
-    /*}*/
-
   } else {
     return lambda_(bad_request("Illegal request-method"));
   }
@@ -200,46 +199,95 @@ void Session::postChainTransaction() {
   return lambda_(ok("{}"));
 }
 
+//void Session::postChainData() {
+//  std::stringstream ss(req_.body());
+//  boost::property_tree::ptree ptree;
+//  chain::DataPtr data = std::make_shared<chain::Data>();
+//  try {
+//    boost::property_tree::read_json(ss, ptree);
+//    blockmirror::serialization::PTreeIArchive archive(ptree);
+//    archive >> data;
+//  } catch (std::exception& e) {
+//    B_WARN("{}", e.what());
+//    return lambda_(server_error(e.what()));
+//  } catch (...) {
+//    B_WARN("unknown exception!");
+//    return lambda_(server_error("unknown exception!"));
+//  }
+//
+//  if (!_context.check(data)) {
+//    B_WARN("data check failed");
+//    return lambda_(bad_request("check failed"));
+//  }
+//
+//  chain::DataSignedPtr dataSigned =
+//      std::make_shared<chain::DataSigned>(data->getName(), data->getData());
+//  try {
+//    dataSigned->sign(globalConfig.miner_privkey,
+//                     _context.getHead()->getHeight());
+//  } catch (std::exception& e) {
+//    B_WARN("{}", e.what());
+//    return lambda_(server_error(e.what()));
+//  } catch (...) {
+//    B_WARN("unknown exception!");
+//    return lambda_(server_error("unknown exception!"));
+//  }
+//
+//  if (!_context.getDataSignatureStore().add(dataSigned)) {
+//    B_WARN("repeat put, modified!");
+//    return lambda_(bad_request("repeat put, modified!"));
+//  }
+//
+//  return lambda_(ok("{}"));
+//}
+
 void Session::postChainData() {
-  std::stringstream ss(req_.body());
-  boost::property_tree::ptree ptree;
-  chain::DataPtr data = std::make_shared<chain::Data>();
-  try {
-    boost::property_tree::read_json(ss, ptree);
-    blockmirror::serialization::PTreeIArchive archive(ptree);
-    archive >> data;
-  } catch (std::exception& e) {
-    B_WARN("{}", e.what());
-    return lambda_(server_error(e.what()));
-  } catch (...) {
-    B_WARN("unknown exception!");
-    return lambda_(server_error("unknown exception!"));
-  }
+	std::stringstream ss(req_.body());
+	boost::property_tree::ptree ptree;
+	std::vector<chain::DataPtr> datas;
+	try {
+		boost::property_tree::read_json(ss, ptree);
+		blockmirror::serialization::PTreeIArchive archive(ptree);
+		archive >> datas;
+	}
+	catch (std::exception& e) {
+		B_WARN("{}", e.what());
+		return lambda_(server_error(e.what()));
+	}
+	catch (...) {
+		B_WARN("unknown exception!");
+		return lambda_(server_error("unknown exception!"));
+	}
 
-  if (!_context.check(data)) {
-    B_WARN("data check failed");
-    return lambda_(bad_request("check failed"));
-  }
+	for (auto pos = datas.begin(); pos != datas.end(); ++pos)
+	{
+		if (!_context.check(*pos)) {
+			B_WARN("data check failed");
+			return lambda_(bad_request("check failed"));
+		}
 
-  chain::DataSignedPtr dataSigned =
-      std::make_shared<chain::DataSigned>(data->getName(), data->getData());
-  try {
-    dataSigned->sign(globalConfig.miner_privkey,
-                     _context.getHead()->getHeight());
-  } catch (std::exception& e) {
-    B_WARN("{}", e.what());
-    return lambda_(server_error(e.what()));
-  } catch (...) {
-    B_WARN("unknown exception!");
-    return lambda_(server_error("unknown exception!"));
-  }
+		chain::DataSignedPtr dataSigned =
+			std::make_shared<chain::DataSigned>((*pos)->getName(), (*pos)->getData());
+		try {
+			dataSigned->sign(globalConfig.miner_privkey,
+				_context.getHead()->getHeight());
+		}
+		catch (std::exception& e) {
+			B_WARN("{}", e.what());
+			return lambda_(server_error(e.what()));
+		}
+		catch (...) {
+			B_WARN("unknown exception!");
+			return lambda_(server_error("unknown exception!"));
+		}
 
-  if (!_context.getDataSignatureStore().add(dataSigned)) {
-    B_WARN("repeat put, modified!");
-    return lambda_(bad_request("repeat put, modified!"));
-  }
+		if (!_context.getDataSignatureStore().add(dataSigned)) {
+			B_WARN("repeat put, modified!");
+			return lambda_(bad_request("repeat put, modified!"));
+		}
+	}
 
-  return lambda_(ok("{}"));
+	return lambda_(ok("{}"));
 }
 
 void Session::getNodeStop(const char*) {

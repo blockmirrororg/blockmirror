@@ -8,18 +8,7 @@ namespace rpc {
 
 Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint,
                    blockmirror::chain::Context& context)
-    : acceptor_(ioc), socket_(ioc), _context(context), _ioc(ioc) {
-  /*HttpHandler& httpHandler = HttpHandler::get();
-  httpHandler.register_target("/node/stop", new GetNodeStop);
-  httpHandler.register_target("/node/version", new GetNodeVersion);
-  httpHandler.register_target("/node/Peers", new GetNodePeers);
-  httpHandler.register_target("/chain/status", new GetChainStatus);
-  httpHandler.register_target("/chain/last", new GetChainLast);
-  httpHandler.register_target("/chain/block", new GetChainBlock);
-  httpHandler.register_target("/chain/transaction", new GetChainTransaction);
-  httpHandler.register_target("/node/connect", new GetNodeConnect);
-  httpHandler.register_target("/put_transaction", new PostPutData);
-  httpHandler.register_target("/put_data", new PutTransaction);*/
+    : acceptor_(ioc), socket_(ioc), _context(context), _ioc(ioc) {  
 
   Session::_getMethodPtrs.insert(
       std::make_pair("/node/stop", &Session::getNodeStop));
@@ -60,16 +49,18 @@ Listener::Listener(boost::asio::io_context& ioc, tcp::endpoint endpoint,
     return;
   }
 
-  acceptor_.set_option(boost::asio::socket_base::reuse_address(true), ec);
+	// 另外一个进程绑走了该端口则accept无法接收；不设置该选项有时会出现进程退出了，端口还处于被占用的状态
+  /*acceptor_.set_option(boost::asio::socket_base::reuse_address(true), ec);
   if (ec) {
     B_ERR("set_option {}", ec.message());
     return;
-  }
+  }*/
 
   acceptor_.bind(endpoint, ec);
   if (ec) {
-    B_ERR("bind {}", ec.message());
-    return;
+    /*B_ERR("bind {}", ec.message());
+    return;*/
+		throw std::runtime_error("rpc绑定端口失败");
   }
 
   acceptor_.listen(boost::asio::socket_base::max_listen_connections, ec);

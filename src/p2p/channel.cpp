@@ -9,7 +9,7 @@ namespace blockmirror {
 namespace p2p {
 
 Channel::Channel(boost::shared_ptr<boost::asio::ip::tcp::socket>& socket, boost::asio::io_context& ioc)
-    : _socket(socket), _timer(ioc) {}
+    : _socket(socket), _timer(ioc), _strand(ioc) {}
 
 // ChannelManager引用的是weak_ptr，那么Channel什么时候会析构，当没有处于异步recv或者send状态中的operation，即没有shared_from_this()
 // hold住shared_ptr
@@ -75,7 +75,12 @@ void Channel::handleReadBody(const boost::system::error_code& e) {
     archive >> message;
     boost::apply_visitor(MessageVisitor(*this), message);
 
-    start();
+		// 接着收下一个包
+    boost::asio::async_read(
+        *_socket, _binaryBuf,
+        boost::asio::transfer_exactly(sizeof(MessageHeader)),
+        boost::bind(&Channel::handleReadHeader, shared_from_this(),
+                    boost::asio::placeholders::error));
   }
 }
 
@@ -90,8 +95,8 @@ void Channel::send(const Message& msg) {
   archive << msg;
   boost::asio::async_write(
       *_socket, binaryBuf,
-      boost::bind(&Channel::handleWrite, shared_from_this(),
-                  boost::asio::placeholders::error));
+      _strand.wrap(boost::bind(&Channel::handleWrite, shared_from_this(),
+                               boost::asio::placeholders::error)));
 }
 
 void Channel::handleWrite(const boost::system::error_code& e) {
@@ -105,6 +110,7 @@ void Channel::handleTimer() {
     send(MsgHeartbeat());  // 每隔10秒向服务端发送心跳包
   } else {
     if (std::time(0) - _current > 15) {
+			// 一定时间内没收到客户端的心跳包，认为该连接已僵死，该间隔可以设置得大一点
       close();
       return;
     }

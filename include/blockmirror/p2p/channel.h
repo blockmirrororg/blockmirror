@@ -43,6 +43,7 @@ class Channel : public boost::enable_shared_from_this<Channel>,
   int _channelId;
   boost::asio::deadline_timer _timer;
   std::time_t _current;
+	boost::asio::io_context::strand _strand;
 };
 
 }  // namespace p2p

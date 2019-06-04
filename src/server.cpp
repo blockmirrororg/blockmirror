@@ -32,13 +32,13 @@ void Server::stop() {
   _workContext.stop();
 }
 
-void Server::nextProduce() {
+void Server::nextProduce(bool tryNow) {
   int delay = _context.getBpsStore().getBPDelay(globalConfig.miner_pubkey);
-  if (delay == 0) {
+  if (delay == 0 && tryNow) {
     produceBlock(boost::system::error_code());
     return;
   }
-  if (delay < 0) {
+  if (delay <= 0) {
     delay = BLOCK_PER_MS;
   }
   B_LOG("next produce delay: {}", delay);
@@ -48,6 +48,7 @@ void Server::nextProduce() {
 }
 
 void Server::produceBlock(const boost::system::error_code& ec) {
+  bool tryNow = true;
   if (ec) {
     B_ERR("produce timer: {}", ec.message());
   } else {
@@ -61,9 +62,10 @@ void Server::produceBlock(const boost::system::error_code& ec) {
       _workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
         &store::MongoStore::get(),
         block, &_context)));
+      tryNow = false;
     }
   }
-  nextProduce();
+  nextProduce(tryNow);
 }
 
 void Server::run() {

@@ -26,7 +26,7 @@ class Server : private boost::noncopyable {
  private:
   void handleSignals(int signo);
   void produceBlock(const boost::system::error_code& e);
-  void nextProduce();
+  void nextProduce(bool tryNow = true);
 
  private:
   boost::asio::io_context _mainContext;  // for main thread

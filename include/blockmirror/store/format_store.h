@@ -7,8 +7,8 @@
 
 #include <blockmirror/chain/script.h>
 #include <blockmirror/common.h>
-#include <blockmirror/serialization/access.h>
-#include <boost/serialization/vector.hpp>
+//#include <blockmirror/serialization/access.h>
+//#include <boost/serialization/vector.hpp>
 
 namespace blockmirror {
 namespace store {
@@ -16,7 +16,7 @@ namespace store {
 using NewFormatPtr = std::shared_ptr<chain::scri::NewFormat>;
 
 class FormatStore {
-  friend class blockmirror::serialization::access;
+  /*friend class blockmirror::serialization::access;
   template<typename Archive>
   void serialize(Archive& ar) {
     std::vector<store::NewFormatPtr> v;
@@ -24,7 +24,7 @@ class FormatStore {
       v.emplace_back(pos->second);
     }
     ar& v;
-  }
+  }*/
 
  private:
   std::unordered_map<std::string, store::NewFormatPtr> _formats;
@@ -37,6 +37,7 @@ class FormatStore {
  public:
   FormatStore();
   ~FormatStore();
+
   /**
    * @brief 从文件中加载store
    * @param path 路径
@@ -50,6 +51,10 @@ class FormatStore {
    * @brief 读取格式
    */
   const store::NewFormatPtr query(const std::string& name);
+	/**
+	 * @brief 查询所有的
+	 */
+	std::vector<NewFormatPtr> queryAll();
   /**
    * @brief 添加格式
    */

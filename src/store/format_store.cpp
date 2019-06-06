@@ -40,6 +40,18 @@ const store::NewFormatPtr FormatStore::query(const std::string& name) {
   return it->second;
 }
 
+std::vector<NewFormatPtr> FormatStore::queryAll()
+{
+	std::vector<NewFormatPtr> v;
+
+	boost::shared_lock<boost::shared_mutex> lock(_mutex);
+	for (auto pos = _formats.begin(); pos != _formats.end(); ++pos) {
+		v.emplace_back(pos->second);
+	}
+
+	return v;
+}
+
 bool FormatStore::add(const store::NewFormatPtr& formatPtr) {
   boost::unique_lock<boost::shared_mutex> lock(_mutex);
   auto p = _formats.insert(std::make_pair(formatPtr->getName(), formatPtr));

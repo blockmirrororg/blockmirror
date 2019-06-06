@@ -462,12 +462,14 @@ void Session::getChainFormat(const char* arg) {
 
 void Session::getChainFormats(const char*) {
   store::FormatStore& fs = _context.getFormatStore();
+	const std::vector<store::NewFormatPtr>& v = fs.queryAll();
 
   std::ostringstream oss;
   blockmirror::serialization::JSONOArchive<std::ostringstream> archive(oss,
                                                                        false);
   try {
-    archive << fs;
+    archive << v;
+		//archive << fs;
   } catch (std::exception& e) {
     B_WARN("{}", e.what());
     return lambda_(server_error(e.what()));

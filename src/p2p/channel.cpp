@@ -1,9 +1,9 @@
 
 #include <blockmirror/p2p/channel.h>
 #include <blockmirror/p2p/channel_manager.h>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/bind.hpp>
+#include <blockmirror/serialization/binary_iarchive.h>
+#include <blockmirror/serialization/binary_oarchive.h>
 
 namespace blockmirror {
 namespace p2p {
@@ -36,7 +36,8 @@ void Channel::start() {
 void Channel::handleReadHeader(const boost::system::error_code& e) {
   if (!e) {
     MessageHeader header;
-    boost::archive::binary_iarchive archive(_binaryBuf);
+    blockmirror::serialization::AsioStream stream(_binaryBuf);
+    blockmirror::serialization::BinaryIArchive<blockmirror::serialization::AsioStream> archive(stream);
     archive >> header;
 
     if (header.length > MESSAGE_MAX_LENGTH)
@@ -64,6 +65,8 @@ class MessageVisitor : public boost::static_visitor<> {
 
   void operator()(const MsgBroadcastBlock& msg) const {}
 
+  void operator()(const MsgGenerateBlock& msg) const {}
+
  private:
   Channel& _channel;
 };
@@ -71,7 +74,8 @@ class MessageVisitor : public boost::static_visitor<> {
 void Channel::handleReadBody(const boost::system::error_code& e) {
   if (!e) {
     Message message;
-    boost::archive::binary_iarchive archive(_binaryBuf);
+    blockmirror::serialization::AsioStream stream(_binaryBuf);
+    blockmirror::serialization::BinaryIArchive<blockmirror::serialization::AsioStream> archive(stream);
     archive >> message;
     boost::apply_visitor(MessageVisitor(*this), message);
 
@@ -90,11 +94,31 @@ void Channel::close() {
 }
 
 void Channel::send(const Message& msg) {
-  boost::asio::streambuf binaryBuf;
-  boost::archive::binary_oarchive archive(binaryBuf);
+  boost::asio::streambuf sb;
+  // binaryBuf.commit(sizeof(MessageHeader)); // 先预留一个头包头的位置
+  blockmirror::serialization::AsioStream stream(sb);
+  blockmirror::serialization::BinaryOArchive<blockmirror::serialization::AsioStream> archive(stream);
   archive << msg;
+
+  // MessageHeader header;
+  // header.length = binaryBuf.size() - sizeof(MessageHeader);
+  // binaryBuf.setp(binaryBuf.pbase(), binaryBuf.epptr()); // 设置三个写指针为最初的状态
+  // archive << header; // MessageHeader序列化后的长度必须等于sizeof(MessageHeader)
+  // binaryBuf.pbump(header.length); // header.length此时等于binaryBuf.egptr() - binaryBuf.pptr()
+
+  boost::asio::streambuf sb1;
+  blockmirror::serialization::AsioStream stream1(sb1);
+  blockmirror::serialization::BinaryOArchive<blockmirror::serialization::AsioStream> archive1(stream1);
+  MessageHeader header;
+  header.length = sb.size();
+  archive1 << header;
+
+  std::vector<boost::asio::const_buffer> v;
+  v.push_back(sb1.data());
+  v.push_back(sb.data());
+
   boost::asio::async_write(
-      *_socket, binaryBuf,
+      *_socket, v,
       _strand.wrap(boost::bind(&Channel::handleWrite, shared_from_this(),
                                boost::asio::placeholders::error)));
 }

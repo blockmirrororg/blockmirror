@@ -7,6 +7,21 @@
 namespace blockmirror {
 namespace serialization {
 
+
+class AsioStream {
+public:
+  AsioStream(std::streambuf &r) : _sb(r) {}
+
+public:
+ void read(void *buf, size_t size) { _sb.sgetn((char *)buf, size); }
+ void write(void *buf, size_t size) {
+   _sb.sputn((char *)buf, size);
+ }
+
+private:
+ std::streambuf &_sb;
+};
+
 template <typename StreamType>
 class BinaryIArchive : private boost::noncopyable {
  public:

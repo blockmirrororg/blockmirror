@@ -6,6 +6,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/array.hpp>
 
 namespace blockmirror {
 namespace p2p {
@@ -45,6 +46,7 @@ class Channel : public boost::enable_shared_from_this<Channel>,
   boost::asio::deadline_timer _timer;
   std::time_t _current;
 	boost::asio::io_context::strand _strand;
+  boost::array<char, sizeof(MessageHeader)> _header;
 };
 
 using ChannelPtr = boost::shared_ptr<Channel>;

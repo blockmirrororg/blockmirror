@@ -32,26 +32,22 @@ void Channel::start() {
   emplaceTimer(); // 安置一个定时器
 
   boost::asio::async_read(
-      *_socket, _binaryBuf, boost::asio::transfer_exactly(sizeof(MessageHeader)),
+      *_socket, /* _binaryBuf */boost::asio::buffer(_header), boost::asio::transfer_exactly(sizeof(MessageHeader)),
       boost::bind(&Channel::handleReadHeader, shared_from_this(),
                   boost::asio::placeholders::error));
 }
 
 void Channel::handleReadHeader(const boost::system::error_code& e) {
   if (!e) {
-    MessageHeader header;
-    blockmirror::serialization::AsioStream stream(_binaryBuf);
-    blockmirror::serialization::BinaryIArchive<blockmirror::serialization::AsioStream> archive(stream);
-    archive >> header;
-
-    if (header.length > MESSAGE_MAX_LENGTH)
+    MessageHeader* header = (MessageHeader*)_header.data();
+    if (header->length > MESSAGE_MAX_LENGTH)
     {
       close();
       return;
     }
 
     boost::asio::async_read(
-        *_socket, _binaryBuf, boost::asio::transfer_exactly(header.length),
+        *_socket, _binaryBuf, boost::asio::transfer_exactly(header->length),
         boost::bind(&Channel::handleReadBody, shared_from_this(),
                     boost::asio::placeholders::error));
   }
@@ -99,36 +95,21 @@ void Channel::close() {
 
 void Channel::send(const Message& msg) {
   boost::shared_ptr<boost::asio::streambuf> sb = boost::make_shared<boost::asio::streambuf>();
-  // binaryBuf.commit(sizeof(MessageHeader)); // 先预留一个头包头的位置
   blockmirror::serialization::AsioStream stream(*sb);
   blockmirror::serialization::BinaryOArchive<blockmirror::serialization::AsioStream> archive(stream);
   archive << msg;
 
-  // MessageHeader header;
-  // header.length = binaryBuf.size() - sizeof(MessageHeader);
-  // binaryBuf.setp(binaryBuf.pbase(), binaryBuf.epptr()); // 设置三个写指针为最初的状态
-  // archive << header;
-  // binaryBuf.pbump(header.length); // header.length此时等于binaryBuf.egptr() - binaryBuf.pptr()
-
-  boost::shared_ptr<boost::asio::streambuf> sb1 = boost::make_shared<boost::asio::streambuf>();;
-  blockmirror::serialization::AsioStream stream1(*sb1);
-  blockmirror::serialization::BinaryOArchive<blockmirror::serialization::AsioStream> archive1(stream1);
-  MessageHeader header;
-  header.length = sb->size();
-  archive1 << header;
+  auto array = boost::make_shared<boost::array<char, sizeof(MessageHeader)>>();
+  MessageHeader* header = (MessageHeader*)array->data();
+  header->length = sb->size();
 
   std::vector<boost::asio::const_buffer> v;
-  v.push_back(sb1->data()); // 先发送头
+  v.push_back(boost::asio::buffer(*array)); // 先发送头
   v.push_back(sb->data());
-
-  // boost::asio::async_write(
-  //     *_socket, v,
-  //     _strand.wrap(boost::bind(&Channel::handleWrite, shared_from_this(),
-  //                              boost::asio::placeholders::error)));
 
   ChannelPtr channel(shared_from_this());
   boost::asio::async_write(*_socket, v,
-                           boost::asio::bind_executor(_strand, [channel, sb, sb1](boost::system::error_code ec, std::size_t w) {
+                           boost::asio::bind_executor(_strand, [channel, array, sb](boost::system::error_code ec, std::size_t w) {
                              // do nothing
                            }));
 }

@@ -66,12 +66,13 @@ class MsgBroadcastBlock {
   Hash256 hash;     // 所广播的HASH
 };
 
+// 消息头不序列化
 struct MessageHeader {
-  friend class blockmirror::serialization::access;
-  template <typename Archive>
-  void serialize(Archive &ar) {
-    ar &BOOST_SERIALIZATION_NVP(magic) & BOOST_SERIALIZATION_NVP(length);
-  }
+  // friend class blockmirror::serialization::access;
+  // template <typename Archive>
+  // void serialize(Archive &ar) {
+  //   ar &BOOST_SERIALIZATION_NVP(magic) & BOOST_SERIALIZATION_NVP(length);
+  // }
 
   uint16_t magic = 0;
   uint16_t length = 0;

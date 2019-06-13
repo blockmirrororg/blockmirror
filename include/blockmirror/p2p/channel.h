@@ -33,8 +33,9 @@ class Channel : public boost::enable_shared_from_this<Channel>,
  private:
   void handleReadHeader(const boost::system::error_code& e);
   void handleReadBody(const boost::system::error_code& e);
-  void handleWrite(const boost::system::error_code& e);
+  // void handleWrite(const boost::system::error_code& e);
   void handleTimer();
+  void emplaceTimer();
 
  private:
   boost::shared_ptr<Connector> _connector;
@@ -45,6 +46,9 @@ class Channel : public boost::enable_shared_from_this<Channel>,
   std::time_t _current;
 	boost::asio::io_context::strand _strand;
 };
+
+using ChannelPtr = boost::shared_ptr<Channel>;
+using ChannelWPtr = boost::weak_ptr<Channel>;
 
 }  // namespace p2p
 }  // namespace blockmirror

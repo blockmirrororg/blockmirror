@@ -4,6 +4,9 @@
 #include <boost/bind.hpp>
 #include <blockmirror/serialization/binary_iarchive.h>
 #include <blockmirror/serialization/binary_oarchive.h>
+#include <boost/asio/bind_executor.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 
 namespace blockmirror {
 namespace p2p {
@@ -24,8 +27,9 @@ void Channel::start() {
   ChannelManager::get().addChannel(shared_from_this());
 
 	_current = std::time(0);
-	_timer.expires_from_now(boost::posix_time::seconds(10));
-	_timer.async_wait(boost::bind(&Channel::handleTimer, shared_from_this()));
+	// _timer.expires_from_now(boost::posix_time::seconds(10));
+	// _timer.async_wait(boost::bind(&Channel::handleTimer, shared_from_this()));
+  emplaceTimer(); // 安置一个定时器
 
   boost::asio::async_read(
       *_socket, _binaryBuf, boost::asio::transfer_exactly(sizeof(MessageHeader)),
@@ -94,39 +98,39 @@ void Channel::close() {
 }
 
 void Channel::send(const Message& msg) {
-  boost::asio::streambuf sb;
+  boost::shared_ptr<boost::asio::streambuf> sb = boost::make_shared<boost::asio::streambuf>();
   // binaryBuf.commit(sizeof(MessageHeader)); // 先预留一个头包头的位置
-  blockmirror::serialization::AsioStream stream(sb);
+  blockmirror::serialization::AsioStream stream(*sb);
   blockmirror::serialization::BinaryOArchive<blockmirror::serialization::AsioStream> archive(stream);
   archive << msg;
 
   // MessageHeader header;
   // header.length = binaryBuf.size() - sizeof(MessageHeader);
   // binaryBuf.setp(binaryBuf.pbase(), binaryBuf.epptr()); // 设置三个写指针为最初的状态
-  // archive << header; // MessageHeader序列化后的长度必须等于sizeof(MessageHeader)
+  // archive << header;
   // binaryBuf.pbump(header.length); // header.length此时等于binaryBuf.egptr() - binaryBuf.pptr()
 
-  boost::asio::streambuf sb1;
-  blockmirror::serialization::AsioStream stream1(sb1);
+  boost::shared_ptr<boost::asio::streambuf> sb1 = boost::make_shared<boost::asio::streambuf>();;
+  blockmirror::serialization::AsioStream stream1(*sb1);
   blockmirror::serialization::BinaryOArchive<blockmirror::serialization::AsioStream> archive1(stream1);
   MessageHeader header;
-  header.length = sb.size();
+  header.length = sb->size();
   archive1 << header;
 
   std::vector<boost::asio::const_buffer> v;
-  v.push_back(sb1.data());
-  v.push_back(sb.data());
+  v.push_back(sb1->data()); // 先发送头
+  v.push_back(sb->data());
 
-  boost::asio::async_write(
-      *_socket, v,
-      _strand.wrap(boost::bind(&Channel::handleWrite, shared_from_this(),
-                               boost::asio::placeholders::error)));
-}
+  // boost::asio::async_write(
+  //     *_socket, v,
+  //     _strand.wrap(boost::bind(&Channel::handleWrite, shared_from_this(),
+  //                              boost::asio::placeholders::error)));
 
-void Channel::handleWrite(const boost::system::error_code& e) {
-  if (!e) {
-    // do nothing
-  }
+  ChannelPtr channel(shared_from_this());
+  boost::asio::async_write(*_socket, v,
+                           boost::asio::bind_executor(_strand, [channel, sb, sb1](boost::system::error_code ec, std::size_t w) {
+                             // do nothing
+                           }));
 }
 
 void Channel::handleTimer() {
@@ -140,8 +144,20 @@ void Channel::handleTimer() {
     }
   }
 
+  emplaceTimer();
+}
+
+void Channel::emplaceTimer() {
   _timer.expires_from_now(boost::posix_time::seconds(10));
-  _timer.async_wait(boost::bind(&Channel::handleTimer, shared_from_this()));
+  ChannelWPtr weak(shared_from_this());
+  _timer.async_wait([weak](const boost::system::error_code&) {
+    auto channel = weak.lock();
+    if(!channel) {
+      return;
+    }
+
+    channel->handleTimer();
+  });
 }
 
 }  // namespace p2p

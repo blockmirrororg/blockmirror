@@ -44,7 +44,7 @@ else()
 endif()
 
 add_definitions(-DBOOST_ENABLE_ASSERT_HANDLER)
-
+set(CMAKE_BUILD_TYPE "DEBUG")
 set(Boost_NO_BOOST_CMAKE ON)
 find_package(Boost 1.67 REQUIRED COMPONENTS
     thread

@@ -17,11 +17,11 @@ class Server : private boost::noncopyable {
  public:
   void run();
   void stop();
-  static Server& get()
-  {
-	  static Server s;
-	  return s;
+  static Server& get() {
+    static Server s;
+    return s;
   }
+  blockmirror::chain::Context& getContext() { return _context; }
 
  private:
   void handleSignals(int signo);

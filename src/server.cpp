@@ -1,9 +1,10 @@
 
+#include <blockmirror/p2p/channel_manager.h>
 #include <blockmirror/server.h>
+#include <blockmirror/store/mongo_store.h>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
-#include <blockmirror/store/mongo_store.h>
 
 namespace blockmirror {
 
@@ -60,9 +61,15 @@ void Server::produceBlock(const boost::system::error_code& ec) {
         &_context.getMongoStore(),
         block, &_context)));*/
       _workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
-        &store::MongoStore::get(),
-        block, &_context)));
+                                                 &store::MongoStore::get(),
+                                                 block, &_context)));
       tryNow = false;
+
+      const std::vector<boost::shared_ptr<p2p::Channel>> channels =
+          p2p::ChannelManager::get().getChannels();
+      for (auto i : channels) {
+        i->sendGenerateBlock(block);
+      }
     }
   }
   nextProduce(tryNow);

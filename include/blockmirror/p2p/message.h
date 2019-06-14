@@ -1,7 +1,6 @@
-
+#include <blockmirror/chain/block.h>
 #include <blockmirror/common.h>
 #include <blockmirror/serialization/access.h>
-#include <blockmirror/chain/block.h>
 
 namespace blockmirror {
 namespace p2p {
@@ -18,38 +17,55 @@ static const uint64_t MSG_HEARTBEAT_TIMEOUT = 1000 * 15;  // 15秒没有消息�
 // 刚产生一个区块
 class MsgGenerateBlock {
   friend class blockmirror::serialization::access;
-  template<typename Archive>
-  void serialize(Archive &ar)
-  {
+  template <typename Archive>
+  void serialize(Archive &ar) {
     ar &BOOST_SERIALIZATION_NVP(_block);
   }
 
+ public:
+  blockmirror::chain::BlockPtr _block;
+};
+
+// 区块
+class MsgBlock {
+  friend class blockmirror::serialization::access;
+  template <typename Archive>
+  void serialize(Archive &ar) {
+    ar &BOOST_SERIALIZATION_NVP(_block);
+  }
+
+ public:
   blockmirror::chain::BlockPtr _block;
 };
 
 //握手
 class MsgHello {
-  friend class boost::serialization::access;
+  friend class blockmirror::serialization::access;
   template <typename Archive>
   void serialize(Archive &ar) {
-    ar &BOOST_SERIALIZATION_NVP(node) & BOOST_SERIALIZATION_NVP(addr) &
-        BOOST_SERIALIZATION_NVP(head) & BOOST_SERIALIZATION_NVP(height);
+    ar &BOOST_SERIALIZATION_NVP(_node) & BOOST_SERIALIZATION_NVP(_addr) &
+        BOOST_SERIALIZATION_NVP(_hash) & BOOST_SERIALIZATION_NVP(_height);
   }
-  Pubkey node;       // 节点公钥
-  std::string addr;  // p2p地址
-  Hash256 head;      // head 哈希
-  uint64_t height;   // head 高度
+
+ public:
+  Pubkey _node;       // 节点公钥
+  std::string _addr;  // p2p地址
+  Hash256 _hash;      // head 哈希
+  uint64_t _height;   // head 高度
 };
 
 //请求区块
 class MsgSyncReq {
-  friend class boost::serialization::access;
+  friend class blockmirror::serialization::access;
+
   template <typename Archive>
   void serialize(Archive &ar) {
-    ar &BOOST_SERIALIZATION_NVP(start) & BOOST_SERIALIZATION_NVP(end);
+    ar &BOOST_SERIALIZATION_NVP(_start) & BOOST_SERIALIZATION_NVP(_end);
   }
-  uint64_t start;
-  uint64_t end;
+
+ public:
+  uint64_t _start;
+  uint64_t _end;
 };
 
 // 广播区块消息 当我获得了一个完整的区块时 向所有连接发送此消息
@@ -62,6 +78,7 @@ class MsgBroadcastBlock {
     ar &BOOST_SERIALIZATION_NVP(height) & BOOST_SERIALIZATION_NVP(hash);
   }
 
+ public:
   uint64_t height;  // 所广播的高度
   Hash256 hash;     // 所广播的HASH
 };
@@ -81,7 +98,8 @@ static const uint64_t MESSAGE_MAX_LENGTH = 65535;
 
 BOOST_STATIC_ASSERT(sizeof(MessageHeader) == 4);
 
-using Message = boost::variant<MsgHeartbeat, MsgBroadcastBlock, MsgGenerateBlock>;
+using Message = boost::variant<MsgHeartbeat, MsgBlock, MsgHello, MsgSyncReq,
+                               MsgBroadcastBlock, MsgGenerateBlock>;
 
 }  // namespace p2p
 }  // namespace blockmirror

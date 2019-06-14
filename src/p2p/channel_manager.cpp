@@ -1,6 +1,7 @@
 
 #include <blockmirror/p2p/channel_manager.h>
 #include <blockmirror/server.h>
+#include <blockmirror/store/mongo_store.h>
 
 namespace blockmirror {
 namespace p2p {
@@ -46,17 +47,12 @@ std::pair<uint64_t, uint64_t> ChannelManager::searchBlocks(uint64_t start,
       break;
     }
   }
-
   uint64_t e = end;
-  auto it = _blocks.find(e);
-  if (it != _blocks.end()) {
-    for (; e > s; e--) {
-      if (!blocksContain(e)) {
-        break;
-      }
+  for (; e > s; e--) {
+    if (_blocks.find(e) == _blocks.end()) {
+      break;
     }
   }
-
   return std::pair<uint64_t, uint64_t>(s, e);
 }
 
@@ -80,9 +76,12 @@ void ChannelManager::syncBlocks(uint64_t h, blockmirror::chain::BlockPtr b) {
       if (r) {
         store::BlockStore& store = c.getBlockStore();
         store.addBlock(it->second);
-        const std::vector<boost::shared_ptr<Channel>> channels = getChannels();
-        for (auto i : channels) {
-          i->sendBroadcastBlock(it->first, it->second->getHash());
+        store::MongoStore::get().save(it->second,&c);
+        for (auto i : _channels) {
+          if (i.second.lock()) {
+            i.second.lock()->sendBroadcastBlock(it->first,
+                                                it->second->getHash());
+          }
         }
       }
       _blocks.erase(it);
@@ -99,10 +98,10 @@ void ChannelManager::syncBlocks(uint64_t h, blockmirror::chain::BlockPtr b) {
 }
 
 const std::vector<boost::shared_ptr<Channel>> ChannelManager::getChannels() {
+  boost::asio::detail::mutex::scoped_lock lock(_mutex);
   std::vector<boost::shared_ptr<Channel>> v;
   for (auto i : _channels) {
-    if (i.second.lock())
-    {
+    if (i.second.lock()) {
       v.push_back(i.second.lock());
     }
   }
@@ -110,6 +109,7 @@ const std::vector<boost::shared_ptr<Channel>> ChannelManager::getChannels() {
 }
 
 bool ChannelManager::blocksContain(const uint64_t& height) {
+  boost::asio::detail::mutex::scoped_lock lock(_mutex);
   return _blocks.find(height) != _blocks.end();
 }
 

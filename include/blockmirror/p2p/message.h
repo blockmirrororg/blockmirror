@@ -11,8 +11,8 @@ class MsgHeartbeat {
   template <typename Archive>
   void serialize(Archive &) {}
 };
-static const uint64_t MSG_HEARTBEAT_TICK = 1000 * 7;  // 每10秒一个心跳
-static const uint64_t MSG_HEARTBEAT_TIMEOUT = 1000 * 15;  // 15秒没有消息则超时
+static const uint64_t MSG_HEARTBEAT_TICK = /* 1000 * 7 */ 10;  // 每10秒一个心跳
+static const uint64_t MSG_HEARTBEAT_TIMEOUT = /* 1000 * 15 */ 60;  // 15秒没有消息则超时
 
 // 刚产生一个区块
 class MsgGenerateBlock {
@@ -85,12 +85,6 @@ class MsgBroadcastBlock {
 
 // 消息头不序列化
 struct MessageHeader {
-  // friend class blockmirror::serialization::access;
-  // template <typename Archive>
-  // void serialize(Archive &ar) {
-  //   ar &BOOST_SERIALIZATION_NVP(magic) & BOOST_SERIALIZATION_NVP(length);
-  // }
-
   uint16_t magic = 0;
   uint16_t length = 0;
 };

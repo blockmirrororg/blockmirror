@@ -76,6 +76,14 @@ void Server::produceBlock(const boost::system::error_code& ec) {
 }
 
 void Server::run() {
+  try {
+    store::MongoStore::get();  // 先连接测试mongo
+  } catch(std::exception& e) {
+    throw std::runtime_error(e.what());
+  } catch(...) {
+    throw std::runtime_error("connect to mongo db failed.");
+  }
+
   for (auto pos = blockmirror::globalConfig.seeds.begin();
        pos != blockmirror::globalConfig.seeds.end(); ++pos) {
     char ip[50] = {0};

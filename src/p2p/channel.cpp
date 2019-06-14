@@ -12,6 +12,29 @@
 namespace blockmirror {
 namespace p2p {
 
+// 收到的网络消息在这里处理
+class MessageVisitor : public boost::static_visitor<> {
+ public:
+  MessageVisitor(Channel& channel) : _channel(channel) {}
+
+  void operator()(const MsgHeartbeat& msg) const {
+    _channel.handleMessage(msg);
+  }
+  void operator()(const MsgBlock& msg) const { _channel.handleMessage(msg); }
+  void operator()(const MsgHello& msg) const { _channel.handleMessage(msg); }
+  void operator()(const MsgSyncReq& msg) const { _channel.handleMessage(msg); }
+  void operator()(const MsgBroadcastBlock& msg) const {
+    _channel.handleMessage(msg);
+  }
+  void operator()(const MsgGenerateBlock& msg) const {
+    _channel.handleMessage(msg);
+  }
+
+ private:
+  Channel& _channel;
+};
+
+// ---------------------------------------------------------------------------------------------------------------------------------------
 Channel::Channel(boost::shared_ptr<boost::asio::ip::tcp::socket>& socket,
                  boost::asio::io_context& ioc)
     : _socket(socket), _timer(ioc), _strand(ioc) {}
@@ -27,10 +50,7 @@ Channel::~Channel() {
 
 void Channel::start() {
   ChannelManager::get().addChannel(shared_from_this());
-
   _current = std::time(0);
-  // _timer.expires_from_now(boost::posix_time::seconds(10));
-  // _timer.async_wait(boost::bind(&Channel::handleTimer, shared_from_this()));
   emplaceTimer();  // 安置一个定时器
 
   sendHello();  //刚连接上，就发hello
@@ -56,31 +76,6 @@ void Channel::handleReadHeader(const boost::system::error_code& e) {
                     boost::asio::placeholders::error));
   }
 }
-
-// 收到的网络消息在这里处理
-class MessageVisitor : public boost::static_visitor<> {
- public:
-  MessageVisitor(Channel& channel) : _channel(channel) {}
-
-  void operator()(const MsgHeartbeat& msg) const {
-    _channel._current = std::time(0);
-  }
-
-  void operator()(const MsgBlock& msg) const { _channel.handleMessage(msg); }
-  void operator()(const MsgHello& msg) const { _channel.handleMessage(msg); }
-  void operator()(const MsgSyncReq& msg) const { _channel.handleMessage(msg); }
-
-  void operator()(const MsgBroadcastBlock& msg) const {
-    _channel.handleMessage(msg);
-  }
-
-  void operator()(const MsgGenerateBlock& msg) const {
-    _channel.handleMessage(msg);
-  }
-
- private:
-  Channel& _channel;
-};
 
 void Channel::handleReadBody(const boost::system::error_code& e) {
   if (!e) {
@@ -137,7 +132,7 @@ void Channel::handleTimer() {
   if (_connector) {
     send(MsgHeartbeat());  // 每隔10秒向服务端发送心跳包
   } else {
-    if (std::time(0) - _current > 15) {
+    if (std::time(0) - _current > MSG_HEARTBEAT_TIMEOUT) {
       // 一定时间内没收到客户端的心跳包，认为该连接已僵死，该间隔可以设置得大一点
       close();
       return;
@@ -148,7 +143,7 @@ void Channel::handleTimer() {
 }
 
 void Channel::emplaceTimer() {
-  _timer.expires_from_now(boost::posix_time::seconds(10));
+  _timer.expires_from_now(boost::posix_time::seconds(MSG_HEARTBEAT_TICK));
   ChannelWPtr weak(shared_from_this());
   _timer.async_wait([weak](const boost::system::error_code&) {
     auto channel = weak.lock();

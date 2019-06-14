@@ -13,8 +13,6 @@ namespace p2p {
 
 class Channel : public boost::enable_shared_from_this<Channel>,
                 private boost::noncopyable {
-  friend class MessageVisitor;
-
  public:
   explicit Channel(boost::shared_ptr<boost::asio::ip::tcp::socket>& socket,
                    boost::asio::io_context& ioc);
@@ -34,19 +32,19 @@ class Channel : public boost::enable_shared_from_this<Channel>,
   void sendBroadcastBlock(const uint64_t& height, const Hash256& hash);
   void sendGenerateBlock(blockmirror::chain::BlockPtr block);
 
- private:
-  void handleReadHeader(const boost::system::error_code& e);
-  void handleReadBody(const boost::system::error_code& e);
-  // void handleWrite(const boost::system::error_code& e);
-  void handleTimer();
-  void emplaceTimer();
-
-  void sendHello();
+  void handleMessage(const MsgHeartbeat& msg) { _current = std::time(0); }
   void handleMessage(const MsgHello& msg);
   void handleMessage(const MsgSyncReq& msg);
   void handleMessage(const MsgBlock& msg);
   void handleMessage(const MsgGenerateBlock& msg);
   void handleMessage(const MsgBroadcastBlock& msg);
+
+ private:
+  void handleReadHeader(const boost::system::error_code& e);
+  void handleReadBody(const boost::system::error_code& e);
+  void handleTimer();
+  void emplaceTimer();
+  void sendHello();
 
  private:
   boost::shared_ptr<Connector> _connector;

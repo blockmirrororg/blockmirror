@@ -101,7 +101,10 @@ void ChannelManager::syncBlocks(uint64_t h, blockmirror::chain::BlockPtr b) {
 const std::vector<boost::shared_ptr<Channel>> ChannelManager::getChannels() {
   std::vector<boost::shared_ptr<Channel>> v;
   for (auto i : _channels) {
-    v.push_back(i.second.lock());
+    if (i.second.lock())
+    {
+      v.push_back(i.second.lock());
+    }
   }
   return std::move(v);
 }

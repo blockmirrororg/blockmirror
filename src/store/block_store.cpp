@@ -23,7 +23,7 @@ void BlockStore::load(const boost::filesystem::path &path) {
   if (boost::filesystem::exists(_path / "index")) {
     BinaryReader reader;
     reader.open(_path / "index");
-    reader >> _currentFileIndex >> _index;
+    reader >> _currentFileIndex >> _index >> _received;
   }
 }
 
@@ -36,7 +36,7 @@ void BlockStore::close() {
 
   BinaryWritter writter;
   writter.open(_path / "index");
-  writter << _currentFileIndex << _index;
+  writter << _currentFileIndex << _index << _received;
 }
 
 chain::BlockPtr BlockStore::_loadBlock(uint64_t index) {
@@ -112,6 +112,18 @@ bool BlockStore::addBlock(chain::BlockPtr &block) {
   auto orderedR = _ordered.insert(block);
   if (!orderedR.second) return false;
   VERIFY(_cached.insert(std::make_pair(block->getHashPtr(), block)).second);
+
+  auto it = _received.find(block->getHeight());
+  if (it == _received.end()) {
+    _received.insert(std::make_pair(
+        block->getHeight(), std::vector<Hash256Ptr>{block->getHashPtr()}));
+  } else {
+    if (std::find(it->second.begin(), it->second.end(), block->getHashPtr()) ==
+        it->second.end()) {
+      it->second.push_back(block->getHashPtr());
+    }
+  }
+
   return true;
 }
 
@@ -172,6 +184,29 @@ bool BlockStore::shouldSwitch(const chain::BlockPtr &head,
     h = getBlock(h->getPrevious());
   }
   return true;
+}
+
+const std::vector<Hash256Ptr> BlockStore::getHash256(const uint64_t &height) {
+  boost::unique_lock<boost::shared_mutex> lock(_mutex);
+  std::vector<Hash256Ptr> v;
+  auto it = _received.find(height);
+  if (it != _received.end()) {
+    v.assign(it->second.begin(), it->second.end());
+  }
+  return std::move(v);
+}
+
+bool BlockStore::contains(const uint64_t &height, const Hash256 &hash) {
+  boost::shared_lock<boost::shared_mutex> lock(_mutex);
+  auto it = _received.find(height);
+  if (it != _received.end()) {
+    Hash256Ptr hashPtr(const_cast<Hash256 *>(&hash), EmptyDeleter());
+    if (std::find(it->second.begin(), it->second.end(), hashPtr) !=
+        it->second.end()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace store

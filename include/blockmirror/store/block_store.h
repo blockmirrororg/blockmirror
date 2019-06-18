@@ -23,6 +23,7 @@ class BlockStore {
  private:
   // 写入文件的块
   std::unordered_map<Hash256Ptr, uint64_t, Hasher, EqualTo> _index;
+  std::unordered_map<uint64_t, std::vector<Hash256Ptr>> _received;
 
   // 缓存在内存的块
   std::set<chain::BlockPtr, chain::BlockLess> _ordered;
@@ -89,6 +90,20 @@ class BlockStore {
   bool shouldSwitch(const chain::BlockPtr &head, const chain::BlockPtr &fork,
                     std::vector<chain::BlockPtr> &back,
                     std::vector<chain::BlockPtr> &forward);
+  /**
+   * @brief 根据高度查找区块哈希
+   * @param hash 高度
+   * @return const std::vector<Hash256Ptr> 区块哈希
+   */
+  const std::vector<Hash256Ptr> getHash256(const uint64_t &height);
+  /**
+   * @brief 判断区块是否存在 线程安全
+   *
+   * @param height 区块高度 hash 区块哈希
+   * @return true 存在
+   * @return false 不存在
+   */
+  bool contains(const uint64_t &height, const Hash256 &hash);
 };
 
 }  // namespace store

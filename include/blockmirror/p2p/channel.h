@@ -45,6 +45,7 @@ class Channel : public boost::enable_shared_from_this<Channel>,
   void handleTimer();
   void emplaceTimer();
   void sendHello();
+  void HandleBlock(chain::BlockPtr block);
 
  private:
   boost::shared_ptr<Connector> _connector;

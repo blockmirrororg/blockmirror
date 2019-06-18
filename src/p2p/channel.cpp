@@ -4,6 +4,7 @@
 #include <blockmirror/serialization/binary_iarchive.h>
 #include <blockmirror/serialization/binary_oarchive.h>
 #include <blockmirror/server.h>
+#include <blockmirror/store/mongo_store.h>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
@@ -198,13 +199,9 @@ void Channel::handleMessage(const MsgHello& msg) {
   }
 
   if (height < msg._height) {
-    std::pair<uint64_t, uint64_t> p =
-        ChannelManager::get().searchBlocks(height, msg._height);
     MsgSyncReq req;
-    // req._start = height + 1;
-    // req._end = msg._height;
-    req._start = p.first;
-    req._end = p.second;
+    req._start = height + 1;
+    req._end = msg._height;
     send(req);
   }
 }
@@ -214,7 +211,6 @@ void Channel::handleMessage(const MsgSyncReq& msg) {
   store::BlockStore& store = c.getBlockStore();
 
   chain::BlockPtr f = c.getHead();
-
   while (f && f->getHeight() != msg._start) {
     f = store.getBlock(f->getPrevious());
   }
@@ -237,15 +233,12 @@ void Channel::handleMessage(const MsgBlock& msg) {
     return;
   }
 
-  std::string shash = boost::algorithm::hex(
-      std::string(msg._block->getHash().begin(), msg._block->getHash().end()));
-  B_LOG("receive MsgBlock hash:{},height:{}", shash, msg._block->getHeight());
+  B_LOG("receive MsgBlock hash:{},height:{}",
+        boost::algorithm::hex(std::string(msg._block->getHash().begin(),
+                                          msg._block->getHash().end())),
+        msg._block->getHeight());
 
-  blockmirror::chain::Context& c = Server::get().getContext();
-  store::BlockStore& store = c.getBlockStore();
-  if (!store.contains(msg._block->getHash())) {
-    ChannelManager::get().syncBlocks(msg._block->getHeight(), msg._block);
-  }
+  HandleBlock(msg._block);
 }
 
 void Channel::handleMessage(const MsgGenerateBlock& msg) {
@@ -253,28 +246,75 @@ void Channel::handleMessage(const MsgGenerateBlock& msg) {
     return;
   }
 
-  std::string shash = boost::algorithm::hex(
-      std::string(msg._block->getHash().begin(), msg._block->getHash().end()));
-  B_LOG("receive MsgGenerateBlock hash:{},height:{}", shash,
+  B_LOG("receive MsgGenerateBlock hash:{},height:{}",
+        boost::algorithm::hex(std::string(msg._block->getHash().begin(),
+                                          msg._block->getHash().end())),
         msg._block->getHeight());
 
-  blockmirror::chain::Context& c = Server::get().getContext();
-  store::BlockStore& store = c.getBlockStore();
-  if (!store.contains(msg._block->getHash())) {
-    ChannelManager::get().syncBlocks(msg._block->getHeight(), msg._block);
-  }
+  HandleBlock(msg._block);
 }
 
 void Channel::handleMessage(const MsgBroadcastBlock& msg) {
   blockmirror::chain::Context& c = Server::get().getContext();
   store::BlockStore& store = c.getBlockStore();
 
-  if (!store.contains(msg.hash) &&
-      !ChannelManager::get().blocksContain(msg.height)) {
+  if (!store.contains(msg.height, msg.hash)) {
     MsgSyncReq req;
     req._start = msg.height;
     req._end = msg.height;
     send(req);
+  }
+}
+
+void Channel::HandleBlock(chain::BlockPtr block) {
+  blockmirror::chain::Context& c = Server::get().getContext();
+  store::BlockStore& store = c.getBlockStore();
+  uint64_t height = block->getHeight();
+  Hash256 hash = block->getHash();
+
+  if (store.contains(height, hash)) {
+    return;
+  }
+  store.addBlock(block);
+  chain::BlockPtr head = c.getHead();
+  if (height != (head ? head->getHeight() : 0) + 1) {
+    return;
+  }
+
+  std::vector<Hash256Ptr> hashes = store.getHash256(height);
+  while (!hashes.empty()) {
+    for (size_t i = 0; i < hashes.size(); i++) {
+      block = store.getBlock(hashes[i]);
+
+      bool success = false;
+      if (head) {
+        std::vector<chain::BlockPtr> back;
+        std::vector<chain::BlockPtr> forward;
+        if (store.shouldSwitch(head, block, back, forward)) {
+          for (size_t i = 0; i < back.size(); i++) {
+            c.rollback();
+          }
+          for (size_t i = 0; i < forward.size(); i++) {
+            c.apply(forward[i]);
+          }
+          success = true;
+        }
+      } else {
+        c.apply(block);
+        success = true;
+      }
+
+      if (success) {
+        store::MongoStore::get().save(block, &c);
+        B_LOG("apply Block hash:{},height:{}",
+              boost::algorithm::hex(std::string(block->getHash().begin(),
+                                                block->getHash().end())),
+              block->getHeight());
+        break;
+      }
+    }
+
+    hashes = store.getHash256(++height);
   }
 }
 

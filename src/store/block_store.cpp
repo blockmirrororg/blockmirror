@@ -200,10 +200,10 @@ bool BlockStore::contains(const uint64_t &height, const Hash256 &hash) {
   boost::shared_lock<boost::shared_mutex> lock(_mutex);
   auto it = _received.find(height);
   if (it != _received.end()) {
-    Hash256Ptr hashPtr(const_cast<Hash256 *>(&hash), EmptyDeleter());
-    if (std::find(it->second.begin(), it->second.end(), hashPtr) !=
-        it->second.end()) {
-      return true;
+    for (auto i : it->second) {
+      if (*i == hash) {
+        return true;
+      }
     }
   }
   return false;

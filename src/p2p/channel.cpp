@@ -175,7 +175,7 @@ void Channel::sendHello() {
   hello._addr = _socket->local_endpoint().address().to_string() + ":" +
                 boost::lexical_cast<std::string>(globalConfig.p2p_bind);
 
-  blockmirror::chain::Context& c = Server::get().getContext();
+  chain::Context& c = Server::get().getContext();
   chain::BlockPtr head = c.getHead();
   if (head) {
     hello._hash = head->getHash();
@@ -191,7 +191,7 @@ void Channel::sendHello() {
 void Channel::handleMessage(const MsgHello& msg) {
   Hash256 hash = {0};
   uint64_t height = 0;
-  blockmirror::chain::Context& c = Server::get().getContext();
+  chain::Context& c = Server::get().getContext();
   chain::BlockPtr head = c.getHead();
   if (head) {
     hash = head->getHash();
@@ -207,7 +207,7 @@ void Channel::handleMessage(const MsgHello& msg) {
 }
 
 void Channel::handleMessage(const MsgSyncReq& msg) {
-  blockmirror::chain::Context& c = Server::get().getContext();
+  chain::Context& c = Server::get().getContext();
   store::BlockStore& store = c.getBlockStore();
 
   chain::BlockPtr f = c.getHead();
@@ -255,7 +255,7 @@ void Channel::handleMessage(const MsgGenerateBlock& msg) {
 }
 
 void Channel::handleMessage(const MsgBroadcastBlock& msg) {
-  blockmirror::chain::Context& c = Server::get().getContext();
+  chain::Context& c = Server::get().getContext();
   store::BlockStore& store = c.getBlockStore();
 
   if (!store.contains(msg.height, msg.hash)) {
@@ -267,7 +267,7 @@ void Channel::handleMessage(const MsgBroadcastBlock& msg) {
 }
 
 void Channel::HandleBlock(chain::BlockPtr block) {
-  blockmirror::chain::Context& c = Server::get().getContext();
+  chain::Context& c = Server::get().getContext();
   store::BlockStore& store = c.getBlockStore();
   uint64_t height = block->getHeight();
   Hash256 hash = block->getHash();
@@ -310,6 +310,13 @@ void Channel::HandleBlock(chain::BlockPtr block) {
               boost::algorithm::hex(std::string(block->getHash().begin(),
                                                 block->getHash().end())),
               block->getHeight());
+
+        const std::vector<boost::shared_ptr<p2p::Channel>> channels =
+            p2p::ChannelManager::get().getChannels();
+        for (auto i : channels) {
+          i->sendBroadcastBlock(block->getHeight(), block->getHash());
+        }
+
         break;
       }
     }

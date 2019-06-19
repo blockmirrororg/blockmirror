@@ -118,8 +118,10 @@ bool BlockStore::addBlock(chain::BlockPtr &block) {
     _received.insert(std::make_pair(
         block->getHeight(), std::vector<Hash256Ptr>{block->getHashPtr()}));
   } else {
-    if (std::find(it->second.begin(), it->second.end(), block->getHashPtr()) ==
-        it->second.end()) {
+    Hash256 hash = block->getHash();
+    auto iter = std::find_if(it->second.begin(), it->second.end(),
+                             [&hash](Hash256Ptr h) { return *h == hash; });
+    if (iter == it->second.end()) {
       it->second.push_back(block->getHashPtr());
     }
   }

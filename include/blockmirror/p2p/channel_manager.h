@@ -25,7 +25,7 @@ class ChannelManager {
  private:
   boost::unordered_map<int, boost::weak_ptr<Channel>> _channels;
   boost::atomic_int _channelId;
-  boost::asio::detail::mutex _mutex;
+  boost::shared_mutex _mutex;
 };
 
 }  // namespace p2p

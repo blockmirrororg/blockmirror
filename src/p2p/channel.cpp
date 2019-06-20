@@ -275,7 +275,10 @@ void Channel::HandleBlock(chain::BlockPtr block) {
   if (store.contains(height, hash)) {
     return;
   }
-  store.addBlock(block);
+  if (!store.addBlock(block)) {
+    return;
+  }
+
   chain::BlockPtr head = c.getHead();
   if (height != (head ? head->getHeight() : 0) + 1) {
     return;
@@ -284,23 +287,42 @@ void Channel::HandleBlock(chain::BlockPtr block) {
   std::vector<Hash256Ptr> hashes = store.getHash256(height);
   while (!hashes.empty()) {
     for (size_t i = 0; i < hashes.size(); i++) {
+      head = c.getHead();
       block = store.getBlock(hashes[i]);
-
       bool success = false;
       if (head) {
         std::vector<chain::BlockPtr> back;
         std::vector<chain::BlockPtr> forward;
         if (store.shouldSwitch(head, block, back, forward)) {
-          for (size_t i = 0; i < back.size(); i++) {
-            c.rollback();
+          for (size_t j = 0; j < back.size(); j++) {
+            if (!c.rollback()) {
+              B_ERR("rollback fail! block hash:{},height:{}",
+                    boost::algorithm::hex(std::string(
+                        back[j]->getHash().begin(), back[j]->getHash().end())),
+                    back[j]->getHeight());
+              throw std::runtime_error("rollback fail! switch fail!");
+            }
           }
-          for (size_t i = 0; i < forward.size(); i++) {
-            c.apply(forward[i]);
+          for (int k = forward.size() - 1; k >= 0; k--) {
+            if (!c.apply(forward[k])) {
+              B_ERR("apply fail! block hash:{},height:{}",
+                    boost::algorithm::hex(
+                        std::string(forward[k]->getHash().begin(),
+                                    forward[k]->getHash().end())),
+                    forward[k]->getHeight());
+              throw std::runtime_error("apply fail! switch fail!");
+            }
           }
           success = true;
         }
       } else {
-        c.apply(block);
+        if (!c.apply(block)) {
+          B_ERR("apply fail! block hash:{},height:{}",
+                boost::algorithm::hex(std::string(block->getHash().begin(),
+                                                  block->getHash().end())),
+                block->getHeight());
+          throw std::runtime_error("apply fail!");
+        }
         success = true;
       }
 

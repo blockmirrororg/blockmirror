@@ -53,23 +53,27 @@ void Server::produceBlock(const boost::system::error_code& ec) {
   if (ec) {
     B_ERR("produce timer: {}", ec.message());
   } else {
-    auto block = _context.genBlock(globalConfig.miner_privkey,
-                                   globalConfig.reward_pubkey);
-    if (block) {
-      // 在工作线程提交数据到MONGODB
-      /*_workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
-        &_context.getMongoStore(),
-        block, &_context)));*/
-      _workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
-                                                 &store::MongoStore::get(),
-                                                 block, &_context)));
-      tryNow = false;
+    if (p2p::ChannelManager::get().channelsSyncDone()) {
+      auto block = _context.genBlock(globalConfig.miner_privkey,
+                                     globalConfig.reward_pubkey);
+      if (block) {
+        // 在工作线程提交数据到MONGODB
+        /*_workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
+          &_context.getMongoStore(),
+          block, &_context)));*/
+        _workContext.post(_strand.wrap(boost::bind(&store::MongoStore::save,
+                                                   &store::MongoStore::get(),
+                                                   block, &_context)));
+        tryNow = false;
 
-      const std::vector<boost::shared_ptr<p2p::Channel>> channels =
-          p2p::ChannelManager::get().getChannels();
-      for (auto i : channels) {
-        i->sendGenerateBlock(block);
+        const std::vector<boost::shared_ptr<p2p::Channel>> channels =
+            p2p::ChannelManager::get().getChannels();
+        for (auto i : channels) {
+          i->sendGenerateBlock(block);
+        }
       }
+    } else {
+      tryNow = false;
     }
   }
   nextProduce(tryNow);
@@ -78,9 +82,9 @@ void Server::produceBlock(const boost::system::error_code& ec) {
 void Server::run() {
   try {
     store::MongoStore::get();  // 先连接测试mongo
-  } catch(std::exception& e) {
+  } catch (std::exception& e) {
     throw std::runtime_error(e.what());
-  } catch(...) {
+  } catch (...) {
     throw std::runtime_error("connect to mongo db failed.");
   }
 
@@ -114,7 +118,7 @@ void Server::run() {
   if (!_context.getBpsStore().contains(globalConfig.genesis_pubkey)) {
     _context.getBpsStore().add(globalConfig.genesis_pubkey);
   }
-
+  
   _p2pAcceptor.startAccept();
   // rpc
   _rpcListener.run();

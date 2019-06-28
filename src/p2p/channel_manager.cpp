@@ -42,5 +42,18 @@ const std::vector<boost::shared_ptr<Channel>> ChannelManager::getChannels() {
   return std::move(v);
 }
 
+boost::shared_mutex& ChannelManager::getChannelMutex() { return _channelMutex; }
+
+bool ChannelManager::channelsSyncDone() {
+  boost::shared_lock<boost::shared_mutex> lock(_mutex);
+  for (auto ch : _channels) {
+    if (ch.second.lock() && ch.second.lock()->getStatus().isSync()) {
+      B_LOG("Channels are synchronizing blocks.");
+      return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace p2p
 }  // namespace blockmirror

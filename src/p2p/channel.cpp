@@ -203,6 +203,8 @@ void Channel::handleMessage(const MsgHello& msg) {
     req._start = height + 1;
     req._end = msg._height;
     send(req);
+  } else {
+    _status.setSync(false);
   }
 }
 
@@ -220,9 +222,7 @@ void Channel::handleMessage(const MsgSyncReq& msg) {
     block._block = f;
     send(block);
 
-    if (msg._start != msg._end) {
-      sendHello();
-    }
+    sendHello();
   } else {
     B_ERR("can not find block,height is {}", msg._start);
   }
@@ -279,6 +279,9 @@ void Channel::HandleBlock(chain::BlockPtr block) {
     return;
   }
 
+  boost::unique_lock<boost::shared_mutex> lock(
+      ChannelManager::get().getChannelMutex());
+
   chain::BlockPtr head = c.getHead();
   if (height != (head ? head->getHeight() : 0) + 1) {
     return;
@@ -286,10 +289,10 @@ void Channel::HandleBlock(chain::BlockPtr block) {
 
   std::vector<Hash256Ptr> hashes = store.getHash256(height);
   while (!hashes.empty()) {
+    bool success = false;
     for (size_t i = 0; i < hashes.size(); i++) {
       head = c.getHead();
       block = store.getBlock(hashes[i]);
-      bool success = false;
       if (head) {
         std::vector<chain::BlockPtr> back;
         std::vector<chain::BlockPtr> forward;
@@ -335,15 +338,24 @@ void Channel::HandleBlock(chain::BlockPtr block) {
 
         const std::vector<boost::shared_ptr<p2p::Channel>> channels =
             p2p::ChannelManager::get().getChannels();
-        for (auto i : channels) {
-          i->sendBroadcastBlock(block->getHeight(), block->getHash());
+        for (auto ch : channels) {
+          ch->sendBroadcastBlock(block->getHeight(), block->getHash());
         }
 
         break;
+      } else {
+        if (i + 1 == hashes.size()) {
+          B_WARN("apply block fail!height:{},size is:{}", height,
+                 hashes.size());
+        }
       }
     }
 
-    hashes = store.getHash256(++height);
+    if (success) {
+      hashes = store.getHash256(++height);
+    } else {
+      break;
+    }
   }
 }
 

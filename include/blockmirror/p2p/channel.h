@@ -11,6 +11,16 @@
 namespace blockmirror {
 namespace p2p {
 
+class ChannelStatus {
+ public:
+  ChannelStatus() : _isSync(true){};
+  void setSync(bool s) { _isSync = s; };
+  bool isSync() { return _isSync; };
+
+ private:
+  bool _isSync;
+};
+
 class Channel : public boost::enable_shared_from_this<Channel>,
                 private boost::noncopyable {
  public:
@@ -39,6 +49,8 @@ class Channel : public boost::enable_shared_from_this<Channel>,
   void handleMessage(const MsgGenerateBlock& msg);
   void handleMessage(const MsgBroadcastBlock& msg);
 
+  ChannelStatus& getStatus() { return _status; }
+
  private:
   void handleReadHeader(const boost::system::error_code& e);
   void handleReadBody(const boost::system::error_code& e);
@@ -56,6 +68,7 @@ class Channel : public boost::enable_shared_from_this<Channel>,
   std::time_t _current;
   boost::asio::io_context::strand _strand;
   boost::array<char, sizeof(MessageHeader)> _header;
+  ChannelStatus _status;
 };
 
 using ChannelPtr = boost::shared_ptr<Channel>;

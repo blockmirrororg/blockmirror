@@ -21,11 +21,14 @@ class ChannelManager {
   void removeChannel(int id);
   boost::shared_ptr<Channel> findChannel(int id);
   const std::vector<boost::shared_ptr<Channel>> getChannels();
+  boost::shared_mutex& getChannelMutex();
+  bool channelsSyncDone();
 
  private:
   boost::unordered_map<int, boost::weak_ptr<Channel>> _channels;
   boost::atomic_int _channelId;
   boost::shared_mutex _mutex;
+  boost::shared_mutex _channelMutex;
 };
 
 }  // namespace p2p

@@ -99,43 +99,48 @@ void Session::do_close() {
 
 void Session::handle_request() {
   B_LOG("handle http request {} \n {}", req_.target().to_string(), req_.body());
-
-  if (req_.method() == http::verb::post) {
-    auto funcPtr = postMethodFuncPtr(req_.target().to_string().c_str());
-    if (!funcPtr) {
-      return lambda_(bad_request("Illegal request-target"));
-    }
-    (this->*funcPtr)();
-
-  } else if (req_.method() == http::verb::get) {
-    std::string strTarget = req_.target().to_string();
-    const char* target = strTarget.c_str();
-    char* ret = (char*)strchr(target, '?');
-    if (ret) {
-      *ret = 0;  // 更改目标、参数分隔符'?'为字符串结尾符'\0'
-    }
-    auto funcPtr = getMethodFuncPtr(target);
-    if (!funcPtr) {
-      if (req_.target().find(".") != std::string::npos) {
-        return handle_file(std::move(req_));
-      } else {
+  try {
+    if (req_.method() == http::verb::post) {
+      auto funcPtr = postMethodFuncPtr(req_.target().to_string().c_str());
+      if (!funcPtr) {
         return lambda_(bad_request("Illegal request-target"));
       }
-    }
+      (this->*funcPtr)();
 
-    if (ret) {
-      std::string out;
-      if (!url_decode(ret + 1, out)) {
-        B_WARN("url_decode failed");
-        return lambda_(bad_request("url_decode failed"));
+    } else if (req_.method() == http::verb::get) {
+      std::string strTarget = req_.target().to_string();
+      const char* target = strTarget.c_str();
+      char* ret = (char*)strchr(target, '?');
+      if (ret) {
+        *ret = 0;  // 更改目标、参数分隔符'?'为字符串结尾符'\0'
       }
-      //(this->*funcPtr)(ret + 1);
-      (this->*funcPtr)(out.c_str());
+      auto funcPtr = getMethodFuncPtr(target);
+      if (!funcPtr) {
+        if (req_.target().find(".") != std::string::npos) {
+          return handle_file(std::move(req_));
+        } else {
+          return lambda_(bad_request("Illegal request-target"));
+        }
+      }
+
+      if (ret) {
+        std::string out;
+        if (!url_decode(ret + 1, out)) {
+          B_WARN("url_decode failed");
+          return lambda_(bad_request("url_decode failed"));
+        }
+        //(this->*funcPtr)(ret + 1);
+        (this->*funcPtr)(out.c_str());
+      } else {
+        (this->*funcPtr)(nullptr);
+      }
     } else {
-      (this->*funcPtr)(nullptr);
+      return lambda_(bad_request("Illegal request-method"));
     }
-  } else {
-    return lambda_(bad_request("Illegal request-method"));
+  } catch (std::exception& e) {
+    B_LOG("Session::handle_request() catch exception: {}", e.what());
+  } catch(...) {
+    B_LOG("Session::handle_request() catch unknown exception.");
   }
 }
 

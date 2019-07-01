@@ -35,8 +35,9 @@ const std::vector<boost::shared_ptr<Channel>> ChannelManager::getChannels() {
   boost::shared_lock<boost::shared_mutex> lock(_mutex);
   std::vector<boost::shared_ptr<Channel>> v;
   for (auto i : _channels) {
-    if (i.second.lock()) {
-      v.push_back(i.second.lock());
+    boost::shared_ptr<Channel> channel = i.second.lock();
+    if(channel) {
+      v.push_back(channel);
     }
   }
   return std::move(v);
@@ -47,7 +48,8 @@ boost::shared_mutex& ChannelManager::getChannelMutex() { return _channelMutex; }
 bool ChannelManager::channelsSyncDone() {
   boost::shared_lock<boost::shared_mutex> lock(_mutex);
   for (auto ch : _channels) {
-    if (ch.second.lock() && ch.second.lock()->getStatus().isSync()) {
+    boost::shared_ptr<Channel> channel = ch.second.lock();
+    if (channel && channel->getStatus().isSync()) {
       B_LOG("Channels are synchronizing blocks.");
       return false;
     }

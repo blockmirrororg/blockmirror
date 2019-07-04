@@ -176,7 +176,13 @@ void Channel::sendHello() {
                 boost::lexical_cast<std::string>(globalConfig.p2p_bind);
 
   chain::Context& c = Server::get().getContext();
-  chain::BlockPtr head = c.getHead();
+  chain::BlockPtr head;
+  {
+    boost::shared_lock<boost::shared_mutex> lock(
+        p2p::ChannelManager::get().getChannelMutex());
+    head = c.getHead();
+  }
+
   if (head) {
     hello._hash = head->getHash();
     hello._height = head->getHeight();
@@ -192,7 +198,13 @@ void Channel::handleMessage(const MsgHello& msg) {
   Hash256 hash = {0};
   uint64_t height = 0;
   chain::Context& c = Server::get().getContext();
-  chain::BlockPtr head = c.getHead();
+  chain::BlockPtr head;
+  {
+    boost::shared_lock<boost::shared_mutex> lock(
+        p2p::ChannelManager::get().getChannelMutex());
+    head = c.getHead();
+  }
+
   if (head) {
     hash = head->getHash();
     height = head->getHeight();
@@ -211,8 +223,13 @@ void Channel::handleMessage(const MsgHello& msg) {
 void Channel::handleMessage(const MsgSyncReq& msg) {
   chain::Context& c = Server::get().getContext();
   store::BlockStore& store = c.getBlockStore();
+  chain::BlockPtr f;
+  {
+    boost::shared_lock<boost::shared_mutex> lock(
+        p2p::ChannelManager::get().getChannelMutex());
+    f = c.getHead();
+  }
 
-  chain::BlockPtr f = c.getHead();
   while (f && f->getHeight() != msg._start) {
     f = store.getBlock(f->getPrevious());
   }

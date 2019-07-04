@@ -54,6 +54,8 @@ void Server::produceBlock(const boost::system::error_code& ec) {
     B_ERR("produce timer: {}", ec.message());
   } else {
     if (p2p::ChannelManager::get().channelsSyncDone()) {
+      boost::unique_lock<boost::shared_mutex> lock(
+          p2p::ChannelManager::get().getChannelMutex());
       auto block = _context.genBlock(globalConfig.miner_privkey,
                                      globalConfig.reward_pubkey);
       if (block) {
@@ -68,8 +70,8 @@ void Server::produceBlock(const boost::system::error_code& ec) {
 
         const std::vector<boost::shared_ptr<p2p::Channel>> channels =
             p2p::ChannelManager::get().getChannels();
-        for (auto i : channels) {
-          i->sendGenerateBlock(block);
+        for (auto ch : channels) {
+          ch->sendGenerateBlock(block);
         }
       }
     } else {
@@ -118,7 +120,7 @@ void Server::run() {
   if (!_context.getBpsStore().contains(globalConfig.genesis_pubkey)) {
     _context.getBpsStore().add(globalConfig.genesis_pubkey);
   }
-  
+
   _p2pAcceptor.startAccept();
   // rpc
   _rpcListener.run();

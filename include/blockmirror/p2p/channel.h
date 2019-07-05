@@ -13,12 +13,15 @@ namespace p2p {
 
 class ChannelStatus {
  public:
-  ChannelStatus() : _isSync(true){};
-  void setSync(bool s) { _isSync = s; };
-  bool isSync() { return _isSync; };
+  ChannelStatus() : _sync(true), _height(0){};
+  void setSync(bool s) { _sync = s; };
+  bool isSync() { return _sync; };
+  void setHeight(uint64_t h) { _height = h; };
+  uint64_t getHeight() { return _height; };
 
  private:
-  bool _isSync;
+  bool _sync;
+  uint64_t _height;
 };
 
 class Channel : public boost::enable_shared_from_this<Channel>,

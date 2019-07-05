@@ -36,7 +36,7 @@ const std::vector<boost::shared_ptr<Channel>> ChannelManager::getChannels() {
   std::vector<boost::shared_ptr<Channel>> v;
   for (auto i : _channels) {
     boost::shared_ptr<Channel> channel = i.second.lock();
-    if(channel) {
+    if (channel) {
       v.push_back(channel);
     }
   }
@@ -50,7 +50,7 @@ bool ChannelManager::channelsSyncDone() {
   for (auto ch : _channels) {
     boost::shared_ptr<Channel> channel = ch.second.lock();
     if (channel && channel->getStatus().isSync()) {
-      B_LOG("Channels are synchronizing blocks.");
+      B_LOG("channels are synchronizing blocks");
       return false;
     }
   }

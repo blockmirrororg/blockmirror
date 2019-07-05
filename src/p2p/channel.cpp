@@ -195,19 +195,21 @@ void Channel::sendHello() {
 }
 
 void Channel::handleMessage(const MsgHello& msg) {
-  Hash256 hash = {0};
   uint64_t height = 0;
-  chain::Context& c = Server::get().getContext();
-  chain::BlockPtr head;
-  {
-    boost::shared_lock<boost::shared_mutex> lock(
-        p2p::ChannelManager::get().getChannelMutex());
-    head = c.getHead();
-  }
-
-  if (head) {
-    hash = head->getHash();
-    height = head->getHeight();
+  if (_status.getHeight() == 0) {
+    chain::Context& c = Server::get().getContext();
+    chain::BlockPtr head;
+    {
+      boost::shared_lock<boost::shared_mutex> lock(
+          p2p::ChannelManager::get().getChannelMutex());
+      head = c.getHead();
+    }
+    if (head) {
+      height = head->getHeight();
+    }
+    _status.setHeight(height);
+  } else {
+    height = _status.getHeight();
   }
 
   if (height < msg._height) {
@@ -215,6 +217,8 @@ void Channel::handleMessage(const MsgHello& msg) {
     req._start = height + 1;
     req._end = msg._height;
     send(req);
+
+    _status.setHeight(height + 1);
   } else {
     _status.setSync(false);
   }

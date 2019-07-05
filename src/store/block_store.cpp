@@ -173,6 +173,10 @@ bool BlockStore::shouldSwitch(const chain::BlockPtr &head,
   while (f->getHeight() > head->getHeight()) {
     forward.push_back(f);
     f = getBlock(f->getPrevious());
+    if (!f) {
+      B_WARN("fallback same height failure");
+      return false;
+    }
   }
   // 2. 两边开始一直退到同一个区块
   chain::BlockPtr h = head;
@@ -184,6 +188,10 @@ bool BlockStore::shouldSwitch(const chain::BlockPtr &head,
     forward.push_back(f);
     f = getBlock(f->getPrevious());
     h = getBlock(h->getPrevious());
+    if (!f || !h) {
+      B_WARN("fallback same hash failure");
+      return false;
+    }
   }
   return true;
 }

@@ -64,7 +64,7 @@ int BpsStore::getBPDelay(const Pubkey& key, uint64_t now) {
     // 第一个块
     // 执行第一个块应该 pushBpChange(0, block.timestamp)
     // 撤回第一个块应该 popBpChange()
-    return 0;
+    return -1;
   }
   // 当前出块序号
   auto nowSlots = getSlotByTime(now);

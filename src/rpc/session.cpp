@@ -403,7 +403,7 @@ void Session::getChainTransaction(const char* arg) {
     return lambda_(bad_request("omit argument"));
   }
 
-  Hash256Ptr key;
+  Hash256Ptr key = std::make_shared<Hash256>();
   try {
     boost::algorithm::unhex(arg, key->begin());
   } catch (std::exception& e) {
